@@ -4,40 +4,41 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SubCraft — Sous-titres IA pour créateurs viraux</title>
+  <meta name="description" content="SubCraft génère des sous-titres viraux pour TikTok, Reels et YouTube Shorts grâce à l'IA."/>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #060810; }
-    #root { min-height: 100vh; }
-    #loading {
-      position: fixed; inset: 0; background: #060810;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 16px;
-    }
-    .spinner {
-      width: 44px; height: 44px; border-radius: 50%;
-      border: 3px solid #1a2040; border-top-color: #4f6dff;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    #loading p { font-family: sans-serif; font-size: 14px; color: #4a5a80; }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#02030a;color:#f0f2ff}
+    #root{min-height:100vh}
+    #splash{position:fixed;inset:0;background:#02030a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:99999;transition:opacity .5s}
+    #splash.hide{opacity:0;pointer-events:none}
+    .splash-logo{width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#5b6cff,#a855f7,#ec4899);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:#fff;box-shadow:0 0 60px rgba(91,108,255,.4);animation:glow 2s ease-in-out infinite}
+    .splash-name{font-family:sans-serif;font-weight:800;font-size:22px;color:#fff;letter-spacing:-.03em}
+    .splash-bar{width:200px;height:2px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+    .splash-fill{height:100%;background:linear-gradient(90deg,#5b6cff,#a855f7,#ec4899);border-radius:2px;animation:fill 2s ease-out forwards}
+    .splash-text{font-family:sans-serif;font-size:12px;color:rgba(255,255,255,.3);letter-spacing:.06em}
+    @keyframes glow{0%,100%{box-shadow:0 0 40px rgba(91,108,255,.3)}50%{box-shadow:0 0 80px rgba(91,108,255,.6),0 0 120px rgba(168,85,247,.3)}}
+    @keyframes fill{from{width:0}to{width:100%}}
   </style>
 </head>
 <body>
-  <div id="loading">
-    <div class="spinner"></div>
-    <p>Chargement de SubCraft...</p>
+  <div id="splash">
+    <div class="splash-logo">✦</div>
+    <div class="splash-name">SubCraft</div>
+    <div class="splash-bar"><div class="splash-fill"></div></div>
+    <div class="splash-text">CHARGEMENT EN COURS...</div>
   </div>
   <div id="root"></div>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
   <script>
-    window.useState = React.useState;
-    window.useEffect = React.useEffect;
-    window.useRef = React.useRef;
-    window.useCallback = React.useCallback;
-    window.useMemo = React.useMemo;
+    window.useState=React.useState;
+    window.useEffect=React.useEffect;
+    window.useRef=React.useRef;
+    window.useCallback=React.useCallback;
+    window.useMemo=React.useMemo;
   </script>
-  <script type="text/babel" data-presets="react" src="./app-bundle.js"></script>
+  <script type="text/babel" data-presets="react" src="./app-bundle.js" onload="document.getElementById('splash').classList.add('hide')"></script>
 </body>
 </html>

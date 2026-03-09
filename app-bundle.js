@@ -1,44 +1,242 @@
+/* ── CUSTOM CURSOR ── */
+const Cursor = () => {
+  const dotRef = useRef(null);
+  const ringRef = useRef(null);
+  const pos = useRef({x:0,y:0});
+  const ring = useRef({x:0,y:0});
+  useEffect(() => {
+    const move = (e) => {
+      pos.current = {x: e.clientX, y: e.clientY};
+      if(dotRef.current) {
+        dotRef.current.style.left = e.clientX + 'px';
+        dotRef.current.style.top = e.clientY + 'px';
+      }
+    };
+    const animate = () => {
+      ring.current.x += (pos.current.x - ring.current.x) * 0.12;
+      ring.current.y += (pos.current.y - ring.current.y) * 0.12;
+      if(ringRef.current) {
+        ringRef.current.style.left = ring.current.x + 'px';
+        ringRef.current.style.top = ring.current.y + 'px';
+      }
+      requestAnimationFrame(animate);
+    };
+    document.addEventListener('mousemove', move);
+    animate();
+    const grow = () => { if(ringRef.current) { ringRef.current.style.transform = 'translate(-50%,-50%) scale(1.8)'; ringRef.current.style.opacity = '.5'; }};
+    const shrink = () => { if(ringRef.current) { ringRef.current.style.transform = 'translate(-50%,-50%) scale(1)'; ringRef.current.style.opacity = '1'; }};
+    document.querySelectorAll('button,a,[role="button"]').forEach(el => { el.addEventListener('mouseenter', grow); el.addEventListener('mouseleave', shrink); });
+    return () => document.removeEventListener('mousemove', move);
+  }, []);
+  return (
+    <div id="cursor">
+      <div id="cursor-dot" ref={dotRef} style={{position:'fixed',width:8,height:8,background:'#fff',borderRadius:'50%',transform:'translate(-50%,-50%)',pointerEvents:'none',zIndex:99999,mixBlendMode:'difference'}}/>
+      <div id="cursor-ring" ref={ringRef} style={{position:'fixed',width:36,height:36,border:'1.5px solid rgba(255,255,255,.6)',borderRadius:'50%',transform:'translate(-50%,-50%)',pointerEvents:'none',zIndex:99998,transition:'transform .2s,opacity .2s',mixBlendMode:'difference'}}/>
+    </div>
+  );
+};
+
+/* ── PARTICLE FIELD (WebGL-style CSS particles) ── */
+const ParticleField = ({count=60,color="#5b6cff"}) => {
+  const particles = Array.from({length:count}, (_,i) => ({
+    id: i,
+    x: Math.random()*100,
+    y: Math.random()*100,
+    size: Math.random()*2.5+0.5,
+    dur: Math.random()*20+10,
+    delay: Math.random()*-20,
+    opacity: Math.random()*.5+.1,
+    dx: (Math.random()-.5)*120,
+    dy: (Math.random()-.5)*80,
+  }));
+  return (
+    <div style={{position:'absolute',inset:0,overflow:'hidden',pointerEvents:'none'}}>
+      {particles.map(p => (
+        <div key={p.id} style={{
+          position:'absolute',
+          left: p.x+'%', top: p.y+'%',
+          width: p.size+'px', height: p.size+'px',
+          borderRadius:'50%',
+          background: color,
+          opacity: p.opacity,
+          boxShadow: `0 0 ${p.size*3}px ${color}`,
+          animation: `float ${p.dur}s ${p.delay}s ease-in-out infinite alternate`,
+          transform: `translate(${p.dx}px, ${p.dy}px)`,
+          willChange:'transform',
+        }}/>
+      ))}
+    </div>
+  );
+};
+
+/* ── 3D FLOATING PHONE ── */
+const Phone3D = ({style={}}) => {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if(!el) return;
+    let frame;
+    let t = 0;
+    const tick = () => {
+      t += 0.005;
+      const rx = Math.sin(t*0.7)*8;
+      const ry = Math.sin(t)*12;
+      el.style.transform = `perspective(1200px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(${Math.sin(t*1.3)*8}px)`;
+      frame = requestAnimationFrame(tick);
+    };
+    tick();
+    return () => cancelAnimationFrame(frame);
+  }, []);
+  return (
+    <div ref={ref} style={{width:240,height:480,borderRadius:38,background:'linear-gradient(145deg,#0c0d1a,#05060f)',border:'2px solid rgba(91,108,255,.3)',boxShadow:'0 40px 120px rgba(91,108,255,.25),0 0 0 1px rgba(255,255,255,.05),inset 0 1px 0 rgba(255,255,255,.1)',position:'relative',overflow:'hidden',transformStyle:'preserve-3d',...style}}>
+      {/* Screen content */}
+      <div style={{position:'absolute',inset:0,background:'linear-gradient(180deg,#080912 0%,#02030a 100%)'}}>
+        {/* Status bar */}
+        <div style={{display:'flex',justifyContent:'space-between',padding:'12px 20px 0',fontSize:10,color:'rgba(255,255,255,.4)'}}>
+          <span>9:41</span><span>●●●●</span>
+        </div>
+        {/* Notch */}
+        <div style={{width:80,height:20,background:'#02030a',borderRadius:12,margin:'0 auto',marginTop:-4}}/>
+        {/* Video preview */}
+        <div style={{margin:'16px 12px',height:200,borderRadius:16,background:'linear-gradient(135deg,#0d0e20,#1a0a2e)',overflow:'hidden',position:'relative'}}>
+          <div style={{position:'absolute',inset:0,background:'linear-gradient(135deg,rgba(91,108,255,.2),rgba(168,85,247,.15))'}}>
+            <ParticleField count={15} color="#a855f7"/>
+          </div>
+          <div style={{position:'absolute',bottom:16,left:0,right:0,textAlign:'center'}}>
+            <div style={{display:'inline-block',background:'rgba(0,0,0,.7)',backdropFilter:'blur(8px)',borderRadius:8,padding:'4px 12px',fontFamily:'Impact',fontSize:18,color:'#FFE600',textShadow:'2px 2px 0 #000,-2px -2px 0 #000',letterSpacing:1}}>REGARDE ÇA 😱</div>
+          </div>
+        </div>
+        {/* Waveform */}
+        <div style={{display:'flex',gap:2,alignItems:'center',justifyContent:'center',padding:'8px 20px'}}>
+          {Array.from({length:28},(_,i)=>(
+            <div key={i} style={{width:3,borderRadius:2,background:`rgba(91,108,255,${.3+Math.abs(Math.sin(i*.6))*.7})`,height:(8+Math.abs(Math.sin(i*.8))*20)+'px',animation:`pulse ${.8+Math.random()*.6}s ${i*.05}s ease-in-out infinite`}}/>
+          ))}
+        </div>
+        {/* Subtitle styles */}
+        <div style={{padding:'8px 12px',display:'flex',flexDirection:'column',gap:6}}>
+          {[['#FFE600','Impact','YEAH C'EST FOU 🔥'],['rgba(255,255,255,.9)','Outfit','attends de voir ça...'],['#34d399','Outfit','la suite va te changer']].map(([color,font,text],i)=>(
+            <div key={i} style={{padding:'5px 10px',borderRadius:6,background:i===0?'transparent':'rgba(0,0,0,.4)',textAlign:'center',fontFamily:font,fontSize:11,fontWeight:i===0?900:600,color,textShadow:i===0?'1px 1px 0 #000':undefined,animation:`subtitlePop .4s ${i*.15}s both`}}>{text}</div>
+          ))}
+        </div>
+      </div>
+      {/* Screen reflection */}
+      <div style={{position:'absolute',top:0,left:0,right:0,height:'40%',background:'linear-gradient(180deg,rgba(255,255,255,.04),transparent)',borderRadius:'38px 38px 0 0',pointerEvents:'none'}}/>
+    </div>
+  );
+};
+
+/* ── AURORA BACKGROUND ── */
+const AuroraBg = () => (
+  <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,overflow:'hidden'}}>
+    {/* Grid */}
+    <div style={{position:'absolute',inset:0,backgroundImage:'linear-gradient(rgba(91,108,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(91,108,255,.04) 1px,transparent 1px)',backgroundSize:'80px 80px',opacity:.6}}/>
+    {/* Aurora blobs */}
+    <div style={{position:'absolute',top:'-20%',left:'-10%',width:'70vw',height:'70vw',borderRadius:'50%',background:'radial-gradient(circle,rgba(91,108,255,.12) 0%,transparent 65%)',filter:'blur(60px)',animation:'aurora 18s ease-in-out infinite'}}/>
+    <div style={{position:'absolute',top:'30%',right:'-15%',width:'60vw',height:'60vw',borderRadius:'50%',background:'radial-gradient(circle,rgba(168,85,247,.1) 0%,transparent 65%)',filter:'blur(80px)',animation:'aurora2 22s ease-in-out infinite'}}/>
+    <div style={{position:'absolute',bottom:'-10%',left:'20%',width:'50vw',height:'50vw',borderRadius:'50%',background:'radial-gradient(circle,rgba(236,72,153,.07) 0%,transparent 65%)',filter:'blur(60px)',animation:'aurora 28s ease-in-out infinite reverse'}}/>
+    {/* Scanline effect */}
+    <div style={{position:'absolute',left:0,right:0,height:2,background:'linear-gradient(90deg,transparent,rgba(91,108,255,.15),transparent)',animation:'scanline 8s linear infinite',opacity:.4}}/>
+  </div>
+);
+
+
 /* ── GLOBAL STYLES ── */
 const GS = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;700&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html{scroll-behavior:smooth}
-    body{background:#080b14;color:#e8edf8;font-family:'Outfit',sans-serif;min-height:100vh;overflow-x:hidden}
-    ::-webkit-scrollbar{width:4px;height:4px}
-    ::-webkit-scrollbar-track{background:#0d1020}
-    ::-webkit-scrollbar-thumb{background:#232840;border-radius:4px}
-    ::-webkit-scrollbar-thumb:hover{background:#4f6dff}
-    ::selection{background:#4f6dff33;color:#fff}
-    input,textarea,select{font-family:'Outfit',sans-serif;outline:none;background:transparent}
-    button{font-family:'Outfit',sans-serif;cursor:pointer}
+    body{background:#02030a;color:#f0f2ff;font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+    ::-webkit-scrollbar{width:4px}
+    ::-webkit-scrollbar-track{background:#02030a}
+    ::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#5b6cff,#a855f7);border-radius:10px}
+    ::selection{background:#5b6cff33;color:#fff}
+    input,textarea,select{font-family:'DM Sans',sans-serif;outline:none;background:transparent}
+    button{font-family:'DM Sans',sans-serif;cursor:pointer}
     a{color:inherit;text-decoration:none}
-    @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+    .syne{font-family:'Syne',sans-serif!important}
+    .mono{font-family:'JetBrains Mono',monospace!important}
+
+    /* ── NOISE OVERLAY ── */
+    body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:.35}
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
     @keyframes fadeIn{from{opacity:0}to{opacity:1}}
     @keyframes fadeDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
     @keyframes slideRight{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
     @keyframes slideLeft{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
     @keyframes spin{to{transform:rotate(360deg)}}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-    @keyframes pulseDot{0%,100%{transform:scale(1)}50%{transform:scale(1.4)}}
+    @keyframes pulseDot{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}
+    @keyframes pulseDotGreen{0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,.5)}70%{box-shadow:0 0 0 8px rgba(52,211,153,0)}}
     @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-    @keyframes glow{0%,100%{box-shadow:0 0 20px #4f6dff33}50%{box-shadow:0 0 50px #4f6dff88,0 0 100px #4f6dff22}}
-    @keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
-    @keyframes popIn{0%{opacity:0;transform:scale(.85) translateY(12px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+    @keyframes float2{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-14px) rotate(2deg)}}
+    @keyframes glow{0%,100%{box-shadow:0 0 30px #5b6cff33,0 0 60px #5b6cff11}50%{box-shadow:0 0 60px #5b6cff66,0 0 120px #5b6cff22}}
+    @keyframes glowPink{0%,100%{box-shadow:0 0 30px #e8397022}50%{box-shadow:0 0 60px #e8397055}}
+    @keyframes shimmer{0%{background-position:-400% center}100%{background-position:400% center}}
+    @keyframes shimmerSlide{0%{transform:translateX(-100%) skewX(-15deg)}100%{transform:translateX(300%) skewX(-15deg)}}
+    @keyframes popIn{0%{opacity:0;transform:scale(.8) translateY(20px)}80%{transform:scale(1.02)}100%{opacity:1;transform:scale(1) translateY(0)}}
+    @keyframes popInBig{0%{opacity:0;transform:scale(.7) translateY(40px)}80%{transform:scale(1.02)}100%{opacity:1;transform:scale(1) translateY(0)}}
     @keyframes subtitlePop{0%{opacity:0;transform:translateY(14px) scale(.88)}25%{opacity:1;transform:translateY(0) scale(1.06)}40%{transform:scale(1)}100%{opacity:1;transform:scale(1)}}
     @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
-    @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
-    @keyframes pageIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+    @keyframes pageIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
     @keyframes notifIn{from{opacity:0;transform:translateX(120px)}to{opacity:1;transform:translateX(0)}}
     @keyframes notifOut{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(120px)}}
-    @keyframes skeletonPulse{0%,100%{opacity:.4}50%{opacity:.8}}
+    @keyframes skeletonPulse{0%,100%{opacity:.3}50%{opacity:.7}}
     @keyframes progressFill{from{width:0%}to{width:100%}}
     @keyframes typing{0%,100%{opacity:1}50%{opacity:0}}
-    @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-    .page{animation:pageIn .4s cubic-bezier(.22,1,.36,1) both}
-    .fu{animation:fadeUp .5s cubic-bezier(.22,1,.36,1) both}
-    .pi{animation:popIn .3s cubic-bezier(.34,1.56,.64,1) both}
-    .skel{animation:skeletonPulse 1.5s ease infinite;background:linear-gradient(90deg,#111525,#161b2e,#111525);border-radius:6px}
+    @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+    @keyframes orbit{from{transform:rotate(0deg) translateX(110px) rotate(0deg)}to{transform:rotate(360deg) translateX(110px) rotate(-360deg)}}
+    @keyframes orbit2{from{transform:rotate(130deg) translateX(155px) rotate(-130deg)}to{transform:rotate(490deg) translateX(155px) rotate(-490deg)}}
+    @keyframes orbit3{from{transform:rotate(250deg) translateX(80px) rotate(-250deg)}to{transform:rotate(610deg) translateX(80px) rotate(-610deg)}}
+    @keyframes aurora{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(5%,4%) scale(1.08)}66%{transform:translate(-3%,2%) scale(.95)}}
+    @keyframes aurora2{0%,100%{transform:translate(0,0) scale(1.1)}50%{transform:translate(-7%,-3%) scale(.92)}}
+    @keyframes scanline{0%{top:-4%}100%{top:104%}}
+    @keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+    @keyframes cardTilt{0%,100%{transform:perspective(1200px) rotateX(0) rotateY(0) translateY(0)}50%{transform:perspective(1200px) rotateX(2deg) rotateY(5deg) translateY(-4px)}}
+    @keyframes starSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+    @keyframes ping{0%{transform:scale(1);opacity:1}100%{transform:scale(2.2);opacity:0}}
+    @keyframes gradShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+    @keyframes waveform{0%,100%{height:4px}50%{height:20px}}
+    @keyframes particleDrift{0%{transform:translate(0,0) scale(1);opacity:.6}33%{transform:translate(30px,-40px) scale(.8);opacity:.3}66%{transform:translate(-20px,-70px) scale(1.1);opacity:.5}100%{transform:translate(10px,-110px) scale(.6);opacity:0}}
+    @keyframes morphBlob{0%,100%{border-radius:60% 40% 30% 70%/60% 30% 70% 40%}25%{border-radius:30% 60% 70% 40%/50% 60% 30% 60%}50%{border-radius:50% 30% 60% 40%/40% 70% 60% 30%}75%{border-radius:40% 60% 30% 70%/70% 40% 60% 30%}}
+
+    .page{animation:pageIn .5s cubic-bezier(.22,1,.36,1) both}
+    .fu{animation:fadeUp .55s cubic-bezier(.22,1,.36,1) both}
+    .pi{animation:popIn .4s cubic-bezier(.34,1.56,.64,1) both}
+    .skel{animation:skeletonPulse 1.5s ease infinite;background:linear-gradient(90deg,#0a0b18,#0f1022,#0a0b18);border-radius:6px}
+
+    /* ── GLASS MORPHISM ── */
+    .glass{background:rgba(255,255,255,.03);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.07)}
+    .glass-med{background:rgba(255,255,255,.05);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.1)}
+    .glass-bright{background:rgba(255,255,255,.08);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.14)}
+
+    /* ── GRADIENT TEXT ── */
+    .grad-text{background:linear-gradient(135deg,#7c8fff 0%,#c084fc 45%,#f472b6 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .grad-text-gold{background:linear-gradient(135deg,#ffd700,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .grad-text-chrome{background:linear-gradient(135deg,#e8e8e8,#ffffff,#c0c0c0,#ffffff,#a0a0a0);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 4s linear infinite}
+
+    /* ── GLOW BORDERS ── */
+    .border-acc{box-shadow:0 0 0 1px rgba(91,108,255,.45),0 0 30px rgba(91,108,255,.12),inset 0 0 20px rgba(91,108,255,.03)}
+    .border-pink{box-shadow:0 0 0 1px rgba(232,57,112,.4),0 0 24px rgba(232,57,112,.1)}
+    .border-green{box-shadow:0 0 0 1px rgba(52,211,153,.35),0 0 20px rgba(52,211,153,.08)}
+
+    /* ── HOVER LIFT ── */
+    .lift{transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s;will-change:transform}
+    .lift:hover{transform:translateY(-5px);box-shadow:0 20px 50px rgba(0,0,0,.4),0 0 40px rgba(91,108,255,.1)}
+    .lift-sm:hover{transform:translateY(-3px)}
+
+    /* ── SHIMMER BTN ── */
+    .shimmer-btn{position:relative;overflow:hidden}
+    .shimmer-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent 20%,rgba(255,255,255,.15) 50%,transparent 80%);transform:translateX(-100%) skewX(-15deg);animation:shimmerSlide 2.8s ease-in-out infinite}
+
+    /* ── GRID / DOT BG ── */
+    .grid-bg{background-image:linear-gradient(rgba(91,108,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(91,108,255,.05) 1px,transparent 1px);background-size:64px 64px}
+    .dot-bg{background-image:radial-gradient(circle,rgba(91,108,255,.18) 1px,transparent 1px);background-size:26px 26px}
+
+    /* ── RESPONSIVE ── */
     @media(max-width:768px){
       .hide-mobile{display:none!important}
       .mobile-full{width:100%!important;max-width:100%!important}
@@ -46,24 +244,30 @@ const GS = () => (
       .mobile-p{padding:16px!important}
       .mobile-grid1{grid-template-columns:1fr!important}
     }
+    .no-scroll::-webkit-scrollbar{display:none}
+    .no-scroll{-ms-overflow-style:none;scrollbar-width:none}
   `}</style>
 );
 
+
+
 /* ── TOKENS ── */
 const T = {
-  bg:"#080b14",bg2:"#0d1020",bg3:"#111525",
-  surf:"#111525",surf2:"#161b2e",surf3:"#1c2238",
-  border:"#1c2238",borderL:"#242d48",
-  acc:"#4f6dff",accH:"#6b85ff",accGlow:"#4f6dff44",
-  pink:"#ff4f8a",cyan:"#00d4ff",green:"#00e5a0",
-  yellow:"#ffcc00",orange:"#ff7043",purple:"#9c6dff",
-  red:"#ff3b5c",
-  text:"#e8edf8",muted:"#5a6688",dim:"#2d3554",
-  grad:"linear-gradient(135deg,#4f6dff,#7c52ff)",
-  gradP:"linear-gradient(135deg,#ff4f8a,#ff7043)",
-  gradG:"linear-gradient(135deg,#00e5a0,#00aaff)",
-  gradY:"linear-gradient(135deg,#ffcc00,#ff9500)",
+  bg:"#02030a",bg2:"#05060f",bg3:"#080912",
+  surf:"#0c0d1a",surf2:"#10111f",surf3:"#141626",
+  border:"#181928",borderL:"#20223a",
+  acc:"#5b6cff",accH:"#7b8cff",accGlow:"#5b6cff3a",
+  pink:"#e83970",cyan:"#22d3ee",green:"#34d399",
+  yellow:"#fbbf24",orange:"#f97316",purple:"#a855f7",
+  red:"#f43f5e",gold:"#ffd700",
+  text:"#f0f2ff",muted:"#4a4f72",dim:"#1e2040",
+  grad:"linear-gradient(135deg,#5b6cff 0%,#a855f7 55%,#ec4899 100%)",
+  gradH:"linear-gradient(135deg,#7b8cff,#c084fc,#f472b6)",
+  gradP:"linear-gradient(135deg,#e83970,#f97316)",
+  gradG:"linear-gradient(135deg,#34d399,#22d3ee)",
+  gradY:"linear-gradient(135deg,#fbbf24,#f97316)",
 };
+
 
 /* ── MOCK DATA ── */
 const LANGS=[
@@ -229,21 +433,21 @@ const NotifProvider=()=>{
 
 /* ── REUSABLE COMPONENTS ── */
 const Btn=({children,v="primary",size="md",onClick,disabled,style,icon,full,loading,title})=>{
-  const pd={sm:"7px 16px",md:"10px 22px",lg:"14px 32px",xl:"17px 42px"}[size];
-  const fs={sm:"12px",md:"14px",lg:"15px",xl:"16px"}[size];
+  const pd={sm:"7px 16px",md:"10px 22px",lg:"13px 28px",xl:"16px 40px"}[size];
+  const fs={sm:"12px",md:"13px",lg:"14px",xl:"15px"}[size];
   const vs={
-    primary:{background:T.grad,color:"#fff",border:"none",boxShadow:`0 4px 20px ${T.accGlow}`},
-    secondary:{background:"transparent",color:T.text,border:`1px solid ${T.border}`},
+    primary:{background:T.grad,color:"#fff",border:"none",boxShadow:`0 4px 24px ${T.accGlow}`},
+    secondary:{background:"rgba(255,255,255,.05)",color:T.text,border:"1px solid rgba(255,255,255,.1)"},
     ghost:{background:"transparent",color:T.muted,border:"none"},
-    danger:{background:`${T.pink}18`,color:T.pink,border:`1px solid ${T.pink}33`},
-    dark:{background:T.surf3,color:T.text,border:`1px solid ${T.border}`},
-    success:{background:`${T.green}18`,color:T.green,border:`1px solid ${T.green}33`},
-    warning:{background:`${T.yellow}18`,color:T.yellow,border:`1px solid ${T.yellow}33`},
+    danger:{background:"rgba(232,57,112,.1)",color:T.pink,border:"1px solid rgba(232,57,112,.22)"},
+    dark:{background:T.surf2,color:T.text,border:"1px solid rgba(255,255,255,.07)"},
+    success:{background:"rgba(52,211,153,.1)",color:T.green,border:"1px solid rgba(52,211,153,.22)"},
+    warning:{background:"rgba(251,191,36,.1)",color:T.yellow,border:"1px solid rgba(251,191,36,.22)"},
   };
   return(
-    <button title={title} onClick={onClick} disabled={disabled||loading} style={{padding:pd,fontSize:fs,fontWeight:600,borderRadius:"11px",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:7,transition:"all .2s",opacity:(disabled||loading)?.45:1,width:full?"100%":undefined,letterSpacing:".01em",cursor:(disabled||loading)?"not-allowed":"pointer",...vs[v],...style}}
-      onMouseEnter={e=>{if(!disabled&&!loading){e.currentTarget.style.filter="brightness(1.15)";e.currentTarget.style.transform="translateY(-1px)";}}}
-      onMouseLeave={e=>{e.currentTarget.style.filter="brightness(1)";e.currentTarget.style.transform="translateY(0)";}}>
+    <button title={title} onClick={onClick} disabled={disabled||loading} style={{padding:pd,fontSize:fs,fontWeight:600,borderRadius:"11px",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:7,transition:"all .22s cubic-bezier(.22,1,.36,1)",opacity:(disabled||loading)?.45:1,width:full?"100%":undefined,letterSpacing:"-.01em",cursor:(disabled||loading)?"not-allowed":"pointer",...vs[v],...style}}
+      onMouseEnter={e=>{if(!disabled&&!loading){e.currentTarget.style.filter="brightness(1.12)";e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.boxShadow=v==="primary"?`0 8px 30px ${T.accGlow}`:"none";}}}
+      onMouseLeave={e=>{e.currentTarget.style.filter="brightness(1)";e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow=vs[v].boxShadow||"none";}}>
       {loading?<Spn s={14}/>:icon&&<span style={{fontSize:"1.1em"}}>{icon}</span>}
       {children}
     </button>
@@ -283,9 +487,9 @@ const Input=({label,value,onChange,placeholder,type="text",required,icon,hint})=
     {label&&<label style={{fontSize:12,color:T.muted,display:"block",marginBottom:6,fontWeight:600}}>{label}{required&&<span style={{color:T.pink,marginLeft:3}}>*</span>}</label>}
     <div style={{position:"relative"}}>
       {icon&&<span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:15,pointerEvents:"none"}}>{icon}</span>}
-      <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={{width:"100%",padding:icon?"10px 12px 10px 38px":"10px 14px",borderRadius:10,fontSize:14,background:T.surf,border:`1px solid ${T.border}`,color:T.text,transition:"border .2s"}}
-        onFocus={e=>{e.target.style.borderColor=T.acc;}}
-        onBlur={e=>{e.target.style.borderColor=T.border;}}/>
+      <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={{width:"100%",padding:icon?"11px 14px 11px 40px":"11px 16px",borderRadius:11,fontSize:14,background:T.surf2,border:"1px solid rgba(255,255,255,.07)",color:T.text,transition:"all .2s"}}
+        onFocus={e=>{e.target.style.borderColor="rgba(91,108,255,.5)";e.target.style.boxShadow="0 0 0 3px rgba(91,108,255,.08)";}}
+        onBlur={e=>{e.target.style.borderColor="rgba(255,255,255,.07)";e.target.style.boxShadow="none";}}/>
     </div>
     {hint&&<div style={{fontSize:11,color:T.muted,marginTop:4}}>{hint}</div>}
   </div>
@@ -301,8 +505,8 @@ const Select=({label,value,onChange,options})=>(
 );
 
 const Modal=({title,onClose,children,width=480,subtitle})=>(
-  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(14px)",padding:16}} onClick={onClose}>
-    <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:width,background:T.surf2,borderRadius:22,border:`1px solid ${T.border}`,padding:32,animation:"popIn .3s cubic-bezier(.34,1.56,.64,1)",boxShadow:"0 40px 80px rgba(0,0,0,.6)",maxHeight:"90vh",overflowY:"auto"}}>
+  <div style={{position:"fixed",inset:0,background:"rgba(2,3,10,.88)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(28px)",padding:16}} onClick={onClose}>
+    <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:width,background:T.surf,borderRadius:24,border:"1px solid rgba(255,255,255,.08)",padding:32,animation:"popIn .35s cubic-bezier(.34,1.56,.64,1)",boxShadow:"0 50px 100px rgba(0,0,0,.7),0 0 0 1px rgba(91,108,255,.08)",maxHeight:"90vh",overflowY:"auto",backdropFilter:"blur(20px)"}}>
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:20}}>
         <div>
           <div style={{fontWeight:800,fontSize:20}}>{title}</div>
@@ -599,6 +803,89 @@ const OnboardingPage=({user,onComplete})=>{
 /* ══════════════════════════════════════════════
    PAGE: AUTH
 ══════════════════════════════════════════════ */
+
+/* ── CUSTOM CURSOR ── */
+const Cursor=()=>{
+  const dotR=useRef(null),ringR=useRef(null),pos=useRef({x:0,y:0}),ring=useRef({x:0,y:0});
+  useEffect(()=>{
+    const move=(e)=>{pos.current={x:e.clientX,y:e.clientY};if(dotR.current){dotR.current.style.left=e.clientX+"px";dotR.current.style.top=e.clientY+"px";}};
+    const tick=()=>{ring.current.x+=(pos.current.x-ring.current.x)*.11;ring.current.y+=(pos.current.y-ring.current.y)*.11;if(ringR.current){ringR.current.style.left=ring.current.x+"px";ringR.current.style.top=ring.current.y+"px";}requestAnimationFrame(tick);};
+    document.addEventListener("mousemove",move);tick();
+    const grow=()=>{if(ringR.current){ringR.current.style.transform="translate(-50%,-50%) scale(1.9)";ringR.current.style.opacity=".4";}};
+    const shrink=()=>{if(ringR.current){ringR.current.style.transform="translate(-50%,-50%) scale(1)";ringR.current.style.opacity="1";}};
+    document.querySelectorAll("button,a,[role=button]").forEach(el=>{el.addEventListener("mouseenter",grow);el.addEventListener("mouseleave",shrink);});
+    return()=>document.removeEventListener("mousemove",move);
+  },[]);
+  if(window.innerWidth<768)return null;
+  return(<>
+    <div ref={dotR} style={{position:"fixed",width:7,height:7,background:"#fff",borderRadius:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none",zIndex:99999,mixBlendMode:"difference",willChange:"left,top"}}/>
+    <div ref={ringR} style={{position:"fixed",width:34,height:34,border:"1.5px solid rgba(255,255,255,.55)",borderRadius:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none",zIndex:99998,transition:"transform .2s,opacity .2s",mixBlendMode:"difference",willChange:"left,top"}}/>
+  </>);
+};
+
+/* ── AURORA BG ── */
+const AuroraBg=({subtle=false})=>(
+  <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden"}}>
+    <div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(rgba(91,108,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(91,108,255,.04) 1px,transparent 1px)",backgroundSize:"72px 72px",opacity:subtle?.4:.7}}/>
+    <div style={{position:"absolute",top:"-25%",left:"-10%",width:"65vw",height:"65vw",background:"radial-gradient(circle,rgba(91,108,255,.11) 0%,transparent 65%)",filter:"blur(64px)",animation:"aurora 20s ease-in-out infinite"}}/>
+    <div style={{position:"absolute",top:"35%",right:"-12%",width:"55vw",height:"55vw",background:"radial-gradient(circle,rgba(168,85,247,.09) 0%,transparent 65%)",filter:"blur(80px)",animation:"aurora2 26s ease-in-out infinite"}}/>
+    <div style={{position:"absolute",bottom:"-8%",left:"25%",width:"45vw",height:"45vw",background:"radial-gradient(circle,rgba(236,72,153,.07) 0%,transparent 65%)",filter:"blur(60px)",animation:"aurora 32s ease-in-out infinite reverse"}}/>
+    <div style={{position:"absolute",left:0,right:0,height:"1.5px",background:"linear-gradient(90deg,transparent,rgba(91,108,255,.18),rgba(168,85,247,.12),transparent)",animation:"scanline 9s linear infinite",opacity:.5}}/>
+  </div>
+);
+
+/* ── PARTICLE FIELD ── */
+const ParticleField=({count=50,color="#5b6cff",style={}})=>{
+  const pts=Array.from({length:count},(_,i)=>({id:i,x:Math.random()*100,y:Math.random()*100,s:Math.random()*2.2+.5,dur:Math.random()*18+8,del:Math.random()*-18,op:Math.random()*.45+.08}));
+  return(
+    <div style={{position:"absolute",inset:0,overflow:"hidden",pointerEvents:"none",...style}}>
+      {pts.map(p=>(
+        <div key={p.id} style={{position:"absolute",left:p.x+"%",top:p.y+"%",width:p.s+"px",height:p.s+"px",borderRadius:"50%",background:color,opacity:p.op,boxShadow:`0 0 ${p.s*4}px ${color}`,animation:`float ${p.dur}s ${p.del}s ease-in-out infinite alternate`,willChange:"transform"}}/>
+      ))}
+    </div>
+  );
+};
+
+/* ── 3D PHONE ── */
+const Phone3D=()=>{
+  const ref=useRef(null);
+  useEffect(()=>{
+    const el=ref.current;if(!el)return;
+    let af,t=0;
+    const tick=()=>{t+=.004;el.style.transform=`perspective(1400px) rotateX(${Math.sin(t*.7)*7}deg) rotateY(${Math.sin(t)*11}deg) translateY(${Math.sin(t*1.2)*8}px)`;af=requestAnimationFrame(tick);};
+    tick();return()=>cancelAnimationFrame(af);
+  },[]);
+  return(
+    <div ref={ref} style={{width:230,height:460,borderRadius:36,background:"linear-gradient(145deg,#0a0b18,#05060f)",border:"1.5px solid rgba(91,108,255,.28)",boxShadow:"0 40px 100px rgba(91,108,255,.22),0 0 0 1px rgba(255,255,255,.04),inset 0 1px 0 rgba(255,255,255,.09)",position:"relative",overflow:"hidden",transformStyle:"preserve-3d",flexShrink:0}}>
+      <div style={{position:"absolute",inset:0}}>
+        <div style={{display:"flex",justifyContent:"space-between",padding:"14px 20px 0",fontSize:9,color:"rgba(255,255,255,.3)"}}>
+          <span>9:41</span><span>●●●●</span>
+        </div>
+        <div style={{width:72,height:18,background:"#02030a",borderRadius:10,margin:"0 auto",marginTop:-2}}/>
+        <div style={{margin:"14px 10px",height:190,borderRadius:14,overflow:"hidden",position:"relative",background:"linear-gradient(135deg,#0d0e1e,#1a0a2e)"}}>
+          <ParticleField count={14} color="#a855f7"/>
+          <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,rgba(91,108,255,.18),rgba(168,85,247,.12))"}}/>
+          <div style={{position:"absolute",bottom:14,left:0,right:0,textAlign:"center"}}>
+            <div style={{display:"inline-block",background:"rgba(0,0,0,.75)",backdropFilter:"blur(6px)",borderRadius:7,padding:"4px 12px",fontFamily:"Impact,sans-serif",fontSize:17,color:"#FFE600",textShadow:"2px 2px 0 #000,-2px -2px 0 #000",letterSpacing:1}}>REGARDE ÇA 😱</div>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:2,alignItems:"center",justifyContent:"center",padding:"6px 18px"}}>
+          {Array.from({length:26},(_,i)=>(
+            <div key={i} style={{width:3,borderRadius:2,background:`rgba(91,108,255,${.25+Math.abs(Math.sin(i*.6))*.7})`,height:(6+Math.abs(Math.sin(i*.8))*18)+"px",animation:`waveform ${.7+Math.random()*.5}s ${i*.04}s ease-in-out infinite`}}/>
+          ))}
+        </div>
+        <div style={{padding:"6px 10px",display:"flex",flexDirection:"column",gap:5}}>
+          {[["#FFE600","Impact","YEAH C'EST DINGUE 🔥"],["rgba(255,255,255,.88)","DM Sans","attends de voir la suite..."],["#34d399","DM Sans","ça va tout changer 🚀"]].map(([color,font,text],i)=>(
+            <div key={i} style={{padding:"4px 8px",borderRadius:5,background:i===0?"transparent":"rgba(0,0,0,.45)",textAlign:"center",fontFamily:font,fontSize:10,fontWeight:i===0?900:600,color,textShadow:i===0?"1px 1px 0 #000":undefined,animation:`subtitlePop .4s ${i*.12}s both`}}>{text}</div>
+          ))}
+        </div>
+      </div>
+      <div style={{position:"absolute",top:0,left:0,right:0,height:"38%",background:"linear-gradient(180deg,rgba(255,255,255,.045),transparent)",borderRadius:"36px 36px 0 0",pointerEvents:"none"}}/>
+    </div>
+  );
+};
+
+
 const LoginPage=({onAuth,onAdmin,goSignup})=>{
   const [email,setEmail]=useState("");
   const [pw,setPw]=useState("");
@@ -612,47 +899,53 @@ const LoginPage=({onAuth,onAdmin,goSignup})=>{
     setTimeout(()=>{setLoading(false);onAuth({name:email.split("@")[0],email,plan:"Free",isNew:false});},1200);
   };
   return(
-    <div style={{minHeight:"100vh",display:"flex",background:T.bg}} className="mobile-col page">
-      <div className="hide-mobile" style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:60,background:`linear-gradient(160deg,${T.bg2},${T.bg})`,borderRight:`1px solid ${T.border}`,position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",top:"8%",left:"12%",width:280,height:280,borderRadius:"50%",background:`radial-gradient(${T.acc}12,transparent 70%)`,filter:"blur(50px)"}}/>
-        <div style={{textAlign:"center",position:"relative",zIndex:1,maxWidth:380}}>
-          <div style={{width:64,height:64,borderRadius:20,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,margin:"0 auto 22px",animation:"glow 3s infinite"}}>✦</div>
-          <div style={{fontWeight:900,fontSize:34,marginBottom:10,letterSpacing:"-.03em"}}>SubCraft</div>
-          <div style={{color:T.muted,fontSize:15,lineHeight:1.75,marginBottom:32}}>Content de te revoir ! Tes projets t'attendent.</div>
-          {[["🎬","47k vidéos générées ce mois"],["⭐","4.9/5 note moyenne utilisateurs"],["⚡","Transcription en moins de 10s"]].map(([ic,txt],i)=>(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:12,background:T.surf,borderRadius:12,padding:"11px 16px",border:`1px solid ${T.border}`,textAlign:"left",fontSize:13,marginBottom:8}}>
-              <span style={{fontSize:18}}>{ic}</span>{txt}
-            </div>
-          ))}
-          <div style={{marginTop:20,fontSize:11,color:T.dim,padding:"8px 12px",borderRadius:8,background:T.surf,border:`1px solid ${T.border}`}}>
-            🔐 Admin: <span style={{fontFamily:"JetBrains Mono",color:T.acc}}>admin@subcraftai.com / admin123</span>
+    <div style={{minHeight:"100vh",display:"flex",background:T.bg,position:"relative",overflow:"hidden"}} className="mobile-col page">
+      <AuroraBg subtle/>
+      <Cursor/>
+      {/* LEFT PANEL */}
+      <div className="hide-mobile" style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:60,position:"relative",zIndex:1}}>
+        <div style={{textAlign:"center",maxWidth:400}}>
+          <div style={{width:72,height:72,borderRadius:22,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,margin:"0 auto 28px",boxShadow:`0 0 60px ${T.accGlow}`,animation:"glow 3s infinite"}}>✦</div>
+          <div className="syne" style={{fontWeight:800,fontSize:38,marginBottom:12,letterSpacing:"-.04em"}} >
+            <span className="grad-text-chrome">SubCraft</span>
+          </div>
+          <div style={{color:T.muted,fontSize:15,lineHeight:1.75,marginBottom:36}}>Content de te revoir !<br/>Tes projets t'attendent.</div>
+          <Phone3D/>
+          <div style={{marginTop:24,padding:"10px 16px",borderRadius:12,background:"rgba(91,108,255,.06)",border:"1px solid rgba(91,108,255,.15)",fontSize:11,color:T.muted}}>
+            🔐 Admin: <span className="mono" style={{color:T.acc}}>admin@subcraftai.com / admin123</span>
           </div>
         </div>
       </div>
-      <div style={{width:"100%",maxWidth:480,display:"flex",alignItems:"center",justifyContent:"center",padding:48}} className="mobile-p">
-        <div style={{width:"100%",maxWidth:380,animation:"fadeUp .5s ease"}}>
-          <div style={{fontWeight:900,fontSize:28,marginBottom:4}}>Content de te revoir 👋</div>
-          <div style={{color:T.muted,fontSize:14,marginBottom:24}}>Connecte-toi pour accéder à tes projets.</div>
-          <GoogleBtn onClick={()=>onAuth({name:"Google User",email:"user@gmail.com",plan:"Free",isNew:false})}/>
+      {/* RIGHT — FORM */}
+      <div style={{width:"100%",maxWidth:480,display:"flex",alignItems:"center",justifyContent:"center",padding:48,position:"relative",zIndex:1,borderLeft:"1px solid rgba(255,255,255,.04)"}} className="mobile-p">
+        <div style={{width:"100%",maxWidth:380}}>
+          <div className="fu syne" style={{fontWeight:800,fontSize:30,marginBottom:6,letterSpacing:"-.04em"}}>Bon retour 👋</div>
+          <div className="fu" style={{color:T.muted,fontSize:14,marginBottom:28,animationDelay:".04s"}}>Connecte-toi pour accéder à tes projets.</div>
+          <div className="fu" style={{animationDelay:".06s"}}>
+            <GoogleBtn onClick={()=>onAuth({name:"Google User",email:"user@gmail.com",plan:"Free",isNew:false})}/>
+          </div>
           <Divider label="ou avec email"/>
-          <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:16}}>
+          <div className="fu" style={{display:"flex",flexDirection:"column",gap:12,marginBottom:16,animationDelay:".1s"}}>
             <Input label="Email" value={email} onChange={setEmail} placeholder="ton@email.com" type="email" icon="📧" required/>
             <Input label="Mot de passe" value={pw} onChange={setPw} placeholder="••••••••" type="password" icon="🔒" required/>
           </div>
-          {err&&<div style={{padding:"9px 14px",borderRadius:8,background:`${T.pink}15`,border:`1px solid ${T.pink}30`,color:T.pink,fontSize:13,marginBottom:12}}>{err}</div>}
-          <Btn full onClick={handle} loading={loading} style={{marginBottom:12,height:46}}>Se connecter →</Btn>
-          <div style={{textAlign:"center",marginBottom:12}}>
-            <button onClick={()=>notify("Email de récupération envoyé ! 📬","success")} style={{background:"none",border:"none",color:T.muted,fontSize:12,cursor:"pointer"}}>Mot de passe oublié ?</button>
+          {err&&<div className="fu" style={{padding:"9px 14px",borderRadius:10,background:"rgba(232,57,112,.08)",border:"1px solid rgba(232,57,112,.2)",color:T.pink,fontSize:13,marginBottom:12}}>{err}</div>}
+          <div className="fu" style={{animationDelay:".14s"}}>
+            <Btn full onClick={handle} loading={loading} style={{marginBottom:12,height:48,background:T.grad,boxShadow:`0 8px 32px ${T.accGlow}`,fontSize:15,borderRadius:14}} className="shimmer-btn">Se connecter →</Btn>
           </div>
-          <div style={{textAlign:"center",fontSize:13,color:T.muted,padding:"12px",borderRadius:10,background:T.surf,border:`1px solid ${T.border}`}}>
+          <div style={{textAlign:"center",marginBottom:14}}>
+            <button onClick={()=>notify("Email de récupération envoyé ! 📬","success")} style={{background:"none",border:"none",color:T.muted,fontSize:12,cursor:"pointer",transition:"color .15s"}} onMouseEnter={e=>e.currentTarget.style.color=T.text} onMouseLeave={e=>e.currentTarget.style.color=T.muted}>Mot de passe oublié ?</button>
+          </div>
+          <div style={{textAlign:"center",fontSize:13,color:T.muted,padding:"14px",borderRadius:12,background:T.surf,border:"1px solid rgba(255,255,255,.06)"}}>
             Pas encore de compte ?{" "}
-            <button onClick={goSignup} style={{background:"none",border:"none",color:T.acc,cursor:"pointer",fontWeight:800,fontSize:13}}>Créer un compte gratuit →</button>
+            <button onClick={goSignup} style={{background:"none",border:"none",color:T.acc,cursor:"pointer",fontWeight:700,fontSize:13,transition:"color .15s"}} onMouseEnter={e=>e.currentTarget.style.color=T.accH} onMouseLeave={e=>e.currentTarget.style.color=T.acc}>Créer un compte gratuit →</button>
           </div>
         </div>
       </div>
     </div>
   );
 };
+
 
 const SignupPage=({onAuth,goLogin})=>{
   const [name,setName]=useState("");
@@ -667,10 +960,7 @@ const SignupPage=({onAuth,goLogin})=>{
   const strength=pwLen<4?0:pwLen<8?1:/[A-Z]/.test(pw)&&/[0-9]/.test(pw)?3:2;
   const sColors=["",T.pink,T.yellow,T.green];
   const sLabels=["","Faible","Moyen","Fort 💪"];
-  const next=()=>{
-    if(!name||!email){setErr("Remplis ton nom et email.");return;}
-    setErr("");setStep(2);
-  };
+  const next=()=>{if(!name||!email){setErr("Remplis ton nom et email.");return;}setErr("");setStep(2);};
   const handle=()=>{
     if(!pw||pw.length<8){setErr("Mot de passe trop court (8 min).");return;}
     if(pw!==pw2){setErr("Les mots de passe ne correspondent pas.");return;}
@@ -679,25 +969,30 @@ const SignupPage=({onAuth,goLogin})=>{
     setTimeout(()=>{setLoading(false);onAuth({name,email,plan:"Free",isNew:true});},1400);
   };
   return(
-    <div style={{minHeight:"100vh",display:"flex",background:T.bg}} className="mobile-col page">
-      <div className="hide-mobile" style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:60,background:`linear-gradient(160deg,${T.bg2},${T.bg})`,borderRight:`1px solid ${T.border}`,position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",bottom:"15%",right:"10%",width:200,height:200,borderRadius:"50%",background:`radial-gradient(${T.pink}10,transparent 70%)`,filter:"blur(40px)"}}/>
-        <div style={{textAlign:"center",position:"relative",zIndex:1,maxWidth:380}}>
-          <div style={{width:64,height:64,borderRadius:20,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,margin:"0 auto 22px",animation:"glow 3s infinite"}}>✦</div>
-          <div style={{fontWeight:900,fontSize:34,marginBottom:10}}>SubCraft</div>
-          <div style={{color:T.muted,fontSize:15,lineHeight:1.75,marginBottom:32}}>Rejoins 10 000+ créateurs qui font des sous-titres viraux.</div>
-          {["⚡ Transcription en moins de 10 secondes","🎨 10+ styles professionnels clés en main","🌍 Traduction automatique en 12 langues","😀 Emojis IA pour booster l'engagement","🎁 1 mois gratuit en invitant un ami"].map((f,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:12,background:T.surf,borderRadius:12,padding:"11px 16px",border:`1px solid ${T.border}`,textAlign:"left",fontSize:13,marginBottom:8}}>{f}</div>
-          ))}
+    <div style={{minHeight:"100vh",display:"flex",background:T.bg,position:"relative",overflow:"hidden"}} className="mobile-col page">
+      <AuroraBg subtle/>
+      <Cursor/>
+      {/* LEFT */}
+      <div className="hide-mobile" style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:60,position:"relative",zIndex:1}}>
+        <div style={{textAlign:"center",maxWidth:400}}>
+          <div style={{width:72,height:72,borderRadius:22,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,margin:"0 auto 28px",boxShadow:`0 0 60px ${T.accGlow}`,animation:"glow 3s infinite"}}>✦</div>
+          <div className="syne" style={{fontWeight:800,fontSize:36,marginBottom:12,letterSpacing:"-.04em"}}><span className="grad-text-chrome">SubCraft</span></div>
+          <div style={{color:T.muted,fontSize:15,lineHeight:1.75,marginBottom:36}}>Rejoins 10 000+ créateurs<br/>qui font des sous-titres viraux.</div>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {["⚡ Transcription en moins de 10 secondes","🎨 24 styles professionnels clés en main","🌍 Traduction automatique en 12 langues","🤖 Emojis IA pour booster l'engagement","🎁 1 mois gratuit en invitant un ami"].map((f,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 16px",borderRadius:12,background:T.surf,border:"1px solid rgba(255,255,255,.06)",textAlign:"left",fontSize:13,animation:`fadeUp .4s ${i*.06}s both`}}>{f}</div>
+            ))}
+          </div>
         </div>
       </div>
-      <div style={{width:"100%",maxWidth:480,display:"flex",alignItems:"center",justifyContent:"center",padding:48}} className="mobile-p">
-        <div style={{width:"100%",maxWidth:380,animation:"fadeUp .5s ease"}}>
-          <div style={{fontWeight:900,fontSize:28,marginBottom:4}}>Crée ton compte 🚀</div>
-          <div style={{color:T.muted,fontSize:14,marginBottom:20}}>Gratuit · Sans carte bancaire · 3 vidéos offertes</div>
+      {/* RIGHT */}
+      <div style={{width:"100%",maxWidth:480,display:"flex",alignItems:"center",justifyContent:"center",padding:48,position:"relative",zIndex:1,borderLeft:"1px solid rgba(255,255,255,.04)"}} className="mobile-p">
+        <div style={{width:"100%",maxWidth:380}}>
+          <div className="fu syne" style={{fontWeight:800,fontSize:30,marginBottom:6,letterSpacing:"-.04em"}}>Crée ton compte 🚀</div>
+          <div className="fu" style={{color:T.muted,fontSize:14,marginBottom:20,animationDelay:".04s"}}>Gratuit · Sans carte bancaire · 3 vidéos offertes</div>
           <div style={{display:"flex",gap:4,marginBottom:20,alignItems:"center"}}>
-            {[1,2].map(s=><div key={s} style={{flex:1,height:3,borderRadius:2,background:step>=s?T.acc:T.border,transition:"background .3s"}}/>)}
-            <span style={{fontSize:10,color:T.muted,marginLeft:6,flexShrink:0}}>Étape {step}/2</span>
+            {[1,2].map(s=><div key={s} style={{flex:1,height:2,borderRadius:2,background:step>=s?T.acc:"rgba(255,255,255,.08)",transition:"background .35s"}}/>)}
+            <span style={{fontSize:10,color:T.muted,marginLeft:8,flexShrink:0}}>Étape {step}/2</span>
           </div>
           <GoogleBtn onClick={()=>onAuth({name:"Google User",email:"user@gmail.com",plan:"Free",isNew:true})}/>
           <Divider label="ou avec email"/>
@@ -705,39 +1000,39 @@ const SignupPage=({onAuth,goLogin})=>{
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
               <Input label="Nom complet" value={name} onChange={setName} placeholder="Marie Dupont" icon="👤" required/>
               <Input label="Email" value={email} onChange={setEmail} placeholder="ton@email.com" type="email" icon="📧" required/>
-              {err&&<div style={{padding:"9px 14px",borderRadius:8,background:`${T.pink}15`,border:`1px solid ${T.pink}30`,color:T.pink,fontSize:13}}>{err}</div>}
-              <Btn full onClick={next} style={{height:46}}>Continuer →</Btn>
+              {err&&<div style={{padding:"9px 14px",borderRadius:10,background:"rgba(232,57,112,.08)",border:"1px solid rgba(232,57,112,.2)",color:T.pink,fontSize:13}}>{err}</div>}
+              <Btn full onClick={next} style={{height:48,borderRadius:14,background:T.grad,boxShadow:`0 8px 32px ${T.accGlow}`}} className="shimmer-btn">Continuer →</Btn>
             </div>
           )}
           {step===2&&(
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
-              <div style={{padding:"8px 12px",borderRadius:8,background:`${T.acc}08`,border:`1px solid ${T.acc}20`,fontSize:12,display:"flex",gap:8,alignItems:"center"}}>
-                <span>📧</span><span style={{fontWeight:600,color:T.text}}>{email}</span>
+              <div style={{padding:"8px 12px",borderRadius:10,background:"rgba(91,108,255,.07)",border:"1px solid rgba(91,108,255,.18)",fontSize:12,display:"flex",gap:8,alignItems:"center"}}>
+                <span>📧</span><span style={{fontWeight:600}}>{email}</span>
                 <button onClick={()=>{setStep(1);setErr("");}} style={{background:"none",border:"none",color:T.acc,cursor:"pointer",fontSize:11,marginLeft:"auto"}}>Modifier</button>
               </div>
               <Input label="Mot de passe" value={pw} onChange={setPw} placeholder="Minimum 8 caractères" type="password" icon="🔒" required/>
               {pwLen>0&&(
                 <div>
-                  <div style={{display:"flex",gap:3,marginBottom:3}}>
-                    {[1,2,3].map(s=><div key={s} style={{flex:1,height:3,borderRadius:2,background:strength>=s?sColors[strength]:T.border,transition:"all .3s"}}/>)}
+                  <div style={{display:"flex",gap:3,marginBottom:4}}>
+                    {[1,2,3].map(s=><div key={s} style={{flex:1,height:2,borderRadius:2,background:strength>=s?sColors[strength]:"rgba(255,255,255,.08)",transition:"all .3s"}}/>)}
                   </div>
                   <div style={{fontSize:10,color:sColors[strength],fontWeight:600}}>{sLabels[strength]}</div>
                 </div>
               )}
               <Input label="Confirmer" value={pw2} onChange={setPw2} placeholder="••••••••" type="password" icon="🔑" required/>
               <div style={{display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer"}} onClick={()=>setAgree(a=>!a)}>
-                <div style={{width:18,height:18,borderRadius:4,border:`2px solid ${agree?T.acc:T.border}`,background:agree?T.acc:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1,transition:"all .15s"}}>
+                <div style={{width:18,height:18,borderRadius:5,border:`2px solid ${agree?T.acc:"rgba(255,255,255,.15)"}`,background:agree?T.acc:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1,transition:"all .2s"}}>
                   {agree&&<span style={{color:"#fff",fontSize:10,fontWeight:900}}>✓</span>}
                 </div>
                 <span style={{fontSize:12,color:T.muted,lineHeight:1.5}}>J'accepte les <span style={{color:T.acc}}>CGU</span> et la <span style={{color:T.acc}}>Politique de confidentialité</span></span>
               </div>
-              {err&&<div style={{padding:"9px 14px",borderRadius:8,background:`${T.pink}15`,border:`1px solid ${T.pink}30`,color:T.pink,fontSize:13}}>{err}</div>}
-              <Btn full onClick={handle} loading={loading} style={{height:46,background:T.grad}}>Créer mon compte gratuit 🚀</Btn>
+              {err&&<div style={{padding:"9px 14px",borderRadius:10,background:"rgba(232,57,112,.08)",border:"1px solid rgba(232,57,112,.2)",color:T.pink,fontSize:13}}>{err}</div>}
+              <Btn full onClick={handle} loading={loading} style={{height:48,borderRadius:14,background:T.grad,boxShadow:`0 8px 32px ${T.accGlow}`}} className="shimmer-btn">Créer mon compte gratuit 🚀</Btn>
             </div>
           )}
-          <div style={{textAlign:"center",fontSize:13,color:T.muted,padding:"12px",borderRadius:10,background:T.surf,border:`1px solid ${T.border}`,marginTop:12}}>
+          <div style={{textAlign:"center",fontSize:13,color:T.muted,padding:"14px",borderRadius:12,background:T.surf,border:"1px solid rgba(255,255,255,.06)",marginTop:12}}>
             Déjà inscrit ?{" "}
-            <button onClick={goLogin} style={{background:"none",border:"none",color:T.acc,cursor:"pointer",fontWeight:800,fontSize:13}}>Se connecter →</button>
+            <button onClick={goLogin} style={{background:"none",border:"none",color:T.acc,cursor:"pointer",fontWeight:700,fontSize:13}}>Se connecter →</button>
           </div>
         </div>
       </div>
@@ -745,435 +1040,310 @@ const SignupPage=({onAuth,goLogin})=>{
   );
 };
 
-/* ══════════════════════════════════════════════
-   PAGE: LANDING
-══════════════════════════════════════════════ */
+
+/* ══ LANDING PAGE ══ */
 const LandingPage=({onCTA,setPage})=>{
-  const [hovDemo,setHovDemo]=useState(null);
-  const [billingY,setBillingY]=useState(true);
   const [hovFeat,setHovFeat]=useState(null);
+  const [billingY,setBillingY]=useState(true);
   const [faqOpen,setFaqOpen]=useState(null);
   const [exitPopup,setExitPopup]=useState(false);
   const [exitDone,setExitDone]=useState(false);
+  const [mouse,setMouse]=useState({x:0,y:0});
+  const heroRef=useRef(null);
+
   useEffect(()=>{
-    const onLeave=(e)=>{if(!exitDone&&e.clientY<=6){setExitPopup(true);}};
+    const onLeave=(e)=>{if(!exitDone&&e.clientY<=6)setExitPopup(true);};
     setTimeout(()=>document.addEventListener("mouseleave",onLeave),3000);
     return()=>document.removeEventListener("mouseleave",onLeave);
   },[exitDone]);
 
+  useEffect(()=>{
+    const mv=(e)=>{if(!heroRef.current)return;const r=heroRef.current.getBoundingClientRect();setMouse({x:(e.clientX-r.left)/r.width-.5,y:(e.clientY-r.top)/r.height-.5});};
+    window.addEventListener("mousemove",mv);return()=>window.removeEventListener("mousemove",mv);
+  },[]);
+
   const feats=[
-    {icon:"⚡",title:"Transcription Whisper AI",desc:"Sous-titres générés en moins de 10 secondes avec une précision de 99%.",color:T.yellow},
-    {icon:"📱",title:"Optimisé Shorts / Reels",desc:"Formats verticaux 9:16 parfaits pour TikTok, Instagram Reels et YouTube Shorts.",color:T.pink},
-    {icon:"🎨",title:"10 Styles Visuels Pro",desc:"Bold Yellow, Neon Green, Minimal, Retro, Dark Card — un look pour chaque vibe.",color:T.cyan},
-    {icon:"🌍",title:"12 Langues Supportées",desc:"Traduit automatiquement tes sous-titres dans n'importe quelle langue du monde.",color:T.green},
-    {icon:"😀",title:"Emojis IA Automatiques",desc:"Claude AI analyse le contexte et insère les emojis parfaits pour booster l'engagement.",color:T.acc},
-    {icon:"⚙️",title:"30+ Effets d'Animation",desc:"Popup, Wave, Shake, Highlight, Typewriter, Zoom — des effets qui retiennent l'attention.",color:T.purple},
+    {icon:"⚡",title:"Transcription Whisper AI",desc:"Sous-titres en moins de 10 secondes — précision 99%.",color:T.yellow},
+    {icon:"📱",title:"Optimisé Shorts & Reels",desc:"Formats verticaux 9:16 parfaits pour TikTok, Reels et Shorts.",color:T.pink},
+    {icon:"🎨",title:"24 Styles Visuels Pro",desc:"MrBeast, Squeezie, Neon, Horror — un style pour chaque vibe.",color:T.cyan},
+    {icon:"🌍",title:"12 Langues Supportées",desc:"Traduction automatique de tes sous-titres en un clic.",color:T.green},
+    {icon:"🤖",title:"Emojis IA Automatiques",desc:"Claude AI insère les emojis parfaits pour booster l'engagement.",color:T.acc},
+    {icon:"✨",title:"30+ Effets d'Animation",desc:"Wave, Shake, Typewriter, Zoom — des effets qui retiennent l'attention.",color:T.purple},
   ];
 
   return(
     <div style={{background:T.bg,minHeight:"100vh",position:"relative",overflow:"hidden"}}>
-      {/* BG blobs */}
-      <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0}}>
-        <div style={{position:"absolute",top:"-5%",left:"5%",width:700,height:700,borderRadius:"50%",background:`radial-gradient(${T.acc}10,transparent 70%)`,filter:"blur(80px)"}}/>
-        <div style={{position:"absolute",top:"40%",right:"-5%",width:500,height:500,borderRadius:"50%",background:`radial-gradient(${T.pink}07,transparent 70%)`,filter:"blur(70px)"}}/>
-        <div style={{position:"absolute",bottom:"5%",left:"25%",width:400,height:400,borderRadius:"50%",background:`radial-gradient(${T.purple}07,transparent 70%)`,filter:"blur(60px)"}}/>
-      </div>
+      <AuroraBg/>
+      <Cursor/>
+
       {/* NAV */}
-      <nav style={{position:"sticky",top:0,zIndex:100,padding:"12px 40px",borderBottom:`1px solid ${T.border}20`,backdropFilter:"blur(24px)",background:"rgba(8,11,20,.88)",display:"flex",alignItems:"center",gap:14}} className="mobile-p">
-        <div style={{display:"flex",alignItems:"center",gap:9,flexShrink:0}}>
-          <div style={{width:32,height:32,borderRadius:9,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>✦</div>
-          <span style={{fontWeight:900,fontSize:18,letterSpacing:"-.02em"}}>SubCraft</span>
-          <Tag color={T.cyan} dot>Beta</Tag>
+      <nav style={{position:"sticky",top:0,zIndex:100,height:62,padding:"0 48px",display:"flex",alignItems:"center",gap:12,backdropFilter:"blur(32px)",background:"rgba(2,3,10,.82)",borderBottom:"1px solid rgba(255,255,255,.045)"}} className="mobile-p">
+        <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+          <div style={{width:34,height:34,borderRadius:10,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:900,boxShadow:`0 0 22px ${T.accGlow}`}}>✦</div>
+          <span className="syne grad-text-chrome" style={{fontWeight:800,fontSize:17,letterSpacing:"-.02em"}}>SubCraft</span>
+          <span style={{fontSize:9,padding:"2px 8px",borderRadius:20,background:"rgba(52,211,153,.1)",border:"1px solid rgba(52,211,153,.25)",color:T.green,fontWeight:800,letterSpacing:".08em"}}>BETA</span>
         </div>
-        <div style={{flex:1,display:"flex",justifyContent:"center",gap:2}} className="hide-mobile">
-          {["Fonctionnalités","Comment","Exemples","Avis","Tarifs"].map(l=>(
-            <button key={l} onClick={()=>document.getElementById(l.toLowerCase())?.scrollIntoView({behavior:"smooth"})} style={{padding:"7px 14px",borderRadius:8,background:"transparent",border:"none",color:T.muted,fontSize:13,fontWeight:500,cursor:"pointer",transition:"color .15s"}} onMouseEnter={e=>e.currentTarget.style.color=T.text} onMouseLeave={e=>e.currentTarget.style.color=T.muted}>{l}</button>
+        <div style={{flex:1,display:"flex",justifyContent:"center",gap:1}} className="hide-mobile">
+          {["Fonctionnalités","Comment","Exemples","Tarifs"].map(l=>(
+            <button key={l} onClick={()=>document.getElementById(l.toLowerCase())?.scrollIntoView({behavior:"smooth"})} style={{padding:"7px 16px",borderRadius:8,background:"transparent",border:"none",color:T.muted,fontSize:13,fontWeight:500,cursor:"pointer",transition:"color .15s"}} onMouseEnter={e=>e.currentTarget.style.color=T.text} onMouseLeave={e=>e.currentTarget.style.color=T.muted}>{l}</button>
           ))}
         </div>
         <div style={{display:"flex",gap:8,marginLeft:"auto",alignItems:"center"}}>
-          <button onClick={()=>setPage("referral")} className="hide-mobile" style={{display:"flex",alignItems:"center",gap:7,padding:"6px 14px",borderRadius:100,background:`${T.green}10`,border:`1px solid ${T.green}25`,color:T.green,fontSize:12,fontWeight:700,cursor:"pointer",transition:"all .18s",animation:"breathe 3s ease infinite"}} onMouseEnter={e=>e.currentTarget.style.background=`${T.green}20`} onMouseLeave={e=>e.currentTarget.style.background=`${T.green}10`}>
-            <span style={{fontSize:14}}>🎁</span> Parrainage — Gagne 1 mois gratuit
-          </button>
-          <Btn v="ghost" size="sm" onClick={()=>setPage("auth")} className="hide-mobile">Se connecter</Btn>
-          <Btn size="sm" onClick={onCTA} style={{background:T.grad}}>Commencer gratuit →</Btn>
+          <button onClick={()=>setPage("referral")} className="hide-mobile" style={{display:"flex",alignItems:"center",gap:6,padding:"6px 14px",borderRadius:100,background:"rgba(52,211,153,.07)",border:"1px solid rgba(52,211,153,.2)",color:T.green,fontSize:12,fontWeight:600,cursor:"pointer",transition:"all .2s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(52,211,153,.14)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(52,211,153,.07)"}>🎁 Parrainage</button>
+          <button onClick={()=>setPage("auth")} className="hide-mobile" style={{padding:"7px 18px",borderRadius:10,background:"transparent",border:"1px solid rgba(255,255,255,.1)",color:T.muted,fontSize:13,cursor:"pointer",transition:"all .2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.2)";e.currentTarget.style.color=T.text;}} onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.1)";e.currentTarget.style.color=T.muted;}}>Se connecter</button>
+          <button onClick={onCTA} className="shimmer-btn" style={{padding:"8px 20px",borderRadius:11,background:T.grad,border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:`0 0 28px ${T.accGlow}`,transition:"all .2s"}} onMouseEnter={e=>e.currentTarget.style.transform="scale(1.04)"} onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}>Commencer gratuit →</button>
         </div>
       </nav>
 
       {/* HERO */}
-      <div id="fonctionnalités" style={{position:"relative",zIndex:1,textAlign:"center",padding:"90px 24px 70px",maxWidth:920,margin:"0 auto"}}>
-        <div className="fu" style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 16px",borderRadius:100,background:`${T.acc}12`,border:`1px solid ${T.acc}28`,marginBottom:28}}>
-          <span style={{width:6,height:6,borderRadius:"50%",background:T.green,animation:"pulseDot 2s infinite"}}/>
-          <span style={{fontSize:12,color:T.muted}}>Propulsé par Whisper AI + Claude — Gratuit pendant la bêta</span>
+      <div ref={heroRef} id="fonctionnalités" style={{position:"relative",zIndex:1,display:"flex",alignItems:"center",padding:"88px 80px 72px",maxWidth:1360,margin:"0 auto",gap:80,minHeight:"88vh"}} className="mobile-col mobile-p">
+        <div style={{flex:1,minWidth:0}}>
+          <div className="fu" style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 14px",borderRadius:100,background:"rgba(91,108,255,.08)",border:"1px solid rgba(91,108,255,.2)",marginBottom:32}}>
+            <span style={{width:7,height:7,borderRadius:"50%",background:T.green,animation:"pulseDotGreen 2s infinite"}}/>
+            <span style={{fontSize:11,color:T.muted,letterSpacing:".05em",fontWeight:500}}>PROPULSÉ PAR WHISPER AI + CLAUDE · BÊTA GRATUITE</span>
+          </div>
+          <h1 className="fu syne" style={{fontWeight:800,fontSize:"clamp(46px,5.8vw,82px)",lineHeight:1.02,letterSpacing:"-.05em",marginBottom:24,animationDelay:".07s"}}>
+            <span style={{display:"block"}}>Des sous-titres</span>
+            <span className="grad-text" style={{display:"block"}}>qui font virer</span>
+            <span style={{display:"block"}}>viral 🚀</span>
+          </h1>
+          <p className="fu" style={{fontSize:17,color:T.muted,maxWidth:500,lineHeight:1.82,marginBottom:44,animationDelay:".13s",fontWeight:400}}>
+            Upload ta vidéo — l'IA transcrit en <strong style={{color:T.text,fontWeight:600}}>10 secondes</strong>. Choisis parmi <strong style={{color:T.text,fontWeight:600}}>24 styles pro</strong>. Exporte en 1 clic.
+          </p>
+          <div className="fu" style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:52,animationDelay:".18s"}}>
+            <button onClick={onCTA} className="shimmer-btn" style={{display:"flex",alignItems:"center",gap:10,padding:"15px 30px",borderRadius:15,background:T.grad,border:"none",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:`0 8px 40px ${T.accGlow},inset 0 1px 0 rgba(255,255,255,.1)`,transition:"all .25s",letterSpacing:"-.02em"}} onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px) scale(1.02)"} onMouseLeave={e=>e.currentTarget.style.transform="none"}>
+              <span>✦</span> Générer mes sous-titres — Gratuit
+            </button>
+            <button onClick={()=>document.getElementById("exemples")?.scrollIntoView({behavior:"smooth"})} style={{display:"flex",alignItems:"center",gap:8,padding:"15px 26px",borderRadius:15,background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.1)",color:T.text,fontSize:15,cursor:"pointer",transition:"all .25s",backdropFilter:"blur(12px)"}} onMouseEnter={e=>e.currentTarget.style.borderColor="rgba(255,255,255,.22)"} onMouseLeave={e=>e.currentTarget.style.borderColor="rgba(255,255,255,.1)"}>
+              ▶ Voir les exemples
+            </button>
+          </div>
+          <div className="fu" style={{display:"flex",gap:40,animationDelay:".22s",flexWrap:"wrap"}}>
+            {[["10k+","Créateurs actifs"],["99%","Précision Whisper"],["< 10s","Génération"],["24","Styles viraux"]].map(([v,l])=>(
+              <div key={l}>
+                <div className="syne mono" style={{fontWeight:800,fontSize:26,background:T.grad,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:1.1}}>{v}</div>
+                <div style={{fontSize:11,color:T.muted,marginTop:4,letterSpacing:".03em"}}>{l}</div>
+              </div>
+            ))}
+          </div>
         </div>
-        <h1 className="fu" style={{fontWeight:900,fontSize:"clamp(42px,7vw,80px)",lineHeight:1.04,letterSpacing:"-.04em",marginBottom:22,animationDelay:".05s"}}>
-          Des sous-titres{" "}
-          <span style={{background:T.grad,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>magiques</span>
-          {" "}pour tes Shorts 🚀
-        </h1>
-        <p className="fu" style={{fontSize:18,color:T.muted,maxWidth:540,margin:"0 auto 44px",lineHeight:1.75,fontWeight:300,animationDelay:".1s"}}>
-          Upload ta vidéo, l'IA transcrit en 10s, tu personnalises avec des effets pro, tu exportes en 1 clic.
-        </p>
-        <div className="fu" style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap",animationDelay:".15s"}}>
-          <Btn size="xl" onClick={onCTA} style={{background:T.grad,animation:"glow 3s infinite"}}>✦ Générer mes sous-titres — Gratuit</Btn>
-          <Btn size="xl" v="secondary" onClick={()=>document.getElementById("exemples")?.scrollIntoView({behavior:"smooth"})}>▶ Voir les exemples</Btn>
+        {/* 3D Phone */}
+        <div className="fu hide-mobile" style={{flexShrink:0,animationDelay:".09s",position:"relative"}}>
+          <div style={{transform:`perspective(1400px) rotateY(${mouse.x*8}deg) rotateX(${-mouse.y*5}deg)`,transition:"transform .12s ease-out",transformStyle:"preserve-3d"}}>
+            <Phone3D/>
+            <div style={{position:"absolute",top:"50%",left:"50%",width:0,height:0}}>
+              <div style={{position:"absolute",width:46,height:46,borderRadius:13,background:"rgba(91,108,255,.12)",border:"1px solid rgba(91,108,255,.3)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,animation:"orbit 8s linear infinite",boxShadow:"0 0 24px rgba(91,108,255,.28)"}}>⚡</div>
+              <div style={{position:"absolute",width:40,height:40,borderRadius:11,background:"rgba(168,85,247,.12)",border:"1px solid rgba(168,85,247,.3)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,animation:"orbit2 13s linear infinite"}}>🎨</div>
+              <div style={{position:"absolute",width:36,height:36,borderRadius:10,background:"rgba(52,211,153,.1)",border:"1px solid rgba(52,211,153,.28)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,animation:"orbit3 6.5s linear infinite"}}>✓</div>
+            </div>
+          </div>
+          <div style={{position:"absolute",bottom:-50,left:"50%",transform:"translateX(-50%)",width:220,height:60,background:`radial-gradient(${T.acc}35,transparent 70%)`,filter:"blur(22px)",pointerEvents:"none"}}/>
         </div>
-        <div className="fu" style={{display:"flex",gap:32,justifyContent:"center",marginTop:44,flexWrap:"wrap",animationDelay:".2s"}}>
-          {[["10k+","Créateurs"],["99%","Précision"],["< 10s","Génération"],["12","Langues"]].map(([v,l])=>(
-            <div key={l} style={{textAlign:"center"}}>
-              <div style={{fontFamily:"JetBrains Mono",fontWeight:700,fontSize:22,color:T.acc}}>{v}</div>
-              <div style={{fontSize:12,color:T.muted}}>{l}</div>
+      </div>
+
+      {/* MARQUEE LOGOS */}
+      <div style={{position:"relative",zIndex:1,borderTop:"1px solid rgba(255,255,255,.04)",borderBottom:"1px solid rgba(255,255,255,.04)",padding:"18px 0",overflow:"hidden",marginBottom:120}}>
+        <div style={{display:"flex",width:"max-content",animation:"marquee 18s linear infinite"}}>
+          {[...["TikTok","YouTube Shorts","Instagram Reels","LinkedIn","Twitter/X","Podcast","Twitch","Snapchat"],...["TikTok","YouTube Shorts","Instagram Reels","LinkedIn","Twitter/X","Podcast","Twitch","Snapchat"]].map((p,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"0 28px",flexShrink:0,color:T.muted,fontSize:13,fontWeight:500,borderRight:"1px solid rgba(255,255,255,.04)"}}>
+              <span style={{width:5,height:5,borderRadius:"50%",background:T.muted,opacity:.3}}/>
+              {p}
             </div>
           ))}
         </div>
       </div>
 
-      {/* BEFORE / AFTER */}
-      <div style={{position:"relative",zIndex:1,maxWidth:860,margin:"0 auto 100px",padding:"0 24px"}}>
-        <div style={{textAlign:"center",marginBottom:36}}>
-          <Tag color={T.green}>Avant / Après</Tag>
-          <h2 style={{fontWeight:800,fontSize:36,marginTop:12,letterSpacing:"-.02em"}}>Vois la différence en direct</h2>
+      {/* FEATURES */}
+      <div id="fonctionnalités" style={{position:"relative",zIndex:1,maxWidth:1160,margin:"0 auto 140px",padding:"0 48px"}} className="mobile-p">
+        <div style={{textAlign:"center",marginBottom:72}}>
+          <span className="fu" style={{display:"inline-block",fontSize:10,padding:"3px 14px",borderRadius:100,background:"rgba(168,85,247,.08)",border:"1px solid rgba(168,85,247,.2)",color:T.purple,fontWeight:700,letterSpacing:".1em",marginBottom:20}}>FONCTIONNALITÉS</span>
+          <h2 className="fu syne" style={{fontWeight:800,fontSize:"clamp(30px,4vw,54px)",letterSpacing:"-.04em",marginBottom:14,animationDelay:".05s"}}>
+            Tout pour <span className="grad-text">exploser tes vues</span>
+          </h2>
+          <p className="fu" style={{fontSize:15,color:T.muted,maxWidth:460,margin:"0 auto",lineHeight:1.75,animationDelay:".1s"}}>Des outils pensés pour les créateurs qui veulent aller vite et aller loin.</p>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 48px 1fr",gap:16,alignItems:"stretch"}} className="mobile-grid1">
-          {[
-            {label:"AVANT",icon:"😴",accent:T.muted,lines:[{t:"✗",l:"Vidéo muette ignorée"},{t:"✗",l:"Engagement très faible"},{t:"✗",l:"Inaccessible aux sourds"},{t:"✗",l:"Zéro sous-titres"}]},
-            null,
-            {label:"APRÈS",icon:"🔥",accent:T.green,lines:[{t:"✓",l:"Sous-titres stylisés"},{t:"✓",l:"Emojis automatiques IA"},{t:"✓",l:"Traduction 12 langues"},{t:"✓",l:"Export 1 clic"}]},
-          ].map((item,i)=>{
-            if(!item) return(
-              <div key="arr" style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <div style={{width:44,height:44,borderRadius:"50%",background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,animation:"glow 3s infinite",flexShrink:0}}>→</div>
-              </div>
-            );
-            return(
-              <div key={item.label} style={{borderRadius:16,border:`2px solid ${item.accent}33`,background:T.surf,overflow:"hidden"}}>
-                <div style={{padding:"13px 16px",borderBottom:`1px solid ${T.border}`,display:"flex",gap:10,alignItems:"center"}}>
-                  <span style={{fontSize:22}}>{item.icon}</span>
-                  <div><div style={{fontWeight:800,fontSize:14,color:item.accent}}>{item.label}</div></div>
-                </div>
-                <div style={{height:170,background:"#040710",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
-                  <div style={{fontSize:44,opacity:.07}}>🎬</div>
-                  {item.label==="APRÈS"&&(
-                    <div style={{position:"absolute",bottom:"22%",left:"50%",transform:"translateX(-50%)",background:"#FFE600",color:"#000",fontFamily:"Impact",fontWeight:900,fontSize:13,padding:"3px 10px",textTransform:"uppercase",whiteSpace:"nowrap"}}>REGARDE ÇA 😱</div>
-                  )}
-                </div>
-                <div style={{padding:"12px 16px"}}>
-                  {item.lines.map((l,li)=>(
-                    <div key={li} style={{display:"flex",gap:9,fontSize:12,color:item.accent,marginBottom:5,alignItems:"center"}}>
-                      <span style={{flexShrink:0,fontWeight:700}}>{l.t}</span>{l.l}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}} className="mobile-grid1">
+          {feats.map((f,i)=>(
+            <div key={i} onMouseEnter={()=>setHovFeat(i)} onMouseLeave={()=>setHovFeat(null)} style={{padding:"28px",borderRadius:20,background:hovFeat===i?T.surf2:T.surf,border:`1px solid ${hovFeat===i?"rgba(255,255,255,.12)":"rgba(255,255,255,.055)"}`,transition:"all .3s cubic-bezier(.22,1,.36,1)",cursor:"default",position:"relative",overflow:"hidden",transform:hovFeat===i?"translateY(-4px)":"none",boxShadow:hovFeat===i?"0 20px 50px rgba(0,0,0,.4)":"none"}}>
+              {hovFeat===i&&<ParticleField count={10} color={f.color}/>}
+              <div style={{width:52,height:52,borderRadius:15,background:`${f.color}14`,border:`1px solid ${f.color}28`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,marginBottom:18,position:"relative",zIndex:1}}>{f.icon}</div>
+              <div className="syne" style={{fontWeight:700,fontSize:16,marginBottom:8,letterSpacing:"-.02em",position:"relative",zIndex:1}}>{f.title}</div>
+              <div style={{fontSize:13,color:T.muted,lineHeight:1.7,position:"relative",zIndex:1}}>{f.desc}</div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* FEATURES */}
-      <div style={{position:"relative",zIndex:1,maxWidth:1060,margin:"0 auto 100px",padding:"0 24px"}}>
-        <div style={{textAlign:"center",marginBottom:48}}>
-          <h2 style={{fontWeight:800,fontSize:40,letterSpacing:"-.02em",marginBottom:10}}>Tout ce dont tu as besoin</h2>
-          <p style={{color:T.muted,fontSize:15}}>Des outils de qualité studio, accessibles en 1 clic.</p>
+      {/* SUBTITLE SHOWCASE */}
+      <div id="exemples" style={{position:"relative",zIndex:1,maxWidth:1160,margin:"0 auto 140px",padding:"0 48px"}} className="mobile-p">
+        <div style={{textAlign:"center",marginBottom:56}}>
+          <span style={{display:"inline-block",fontSize:10,padding:"3px 14px",borderRadius:100,background:"rgba(52,211,153,.08)",border:"1px solid rgba(52,211,153,.2)",color:T.green,fontWeight:700,letterSpacing:".1em",marginBottom:20}}>24 STYLES VIRAUX</span>
+          <h2 className="syne" style={{fontWeight:800,fontSize:"clamp(28px,3.5vw,50px)",letterSpacing:"-.04em"}}>
+            Choisis ton <span style={{background:"linear-gradient(135deg,#34d399,#22d3ee)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>style signature</span>
+          </h2>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))",gap:14}} className="mobile-grid1">
-          {feats.map((f,i)=>(
-            <div key={f.title} onMouseEnter={()=>setHovFeat(i)} onMouseLeave={()=>setHovFeat(null)} style={{padding:"24px 22px",borderRadius:16,background:hovFeat===i?T.surf2:T.surf,border:`1px solid ${hovFeat===i?f.color+"44":T.border}`,transition:"all .25s",transform:hovFeat===i?"translateY(-4px)":"none",animation:`fadeUp .5s ease ${i*.07}s both`,cursor:"default"}}>
-              <div style={{fontSize:34,marginBottom:14,animation:hovFeat===i?"float 2s ease infinite":"none"}}>{f.icon}</div>
-              <div style={{fontWeight:700,fontSize:17,marginBottom:8,color:hovFeat===i?f.color:T.text}}>{f.title}</div>
-              <div style={{color:T.muted,fontSize:13,lineHeight:1.7}}>{f.desc}</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))",gap:10}}>
+          {SUBTITLE_STYLES.slice(0,12).map((s,i)=>(
+            <div key={s.id} style={{borderRadius:16,background:T.surf,border:"1px solid rgba(255,255,255,.055)",padding:"18px 14px",textAlign:"center",cursor:"default",transition:"all .3s",overflow:"hidden",position:"relative",animation:`fadeUp .4s ${i*.04}s both`}} onMouseEnter={e=>{e.currentTarget.style.background=T.surf2;e.currentTarget.style.borderColor="rgba(255,255,255,.14)";e.currentTarget.style.transform="translateY(-3px)";}} onMouseLeave={e=>{e.currentTarget.style.background=T.surf;e.currentTarget.style.borderColor="rgba(255,255,255,.055)";e.currentTarget.style.transform="none";}}>
+              <div style={{height:56,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:8}}>
+                <span style={{fontFamily:s.preview?.font||"DM Sans",fontWeight:s.preview?.weight||700,fontSize:16,color:s.preview?.color||"#fff",textShadow:s.preview?.shadow}}>{s.label.toUpperCase()}</span>
+              </div>
+              <div style={{fontSize:10,color:T.muted,fontWeight:500,letterSpacing:".04em"}}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* HOW IT WORKS */}
+      <div id="comment" style={{position:"relative",zIndex:1,maxWidth:1060,margin:"0 auto 140px",padding:"0 48px"}} className="mobile-p">
+        <div style={{textAlign:"center",marginBottom:72}}>
+          <span style={{display:"inline-block",fontSize:10,padding:"3px 14px",borderRadius:100,background:"rgba(251,191,36,.08)",border:"1px solid rgba(251,191,36,.2)",color:T.yellow,fontWeight:700,letterSpacing:".1em",marginBottom:20}}>COMMENT ÇA MARCHE</span>
+          <h2 className="syne" style={{fontWeight:800,fontSize:"clamp(28px,3.5vw,50px)",letterSpacing:"-.04em"}}>
+            De zéro à viral en <span style={{background:"linear-gradient(135deg,#ffd700,#ffa500)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>3 étapes</span>
+          </h2>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:20,position:"relative"}} className="mobile-grid1">
+          <div style={{position:"absolute",top:38,left:"17%",right:"17%",height:1,background:"linear-gradient(90deg,transparent,rgba(91,108,255,.4),rgba(168,85,247,.35),transparent)"}} className="hide-mobile"/>
+          {[{n:"01",icon:"📁",title:"Upload ta vidéo",desc:"Glisse-dépose ton MP4, MOV ou colle un lien YouTube / TikTok.",color:T.acc},{n:"02",icon:"🤖",title:"L'IA transcrit",desc:"Whisper génère tes sous-titres en 10 secondes avec une précision de 99%.",color:T.purple},{n:"03",icon:"✦",title:"Exporte en 1 clic",desc:"Choisis ton style, peaufine, puis exporte ton MP4 HD avec sous-titres incrustés.",color:T.green}].map((step,i)=>(
+            <div key={i} style={{padding:"30px 26px",borderRadius:22,background:T.surf,border:"1px solid rgba(255,255,255,.055)",position:"relative",overflow:"hidden",transition:"all .3s",animation:`fadeUp .5s ${i*.1}s both`}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.boxShadow="0 20px 50px rgba(0,0,0,.35)";}} onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";}}>
+              <ParticleField count={7} color={step.color}/>
+              <div style={{position:"relative",zIndex:1}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+                  <div style={{width:54,height:54,borderRadius:16,background:`${step.color}12`,border:`1px solid ${step.color}26`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>{step.icon}</div>
+                  <span className="syne" style={{fontSize:46,fontWeight:800,color:"rgba(255,255,255,.035)",lineHeight:1}}>{step.n}</span>
+                </div>
+                <div className="syne" style={{fontWeight:700,fontSize:17,marginBottom:10,letterSpacing:"-.025em"}}>{step.title}</div>
+                <div style={{fontSize:13,color:T.muted,lineHeight:1.72}}>{step.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* TESTIMONIALS */}
+      <div style={{position:"relative",zIndex:1,maxWidth:1160,margin:"0 auto 140px",padding:"0 48px"}} className="mobile-p">
+        <div style={{textAlign:"center",marginBottom:60}}>
+          <h2 className="syne" style={{fontWeight:800,fontSize:"clamp(26px,3vw,46px)",letterSpacing:"-.04em",marginBottom:14}}>Ils ont <span className="grad-text">déjà sauté le pas</span></h2>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:3,marginBottom:8}}>{"★★★★★".split("").map((s,i)=><span key={i} style={{color:T.yellow,fontSize:18}}>{s}</span>)}</div>
+          <div style={{fontSize:13,color:T.muted}}>4.9/5 · 2 400+ avis vérifiés</div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}} className="mobile-grid1">
+          {[{name:"Sophie M.",role:"TikToker · 890k abonnés",avatar:"SM",text:"J'ai multiplié mes vues par 3 en 2 semaines. Les styles MrBeast et Squeezie sont juste parfaits pour mon contenu.",color:T.acc},{name:"Lucas D.",role:"YouTubeur · 210k abonnés",avatar:"LD",text:"La transcription en 10 secondes c'est dingue. Avant je passais 2h par vidéo, maintenant c'est 5 minutes.",color:T.purple},{name:"Emma W.",role:"Créatrice Reels · 450k",avatar:"EW",text:"L'interface est magnifique et les styles vraiment pro. Mes Reels ont explosé depuis que j'utilise SubCraft.",color:T.pink}].map((r,i)=>(
+            <div key={i} style={{padding:"24px",borderRadius:20,background:T.surf,border:"1px solid rgba(255,255,255,.055)",position:"relative",overflow:"hidden",transition:"all .3s"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.boxShadow="0 16px 40px rgba(0,0,0,.35)";}} onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";}}>
+              <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${r.color}55,transparent)`}}/>
+              <div style={{display:"flex",gap:2,marginBottom:14}}>{"★★★★★".split("").map((s,j)=><span key={j} style={{color:T.yellow,fontSize:13}}>{s}</span>)}</div>
+              <p style={{fontSize:13,color:"rgba(240,242,255,.68)",lineHeight:1.78,marginBottom:18,fontStyle:"italic"}}>"{r.text}"</p>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{width:34,height:34,borderRadius:"50%",background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#fff",flexShrink:0}}>{r.avatar}</div>
+                <div><div style={{fontWeight:700,fontSize:13}}>{r.name}</div><div style={{fontSize:11,color:T.muted}}>{r.role}</div></div>
+                <span style={{marginLeft:"auto",fontSize:9,padding:"2px 8px",borderRadius:6,background:`${r.color}10`,color:r.color,fontWeight:800,letterSpacing:".04em"}}>{i===0?"TikTok":i===1?"YouTube":"Instagram"}</span>
+              </div>
             </div>
           ))}
         </div>
       </div>
 
       {/* PRICING */}
-      <div id="tarifs" style={{position:"relative",zIndex:1,maxWidth:1100,margin:"0 auto 120px",padding:"0 24px"}}>
-        <div style={{textAlign:"center",marginBottom:44}}>
-          <h2 style={{fontWeight:900,fontSize:"clamp(30px,5vw,52px)",letterSpacing:"-.02em",marginBottom:10}}>
-            Start creating, <em style={{fontStyle:"italic"}}>today</em>.
-          </h2>
-          <p style={{color:T.muted,marginBottom:28}}>Choose the plan that fits your needs.</p>
-          <div style={{display:"inline-flex",alignItems:"center",gap:14,padding:"10px 22px",borderRadius:100,background:T.surf,border:`1px solid ${T.border}`}}>
-            <span style={{fontSize:13,fontWeight:billingY?400:600,color:billingY?T.muted:T.text}}>Monthly</span>
-            <Tog value={billingY} onChange={setBillingY}/>
-            <div>
-              <span style={{fontSize:13,fontWeight:billingY?600:400,color:billingY?T.text:T.muted}}>Yearly</span>
-              {billingY&&<div style={{fontSize:10,color:T.green,fontWeight:700}}>2 mois offerts 🎉</div>}
-            </div>
+      <div id="tarifs" style={{position:"relative",zIndex:1,maxWidth:1060,margin:"0 auto 140px",padding:"0 48px"}} className="mobile-p">
+        <div style={{textAlign:"center",marginBottom:60}}>
+          <span style={{display:"inline-block",fontSize:10,padding:"3px 14px",borderRadius:100,background:"rgba(91,108,255,.08)",border:"1px solid rgba(91,108,255,.2)",color:T.acc,fontWeight:700,letterSpacing:".1em",marginBottom:20}}>TARIFS</span>
+          <h2 className="syne" style={{fontWeight:800,fontSize:"clamp(28px,3.5vw,50px)",letterSpacing:"-.04em",marginBottom:20}}>Simple, transparent, <span className="grad-text">sans surprise</span></h2>
+          <div style={{display:"inline-flex",alignItems:"center",gap:0,background:T.surf,borderRadius:12,padding:3,border:"1px solid rgba(255,255,255,.06)"}}>
+            <button onClick={()=>setBillingY(false)} style={{padding:"7px 18px",borderRadius:9,background:!billingY?T.surf2:"transparent",border:"none",color:!billingY?T.text:T.muted,fontSize:13,fontWeight:!billingY?700:400,cursor:"pointer",transition:"all .2s"}}>Mensuel</button>
+            <button onClick={()=>setBillingY(true)} style={{padding:"7px 18px",borderRadius:9,background:billingY?T.surf2:"transparent",border:"none",color:billingY?T.text:T.muted,fontSize:13,fontWeight:billingY?700:400,cursor:"pointer",transition:"all .2s",display:"flex",alignItems:"center",gap:6}}>Annuel <span style={{fontSize:9,padding:"2px 6px",borderRadius:4,background:"rgba(52,211,153,.12)",color:T.green,fontWeight:800}}>-30%</span></button>
           </div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:16}} className="mobile-grid1">
-          {PLANS.map((plan,i)=>{
-            const price=billingY?plan.priceY:plan.price;
-            return(
-              <div key={plan.id} style={{borderRadius:18,padding:"28px 24px",background:plan.popular?`linear-gradient(160deg,${T.acc}10,${T.surf})`:T.surf,border:`2px solid ${plan.popular?T.acc:T.border}`,position:"relative",transition:"transform .2s",animation:`fadeUp .4s ease ${i*.08}s both`}}
-                onMouseEnter={e=>e.currentTarget.style.transform="translateY(-5px)"}
-                onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
-                {plan.popular&&<div style={{position:"absolute",top:-14,left:"50%",transform:"translateX(-50%)",padding:"5px 18px",borderRadius:100,background:T.acc,color:"#fff",fontSize:12,fontWeight:700,whiteSpace:"nowrap",boxShadow:`0 4px 16px ${T.accGlow}`}}>⭐ Most popular</div>}
-                <div style={{fontWeight:800,fontSize:17,marginBottom:3}}>{plan.name} edition</div>
-                <div style={{fontSize:12,color:T.muted,marginBottom:18}}>{plan.credits===Infinity?"Illimité":`${plan.credits} crédits/mois`}</div>
-                <div style={{display:"flex",alignItems:"flex-end",gap:2,marginBottom:14}}>
-                  <span style={{fontSize:18,color:T.muted,fontWeight:600}}>$</span>
-                  <span style={{fontSize:50,fontWeight:900,lineHeight:1,color:plan.popular?T.acc:T.text}}>{price}</span>
-                  <span style={{color:T.muted,fontSize:12,marginBottom:7}}>/Mo</span>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}} className="mobile-grid1">
+          {PLANS.map((plan,i)=>(
+            <div key={plan.id} style={{borderRadius:22,background:plan.popular?"linear-gradient(145deg,rgba(91,108,255,.1),rgba(168,85,247,.07))":T.surf,border:plan.popular?"1px solid rgba(91,108,255,.38)":"1px solid rgba(255,255,255,.055)",padding:"26px 20px",position:"relative",overflow:"hidden",transition:"all .3s",boxShadow:plan.popular?"0 0 60px rgba(91,108,255,.12)":"none",animation:`fadeUp .4s ${i*.07}s both`}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-4px)";}} onMouseLeave={e=>{e.currentTarget.style.transform="none";}}>
+              {plan.popular&&<><div style={{position:"absolute",top:0,left:0,right:0,height:2,background:T.grad}}/><div style={{position:"absolute",top:14,right:14,fontSize:8,padding:"3px 9px",borderRadius:20,background:T.grad,color:"#fff",fontWeight:800,letterSpacing:".07em"}}>POPULAIRE</div><ParticleField count={8} color={T.acc}/></>}
+              <div style={{position:"relative",zIndex:1}}>
+                <div style={{fontWeight:600,fontSize:11,color:plan.color,letterSpacing:".1em",marginBottom:8}}>{plan.name.toUpperCase()}</div>
+                <div style={{display:"flex",alignItems:"baseline",gap:3,marginBottom:4}}>
+                  <span className="syne" style={{fontWeight:800,fontSize:34,color:T.text}}>€{billingY?plan.priceY:plan.price}</span>
+                  <span style={{fontSize:11,color:T.muted}}>/mois</span>
                 </div>
-                {billingY&&price>0&&<div style={{fontSize:11,color:T.green,fontWeight:600,marginBottom:14}}>💰 Économise ${plan.price*2}/an</div>}
-                {price>0&&<Btn full v={plan.popular?"primary":"secondary"} onClick={onCTA} style={{marginBottom:20}}>Start Now</Btn>}
-                <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  {plan.features.map(f=><div key={f} style={{display:"flex",gap:8,fontSize:12,color:T.text,alignItems:"flex-start"}}><span style={{color:plan.popular?T.acc:T.green,flexShrink:0}}>✓</span>{f}</div>)}
-                  {plan.locked.map(f=><div key={f} style={{display:"flex",gap:8,fontSize:12,color:T.dim,alignItems:"flex-start"}}><span style={{flexShrink:0}}>✗</span>{f}</div>)}
+                {billingY&&plan.price>0&&<div style={{fontSize:10,color:T.muted,marginBottom:14}}>facturé €{plan.priceY*12}/an</div>}
+                <div style={{height:1,background:"rgba(255,255,255,.045)",margin:"14px 0"}}/>
+                <div style={{display:"flex",flexDirection:"column",gap:7,marginBottom:18}}>
+                  {plan.features.map(f=>(
+                    <div key={f} style={{display:"flex",alignItems:"flex-start",gap:8,fontSize:11}}>
+                      <span style={{color:T.green,flexShrink:0,marginTop:1}}>✓</span>
+                      <span style={{color:"rgba(240,242,255,.65)"}}>{f}</span>
+                    </div>
+                  ))}
                 </div>
+                <button onClick={onCTA} className={plan.popular?"shimmer-btn":""} style={{width:"100%",padding:"10px",borderRadius:11,background:plan.popular?T.grad:"rgba(255,255,255,.055)",border:plan.popular?"none":"1px solid rgba(255,255,255,.09)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .2s"}} onMouseEnter={e=>e.currentTarget.style.opacity=".85"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>{plan.id==="free"?"Commencer gratuit":"Choisir ce plan"}</button>
               </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* HOW IT WORKS */}
-      <div id="comment" style={{position:"relative",zIndex:1,maxWidth:960,margin:"0 auto 100px",padding:"0 24px"}}>
-        <div style={{textAlign:"center",marginBottom:52}}>
-          <Tag color={T.cyan}>Simple comme bonjour</Tag>
-          <h2 style={{fontWeight:900,fontSize:"clamp(28px,5vw,44px)",letterSpacing:"-.02em",margin:"14px 0 10px"}}>Comment ça marche ?</h2>
-          <p style={{color:T.muted,fontSize:15}}>De la vidéo brute aux sous-titres viraux en moins de 60 secondes.</p>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:0,position:"relative"}} className="mobile-grid1">
-          {/* connector line desktop */}
-          <div className="hide-mobile" style={{position:"absolute",top:44,left:"12.5%",right:"12.5%",height:2,background:`linear-gradient(90deg,${T.acc},${T.purple},${T.pink},${T.green})`,opacity:.25,zIndex:0}}/>
-          {[
-            {n:"01",icon:"⬆",title:"Upload ta vidéo",desc:"MP4, MOV, AVI — jusqu'à 600 MB. Glisse-dépose ou clique pour sélectionner.",color:T.acc},
-            {n:"02",icon:"⚡",title:"Transcription IA",desc:"Whisper AI analyse l'audio et génère des sous-titres synchronisés en 10 secondes.",color:T.purple},
-            {n:"03",icon:"🎨",title:"Personnalise le style",desc:"Choisis parmi 10 styles pro. Modifie chaque mot, ajoute des emojis IA, traduis.",color:T.pink},
-            {n:"04",icon:"🚀",title:"Exporte & publie",desc:"Télécharge le SRT, l'ASS ou la vidéo finale avec sous-titres incrustés en HD.",color:T.green},
-          ].map((step,i)=>(
-            <div key={step.n} style={{textAlign:"center",padding:"0 20px",position:"relative",zIndex:1,animation:`fadeUp .5s ease ${i*.1}s both`}}>
-              <div style={{width:88,height:88,borderRadius:"50%",background:T.bg2,border:`2px solid ${step.color}44`,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px",position:"relative",boxShadow:`0 0 32px ${step.color}20`}}>
-                <span style={{fontSize:36}}>{step.icon}</span>
-                <div style={{position:"absolute",top:-8,right:-8,width:26,height:26,borderRadius:"50%",background:step.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,color:"#fff",fontFamily:"JetBrains Mono"}}>{step.n}</div>
-              </div>
-              <div style={{fontWeight:800,fontSize:17,marginBottom:8,color:step.color}}>{step.title}</div>
-              <div style={{color:T.muted,fontSize:13,lineHeight:1.7}}>{step.desc}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{textAlign:"center",marginTop:44}}>
-          <Btn size="xl" onClick={onCTA} style={{background:T.grad,animation:"glow 3s infinite"}}>Essayer gratuitement →</Btn>
-        </div>
-      </div>
-
-      {/* TESTIMONIALS */}
-      <div id="avis" style={{position:"relative",zIndex:1,maxWidth:1100,margin:"0 auto 100px",padding:"0 24px"}}>
-        <div style={{textAlign:"center",marginBottom:48}}>
-          <Tag color={T.yellow}>Ils adorent SubCraft</Tag>
-          <h2 style={{fontWeight:900,fontSize:"clamp(26px,5vw,42px)",letterSpacing:"-.02em",margin:"14px 0 8px"}}>Ce que disent nos créateurs</h2>
-          <p style={{color:T.muted,fontSize:15}}>Plus de 10 000 créateurs font confiance à SubCraft chaque mois.</p>
-        </div>
-        {/* Star rating summary */}
-        <div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:16,marginBottom:44,flexWrap:"wrap"}}>
-          <div style={{display:"flex",gap:3}}>{Array(5).fill("⭐").map((s,i)=><span key={i} style={{fontSize:22}}>{s}</span>)}</div>
-          <div style={{fontFamily:"JetBrains Mono",fontWeight:900,fontSize:28,color:T.yellow}}>4.9</div>
-          <div style={{color:T.muted,fontSize:14}}>/5 · Basé sur 2 847 avis</div>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:16}} className="mobile-grid1">
-          {[
-            {name:"Sophie Martin",handle:"@sophiecreates",avatar:"SM",color:"#f97316",plan:"Pro",stars:5,text:"J'ai multiplié mon engagement par 3 depuis que j'utilise SubCraft. Les sous-titres bold yellow sont reconnaissables entre mille. Je peux plus m'en passer !",platform:"TikTok",metric:"340K abonnés",gain:"+40K en 2 mois"},
-            {name:"Lucas Dubois",handle:"@lucasdev",avatar:"LD",color:"#3b82f6",plan:"Expert",stars:5,text:"En tant que dev qui fait des tutos, la précision de la transcription est top. Plus jamais de sous-titres à la main. Traduction en anglais en 2 clics, mes vues ont explosé.",platform:"YouTube",metric:"128K vues/mois",gain:"x2.5 en 3 mois"},
-            {name:"Emma Wilson",handle:"@emmacooks",avatar:"EW",color:"#ec4899",plan:"Pro",stars:5,text:"Le style 'Yellow Bold' est parfait pour mes recettes. L'IA de traduction est bluffante, mes recettes touchent maintenant une audience mondiale. Indispensable !",platform:"Instagram",metric:"89K abonnés",gain:"+22K en 1 mois"},
-            {name:"Carlos García",handle:"@carlos_fit",avatar:"CG",color:"#10b981",plan:"Basic",stars:5,text:"Pour mes vidéos fitness, le Neon Green est parfait. Upload rapide, sous-titres impeccables, export en 1 clic. Exactement ce dont j'avais besoin.",platform:"TikTok",metric:"45K abonnés",gain:"+8K en 3 semaines"},
-            {name:"Yuki Tanaka",handle:"@yukivlog",avatar:"YT",color:"#8b5cf6",plan:"Pro",stars:5,text:"La traduction automatique est magique. Je fais mes vlogs en japonais, SubCraft les traduit en français/anglais. Mon audience internationale a doublé en 2 mois.",platform:"YouTube",metric:"210K abonnés",gain:"+60K international"},
-            {name:"Marie Lefebvre",handle:"@mariepodcast",avatar:"ML",color:"#06b6d4",plan:"Expert",stars:5,text:"Pour mon podcast, le style Minimal blanc est parfait. L'IA Whisper est précise même sur mes interviews techniques. Je gagne 2h par semaine facilement.",platform:"YouTube",metric:"67K abonnés",gain:"2h économisées/semaine"},
-          ].map((t,i)=>(
-            <div key={t.name} style={{padding:"22px 24px",borderRadius:18,background:T.surf,border:`1px solid ${T.border}`,transition:"all .22s",animation:`fadeUp .45s ease ${i*.07}s both`,cursor:"default"}}
-              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.borderColor=t.color+"55";e.currentTarget.style.boxShadow=`0 16px 40px ${t.color}10`;}}
-              onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.borderColor=T.border;e.currentTarget.style.boxShadow="none";}}>
-              {/* Stars */}
-              <div style={{display:"flex",gap:2,marginBottom:14}}>{Array(t.stars).fill("⭐").map((s,si)=><span key={si} style={{fontSize:13}}>{s}</span>)}</div>
-              {/* Quote */}
-              <p style={{color:T.text,fontSize:13.5,lineHeight:1.75,marginBottom:18,fontStyle:"italic"}}>"{t.text}"</p>
-              {/* Author */}
-              <div style={{display:"flex",alignItems:"center",gap:11}}>
-                <div style={{width:40,height:40,borderRadius:"50%",background:`linear-gradient(135deg,${t.color},${t.color}88)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff",flexShrink:0}}>{t.avatar}</div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:700,fontSize:13}}>{t.name}</div>
-                  <div style={{fontSize:11,color:T.muted}}>{t.handle} · {t.platform}</div>
-                </div>
-                <Tag color={t.color}>{t.plan}</Tag>
-              </div>
-              {/* Metric */}
-              <div style={{marginTop:14,padding:"9px 12px",borderRadius:10,background:`${t.color}0e`,border:`1px solid ${t.color}22`,display:"flex",gap:10,justifyContent:"space-between"}}>
-                <div style={{fontSize:11,color:T.muted}}>{t.metric}</div>
-                <div style={{fontSize:11,fontWeight:700,color:t.color}}>{t.gain} ✨</div>
-              </div>
-            </div>
-          ))}
-        </div>
-        {/* Social logos */}
-        <div style={{display:"flex",justifyContent:"center",gap:28,marginTop:44,flexWrap:"wrap",alignItems:"center"}}>
-          <div style={{fontSize:11,color:T.muted,textTransform:"uppercase",letterSpacing:".08em"}}>Utilisé par des créateurs sur</div>
-          {[["📱","TikTok"],["▶","YouTube"],["📸","Instagram"],["💼","LinkedIn"],["🎙️","Podcast"]].map(([ic,pl])=>(
-            <div key={pl} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 16px",borderRadius:30,background:T.surf,border:`1px solid ${T.border}`,fontSize:13,fontWeight:600,color:T.muted}}>
-              <span>{ic}</span>{pl}
             </div>
           ))}
         </div>
       </div>
 
-      {/* COMPARISON VS COMPETITORS */}
-      <div id="comparaison" style={{position:"relative",zIndex:1,maxWidth:1060,margin:"0 auto 100px",padding:"0 24px"}}>
-        <div style={{textAlign:"center",marginBottom:44}}>
-          <Tag color={T.green}>Pourquoi SubCraft ?</Tag>
-          <h2 style={{fontWeight:900,fontSize:"clamp(26px,5vw,42px)",letterSpacing:"-.02em",margin:"14px 0 8px"}}>SubCraft vs la concurrence</h2>
-          <p style={{color:T.muted,fontSize:15}}>On te laisse comparer par toi-même.</p>
-        </div>
-        <div style={{background:T.surf,borderRadius:20,border:`1px solid ${T.border}`,overflow:"hidden"}}>
-          {/* Header */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 140px 140px 140px 140px",borderBottom:`1px solid ${T.border}`}} className="hide-mobile">
-            <div style={{padding:"18px 24px"}}/>
-            {[["SubCraft","#4f6dff",true],["SubMagic","#666",false],["VEED","#888",false],["CapCut","#777",false]].map(([name,color,bold])=>(
-              <div key={name} style={{padding:"18px 12px",textAlign:"center",background:bold?`${T.acc}08`:"transparent",borderLeft:`1px solid ${T.border}`}}>
-                <div style={{fontWeight:800,fontSize:15,color:bold?T.acc:T.muted}}>{name}</div>
-                {bold&&<Tag color={T.acc}>Toi 😎</Tag>}
-              </div>
-            ))}
-          </div>
-          {[
-            ["Prix mensuel","$12–30","$20–60","$18–50","$7–15*"],
-            ["Transcription IA","✓ Whisper","✓","✓","✓"],
-            ["Styles premium","✓ 10+","✓ 5","✓ 3","✓ 4"],
-            ["Traduction IA","✓ Claude","✗","✓ payant","✗"],
-            ["Emojis IA","✓ Auto","✗","✗","✗"],
-            ["Export SRT / ASS","✓","✓","✓ payant","✓"],
-            ["Vidéo incrustée","✓ HD","✓","✓","✓"],
-            ["Suppression 24h","✓ RGPD","✗","✗","✗"],
-            ["Support FR","✓ 24/7","✗ EN only","✗ EN only","✗"],
-          ].map(([feature,...vals],ri)=>(
-            <div key={feature} style={{display:"grid",gridTemplateColumns:"1fr 140px 140px 140px 140px",borderBottom:ri<8?`1px solid ${T.border}`:"none",transition:"background .12s"}} onMouseEnter={e=>e.currentTarget.style.background=T.surf2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-              <div style={{padding:"14px 24px",fontSize:13,fontWeight:500}}>{feature}</div>
-              {vals.map((v,vi)=>(
-                <div key={vi} style={{padding:"14px 12px",textAlign:"center",borderLeft:`1px solid ${T.border}`,background:vi===0?`${T.acc}04`:"transparent"}}>
-                  <span style={{fontSize:13,fontWeight:vi===0?700:400,color:v.startsWith("✓")?T.green:v.startsWith("✗")?T.pink:vi===0?T.acc:T.muted}}>{v}</span>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-        <div style={{fontSize:11,color:T.dim,textAlign:"center",marginTop:10}}>* CapCut Pro · Les prix peuvent varier. Dernière vérification : Mars 2026.</div>
-      </div>
-
-
-      {/* ═══ FAQ ═══ */}
-      <div style={{position:"relative",zIndex:1,maxWidth:800,margin:"0 auto 90px",padding:"0 24px"}}>
-        <div style={{textAlign:"center",marginBottom:44}}>
-          <div style={{fontSize:11,fontWeight:800,letterSpacing:".14em",color:T.cyan,textTransform:"uppercase",marginBottom:10}}>FAQ</div>
-          <h2 style={{fontWeight:900,fontSize:"clamp(24px,4vw,40px)",letterSpacing:"-.03em"}}>Questions fréquentes</h2>
-        </div>
+      {/* FAQ */}
+      <div style={{position:"relative",zIndex:1,maxWidth:700,margin:"0 auto 140px",padding:"0 48px"}} className="mobile-p">
+        <h2 className="syne" style={{fontWeight:800,fontSize:"clamp(26px,3vw,44px)",letterSpacing:"-.04em",textAlign:"center",marginBottom:48}}>Questions <span className="grad-text">fréquentes</span></h2>
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {[
-            {q:"Est-ce vraiment gratuit ?",a:"Oui ! Le plan Free inclut 3 vidéos par mois, sans carte bancaire. Tu peux upgrader à tout moment pour débloquer plus de crédits."},
-            {q:"Puis-je importer depuis YouTube ou TikTok ?",a:"Oui ! Colle directement un lien YouTube Shorts, TikTok ou Instagram Reel dans la modal d'import. SubCraft télécharge et traite ta vidéo automatiquement."},
-            {q:"Combien de temps prend la transcription ?",a:"Moins de 10 secondes pour une vidéo de 60 secondes avec Whisper AI. Pour des vidéos plus longues (5–10 min), comptez 30 à 90 secondes."},
-            {q:"Mes vidéos sont-elles sécurisées ?",a:"100% oui. Conformément au RGPD, toutes tes vidéos sont automatiquement supprimées de nos serveurs après 24h. Nous ne stockons jamais ton contenu de façon permanente."},
-            {q:"Quels formats d'export sont disponibles ?",a:"MP4 HD avec sous-titres incrustés, fichier .SRT universel, fichier .ASS avec animations, ou texte brut pour le montage."},
-            {q:"Puis-je annuler à tout moment ?",a:"Oui, sans engagement et sans pénalité. Annule depuis Profil → Abonnement en 2 clics. Tu gardes l'accès jusqu'à la fin de ta période payée."},
-            {q:"Y a-t-il des frais cachés ?",a:"Aucun. Le prix affiché est le prix final. Pas de frais d'activation, pas de frais d'annulation."},
-            {q:"SubCraft fonctionne-t-il en français ?",a:"Oui, SubCraft est 100% en français et optimisé pour les créateurs francophones. Whisper supporte aussi 11 autres langues nativement."},
-          ].map((faq,i)=>(
-            <div key={i} style={{borderRadius:13,background:T.surf,border:`1px solid ${faqOpen===i?T.acc+"44":T.border}`,overflow:"hidden",transition:"border-color .2s"}}>
-              <button onClick={()=>setFaqOpen(faqOpen===i?null:i)} style={{width:"100%",padding:"15px 18px",background:"none",border:"none",color:T.text,textAlign:"left",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
-                <span style={{fontWeight:700,fontSize:14}}>{faq.q}</span>
-                <span style={{color:faqOpen===i?T.acc:T.muted,fontSize:20,flexShrink:0,transition:"transform .2s",display:"inline-block",transform:faqOpen===i?"rotate(45deg)":"none"}}>+</span>
+          {[{q:"SubCraft est-il vraiment gratuit ?",a:"Oui — plan gratuit avec 3 vidéos/mois, aucune carte bancaire requise."},{q:"Puis-je importer depuis YouTube ou TikTok ?",a:"Oui ! Colle simplement l'URL — SubCraft télécharge et traite automatiquement."},{q:"Combien de temps prend la transcription ?",a:"Moins de 10 secondes pour une vidéo de 60s. Moins de 90s pour des vidéos longues."},{q:"Mes vidéos sont-elles sécurisées ?",a:"Toutes les vidéos sont supprimées automatiquement après 24h (RGPD). Jamais partagées ni vendues."},{q:"Puis-je annuler à tout moment ?",a:"Oui, sans engagement. L'accès reste actif jusqu'à la fin de la période."}].map((item,i)=>(
+            <div key={i} style={{borderRadius:14,background:faqOpen===i?T.surf2:T.surf,border:`1px solid ${faqOpen===i?"rgba(91,108,255,.28)":"rgba(255,255,255,.055)"}`,overflow:"hidden",transition:"all .22s"}}>
+              <button onClick={()=>setFaqOpen(faqOpen===i?null:i)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",background:"transparent",border:"none",color:T.text,fontSize:14,fontWeight:600,textAlign:"left",cursor:"pointer",gap:12}}>
+                <span style={{letterSpacing:"-.01em"}}>{item.q}</span>
+                <span style={{fontSize:18,color:faqOpen===i?T.acc:T.muted,transition:"transform .22s",transform:faqOpen===i?"rotate(45deg)":"none",flexShrink:0}}>+</span>
               </button>
-              {faqOpen===i&&<div style={{padding:"0 18px 14px",fontSize:13,color:T.muted,lineHeight:1.7,borderTop:`1px solid ${T.acc}18`}}>{faq.a}</div>}
+              {faqOpen===i&&<div style={{padding:"0 20px 16px",fontSize:13,color:T.muted,lineHeight:1.7,animation:"fadeIn .2s both"}}>{item.a}</div>}
             </div>
           ))}
         </div>
       </div>
 
-      {/* ═══ BADGES SÉCURITÉ ═══ */}
-      <div style={{position:"relative",zIndex:1,maxWidth:900,margin:"0 auto 80px",padding:"0 24px"}}>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10}}>
-          {[
-            {icon:"🔒",title:"SSL / TLS",desc:"Chiffrement 256-bit",color:T.green},
-            {icon:"🇪🇺",title:"RGPD Conforme",desc:"Données hébergées en UE",color:T.acc},
-            {icon:"💳",title:"Paiement sécurisé",desc:"Powered by Stripe",color:T.yellow},
-            {icon:"🗑",title:"Suppression 24h",desc:"Vidéos auto-effacées",color:T.pink},
-            {icon:"🛡",title:"Données privées",desc:"Jamais revendues",color:T.purple},
-          ].map(b=>(
-            <div key={b.title} style={{padding:"13px 11px",borderRadius:12,background:T.surf,border:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:9,transition:"all .2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=b.color+"44";e.currentTarget.style.background=T.surf2;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.background=T.surf;}}>
-              <div style={{width:34,height:34,borderRadius:8,background:`${b.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{b.icon}</div>
-              <div><div style={{fontWeight:700,fontSize:11,color:b.color}}>{b.title}</div><div style={{fontSize:10,color:T.muted}}>{b.desc}</div></div>
-            </div>
-          ))}
+      {/* FINAL CTA */}
+      <div style={{position:"relative",zIndex:1,textAlign:"center",padding:"80px 48px 110px",maxWidth:780,margin:"0 auto"}} className="mobile-p">
+        <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at center,rgba(91,108,255,.1) 0%,transparent 68%)",pointerEvents:"none"}}/>
+        <div style={{position:"relative"}}>
+          <h2 className="syne" style={{fontWeight:800,fontSize:"clamp(34px,5vw,62px)",letterSpacing:"-.045em",marginBottom:20}}>Prêt à faire <span className="grad-text">virer viral</span> ?</h2>
+          <p style={{fontSize:15,color:T.muted,marginBottom:40,lineHeight:1.7}}>Rejoins 10 000+ créateurs qui font confiance à SubCraft.</p>
+          <button onClick={onCTA} className="shimmer-btn" style={{display:"inline-flex",alignItems:"center",gap:12,padding:"16px 40px",borderRadius:16,background:T.grad,border:"none",color:"#fff",fontSize:16,fontWeight:700,cursor:"pointer",boxShadow:`0 0 60px ${T.accGlow},0 20px 60px rgba(91,108,255,.18)`,animation:"glow 3s infinite",letterSpacing:"-.025em"}} onMouseEnter={e=>e.currentTarget.style.transform="scale(1.04)"} onMouseLeave={e=>e.currentTarget.style.transform="none"}>
+            <span style={{fontSize:20}}>✦</span> Générer mes sous-titres — Gratuit
+          </button>
+          <div style={{marginTop:18,fontSize:11,color:T.muted}}>Aucune carte bancaire · Annulation à tout moment · RGPD conforme</div>
         </div>
       </div>
 
-      {/* ═══ EXIT INTENT POPUP ═══ */}
+      {/* FOOTER */}
+      <footer style={{position:"relative",zIndex:1,borderTop:"1px solid rgba(255,255,255,.045)",padding:"32px 48px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:14}} className="mobile-p">
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div style={{width:28,height:28,borderRadius:8,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:900}}>✦</div>
+          <span className="syne grad-text-chrome" style={{fontWeight:800,fontSize:14}}>SubCraft</span>
+        </div>
+        <div style={{display:"flex",gap:18,flexWrap:"wrap"}}>
+          {["CGU","Confidentialité","RGPD","Changelog","Statut"].map(p=>(
+            <button key={p} onClick={()=>setPage(p.toLowerCase().replace("é","e"))} style={{background:"none",border:"none",color:T.muted,fontSize:12,cursor:"pointer",transition:"color .15s"}} onMouseEnter={e=>e.currentTarget.style.color=T.text} onMouseLeave={e=>e.currentTarget.style.color=T.muted}>{p}</button>
+          ))}
+        </div>
+        <div style={{fontSize:11,color:T.dim}}>© 2026 SubCraft · Alès, France 🇫🇷</div>
+      </footer>
+
+      {/* EXIT POPUP */}
       {exitPopup&&!exitDone&&(
-        <div style={{position:"fixed",inset:0,zIndex:9000,display:"flex",alignItems:"center",justifyContent:"center",padding:20,background:"rgba(0,0,0,.7)",backdropFilter:"blur(8px)"}} onClick={e=>{if(e.target===e.currentTarget){setExitPopup(false);setExitDone(true);}}}>
-          <div style={{maxWidth:440,width:"100%",background:T.surf,borderRadius:22,border:`1px solid ${T.acc}40`,padding:"40px 32px",textAlign:"center",position:"relative",animation:"popInBig .4s cubic-bezier(.34,1.56,.64,1)",boxShadow:"0 40px 100px rgba(0,0,0,.8)"}}>
-            <button onClick={()=>{setExitPopup(false);setExitDone(true);}} style={{position:"absolute",top:12,right:16,background:"none",border:"none",color:T.muted,fontSize:22,cursor:"pointer",lineHeight:1}}>×</button>
-            <div style={{position:"absolute",top:-14,left:"50%",transform:"translateX(-50%)",padding:"5px 16px",borderRadius:100,background:"linear-gradient(90deg,#ff2970,#ff7043)",color:"#fff",fontSize:11,fontWeight:900,whiteSpace:"nowrap"}}>⏱ OFFRE LIMITÉE</div>
-            <div style={{fontSize:44,marginBottom:12,marginTop:6}}>🎁</div>
-            <h2 style={{fontWeight:900,fontSize:24,marginBottom:10,letterSpacing:"-.02em"}}>Attends ! Voilà <span className="grad-text">-20%</span> pour toi</h2>
-            <p style={{color:T.muted,fontSize:13,marginBottom:20,lineHeight:1.7}}>Tu t'en allais ? On t'offre <strong style={{color:T.text}}>20% de réduction</strong> sur ton premier mois.</p>
-            <div style={{padding:"10px 16px",borderRadius:10,background:`${T.acc}10`,border:`1px solid ${T.acc}30`,marginBottom:16,display:"flex",gap:10,alignItems:"center",justifyContent:"center"}}>
-              <span style={{fontFamily:"JetBrains Mono",fontWeight:900,fontSize:18,color:T.acc,letterSpacing:".08em"}}>RESTE20</span>
-              <button onClick={()=>{navigator.clipboard?.writeText("RESTE20");notify("Code copié !","success");}} style={{padding:"3px 10px",borderRadius:6,background:T.acc,border:"none",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>Copier</button>
+        <div style={{position:"fixed",inset:0,zIndex:1000,background:"rgba(2,3,10,.88)",backdropFilter:"blur(24px)",display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>{setExitPopup(false);setExitDone(true);}}>
+          <div style={{maxWidth:420,width:"100%",borderRadius:24,background:T.surf,border:"1px solid rgba(232,57,112,.3)",padding:"40px 34px",textAlign:"center",animation:"popInBig .4s cubic-bezier(.34,1.56,.64,1) both",boxShadow:"0 0 80px rgba(232,57,112,.12)"}} onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:48,marginBottom:16,animation:"bounce 1s ease infinite"}}>🎁</div>
+            <div className="syne" style={{fontWeight:800,fontSize:24,marginBottom:8,letterSpacing:"-.03em"}}>Avant de partir...</div>
+            <div style={{fontSize:14,color:T.muted,marginBottom:24,lineHeight:1.7}}>On t'offre <strong style={{color:T.pink}}>-20% sur ton premier mois</strong>. Code :</div>
+            <div style={{display:"flex",alignItems:"center",gap:8,padding:"12px 16px",borderRadius:12,background:"rgba(232,57,112,.08)",border:"1px solid rgba(232,57,112,.22)",justifyContent:"center",marginBottom:24}}>
+              <span className="mono" style={{fontSize:22,fontWeight:700,color:T.pink,letterSpacing:".1em"}}>RESTE20</span>
+              <button onClick={()=>{navigator.clipboard?.writeText("RESTE20");notify("Code copié !","success");}} style={{padding:"4px 10px",borderRadius:7,background:"rgba(232,57,112,.12)",border:"none",color:T.pink,fontSize:11,fontWeight:700,cursor:"pointer"}}>📋 Copier</button>
             </div>
-            <button onClick={()=>{setExitPopup(false);setExitDone(true);onCTA();}} className="btn-shimmer" style={{width:"100%",padding:"12px",borderRadius:11,background:T.grad,border:"none",color:"#fff",fontSize:14,fontWeight:900,cursor:"pointer",marginBottom:8}}>Profiter de -20% →</button>
-            <button onClick={()=>{setExitPopup(false);setExitDone(true);}} style={{background:"none",border:"none",color:T.dim,fontSize:11,cursor:"pointer"}}>Non merci</button>
+            <button onClick={onCTA} className="shimmer-btn" style={{width:"100%",padding:"13px",borderRadius:12,background:T.gradP,border:"none",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",marginBottom:12}}>Je veux -20% →</button>
+            <button onClick={()=>{setExitPopup(false);setExitDone(true);}} style={{background:"none",border:"none",color:T.dim,fontSize:12,cursor:"pointer"}}>Non merci</button>
           </div>
         </div>
       )}
-
-      {/* FOOTER */}
-      <footer style={{borderTop:`1px solid ${T.border}`,padding:"48px 40px 32px",position:"relative",zIndex:1}}>
-        <div style={{maxWidth:1100,margin:"0 auto"}}>
-          <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:32,marginBottom:36}}>
-            <div style={{maxWidth:280}}>
-              <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:14}}>
-                <div style={{width:32,height:32,borderRadius:9,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>✦</div>
-                <span style={{fontWeight:900,fontSize:18}}>SubCraft</span>
-                <Tag color={T.cyan}>Beta</Tag>
-              </div>
-              <div style={{color:T.muted,fontSize:13,lineHeight:1.7,marginBottom:16}}>La plateforme de sous-titres IA pour créateurs de contenu viral. Transcription, personnalisation, export en 1 clic.</div>
-              {/* Status indicator */}
-              <div style={{display:"inline-flex",alignItems:"center",gap:7,padding:"5px 12px",borderRadius:100,background:`${T.green}10`,border:`1px solid ${T.green}22`,fontSize:12}}>
-                <span style={{width:7,height:7,borderRadius:"50%",background:T.green,animation:"pulseDot 2s infinite",flexShrink:0}}/>
-                <span style={{color:T.green,fontWeight:600}}>Tous les systèmes opérationnels</span>
-              </div>
-            </div>
-            <div style={{display:"flex",gap:40,flexWrap:"wrap"}}>
-              {[
-                ["Produit",[["Fonctionnalités","#fonctionnalités"],["Comment ça marche","#comment"],["Styles & Effets","#exemples"],["Tarifs","#tarifs"],["Changelog","changelog"]]],
-                ["Créateurs",[["Programme de parrainage","referral"],["Témoignages","#avis"],["Comparatif","#comparaison"],["Templates","templates"],["Support","support"]]],
-                ["Légal",[["CGU","cgu"],["Politique de confidentialité","privacy"],["Cookies","cookies"],["Mentions légales","legal"],["RGPD","rgpd"]]],
-              ].map(([sec,links])=>(
-                <div key={sec}>
-                  <div style={{fontSize:11,fontWeight:800,color:T.muted,textTransform:"uppercase",letterSpacing:".1em",marginBottom:14}}>{sec}</div>
-                  {links.map(([l,target])=>(
-                    <div key={l} onClick={()=>{if(target.startsWith("#"))document.getElementById(target.slice(1))?.scrollIntoView({behavior:"smooth"});else setPage(target);}} style={{fontSize:13,color:T.muted,marginBottom:9,cursor:"pointer",transition:"color .15s"}} onMouseEnter={e=>e.currentTarget.style.color=T.text} onMouseLeave={e=>e.currentTarget.style.color=T.muted}>{l}</div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={{borderTop:`1px solid ${T.border}`,paddingTop:20,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
-            <div style={{color:T.dim,fontSize:12}}>© 2026 SubCraft SAS · Tous droits réservés · Made with ❤️ in France 🇫🇷</div>
-            <div style={{display:"flex",gap:8}}>
-              {[["🐦","Twitter/X"],["📸","Instagram"],["▶","YouTube"],["💬","Discord"]].map(([ic,label])=>(
-                <button key={label} title={label} style={{width:34,height:34,borderRadius:9,background:T.surf,border:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,cursor:"pointer",transition:"all .15s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=T.acc;e.currentTarget.style.background=`${T.acc}10`;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.background=T.surf;}}>{ic}</button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };
 
-/* ══════════════════════════════════════════════
-   PAGE: DASHBOARD
-══════════════════════════════════════════════ */
+
 const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
   const [files,setFiles]=useState(MOCK_FILES);
   const [showUpload,setShowUpload]=useState(false);
@@ -1247,13 +1417,13 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
   const tabFiles=activeTab==="all"?filtered:activeTab==="ready"?filtered.filter(f=>f.status==="ready"):filtered.filter(f=>f.status==="processing");
 
   return(
-    <div style={{minHeight:"100vh",background:T.bg}} className="page">
-      {/* NAV — redesigné */}
-      <nav style={{padding:"0 20px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:10,background:"rgba(8,11,20,.97)",backdropFilter:"blur(20px)",height:60,position:"sticky",top:0,zIndex:50}}>
+    <div style={{minHeight:"100vh",background:T.bg,position:"relative"}} className="page"><AuroraBg subtle/><Cursor/>
+      {/* NAV */}
+      <nav style={{padding:"0 24px",borderBottom:"1px solid rgba(255,255,255,.05)",display:"flex",alignItems:"center",gap:10,background:"rgba(2,3,10,.88)",backdropFilter:"blur(32px)",height:62,position:"sticky",top:0,zIndex:50}}>
         {/* Logo */}
         <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0,marginRight:8}}>
-          <div style={{width:30,height:30,borderRadius:9,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,boxShadow:`0 0 16px ${T.acc}44`}}>✦</div>
-          <span style={{fontWeight:900,fontSize:17,letterSpacing:"-.02em"}}>SubCraft</span>
+          <div style={{width:32,height:32,borderRadius:10,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:900,boxShadow:`0 0 20px ${T.accGlow}`}}>✦</div>
+          <span className="syne grad-text-chrome" style={{fontWeight:800,fontSize:16,letterSpacing:"-.025em"}}>SubCraft</span>
         </div>
         {/* Nav pills */}
         <div style={{display:"flex",gap:2}} className="hide-mobile">
@@ -1302,12 +1472,12 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
         </div>
       </nav>
 
-      <div style={{maxWidth:1060,margin:"0 auto",padding:"24px 20px"}}>
+      <div style={{maxWidth:1100,margin:"0 auto",padding:"28px 24px",position:"relative",zIndex:1}}>
 
         {/* ── WELCOME STRIP ── */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:22,flexWrap:"wrap",gap:12}}>
           <div>
-            <h1 style={{fontWeight:900,fontSize:22,marginBottom:3}}>Bonjour {user?.name?.split(" ")[0]||"Créateur"} 👋</h1>
+            <h1 className="syne" style={{fontWeight:800,fontSize:24,marginBottom:3,letterSpacing:"-.03em"}}>Bonjour {user?.name?.split(" ")[0]||"Créateur"} 👋</h1>
             <div style={{color:T.muted,fontSize:13}}>
               Plan <span style={{color:planColor[user?.plan]||T.muted,fontWeight:700}}>{user?.plan}</span>
               {" · "}{files.length} vidéo{files.length>1?"s":""} au total
@@ -1327,10 +1497,10 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
             {icon:"⬆",label:"Exports",value:files.filter(f=>f.exported).length,color:T.green,sub:"réalisés"},
             {icon:"⏳",label:"Suppression dans",value:`${Math.min(...files.filter(f=>f.deleteIn>0).map(f=>f.deleteIn)||[24])}h`,color:T.cyan,sub:"prochaine"},
           ].map((s,i)=>(
-            <div key={s.label} style={{padding:"14px 16px",borderRadius:13,background:T.surf,border:`1px solid ${T.border}`,position:"relative",overflow:"hidden",animation:`fadeUp .35s ease ${i*.06}s both`,display:"flex",gap:12,alignItems:"center"}}>
-              <div style={{width:40,height:40,borderRadius:10,background:`${s.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{s.icon}</div>
+            <div key={s.label} style={{padding:"16px",borderRadius:16,background:T.surf,border:"1px solid rgba(255,255,255,.055)",position:"relative",overflow:"hidden",animation:`fadeUp .35s ease ${i*.06}s both`,display:"flex",gap:14,alignItems:"center",transition:"all .25s"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 16px 40px rgba(0,0,0,.3)";}} onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";}}>
+              <div style={{width:42,height:42,borderRadius:12,background:`${s.color}12`,border:`1px solid ${s.color}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{s.icon}</div>
               <div>
-                <div style={{fontFamily:"JetBrains Mono",fontWeight:800,fontSize:20,color:s.color,lineHeight:1}}>{s.value}</div>
+                <div className="mono syne" style={{fontWeight:800,fontSize:22,color:s.color,lineHeight:1}}>{s.value}</div>
                 <div style={{fontSize:10,color:T.muted,marginTop:3}}>{s.label}</div>
                 <div style={{fontSize:9,color:T.dim}}>{s.sub}</div>
               </div>
@@ -1366,7 +1536,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
         )}
 
         {/* ── FILES SECTION ── */}
-        <div style={{background:T.surf,borderRadius:16,border:`1px solid ${T.border}`,overflow:"hidden"}}>
+        <div style={{background:T.surf,borderRadius:18,border:"1px solid rgba(255,255,255,.055)",overflow:"hidden",boxShadow:"0 4px 40px rgba(0,0,0,.25)"}}>
           {/* Section header */}
           <div style={{padding:"14px 18px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
             <div style={{display:"flex",gap:0,background:T.bg,borderRadius:9,padding:3,flexShrink:0}}>
@@ -6215,5 +6385,5 @@ function App(){
   );
 }
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
+const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(React.createElement(App));
