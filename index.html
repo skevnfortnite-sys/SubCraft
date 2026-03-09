@@ -4,18 +4,40 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SubCraft — Sous-titres IA pour créateurs viraux</title>
-  <meta name="description" content="Génère des sous-titres professionnels en 10 secondes avec Whisper AI. 24 styles, TikTok, YouTube Shorts, Instagram Reels."/>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #060810; }
     #root { min-height: 100vh; }
+    #loading {
+      position: fixed; inset: 0; background: #060810;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 16px;
+    }
+    .spinner {
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 3px solid #1a2040; border-top-color: #4f6dff;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading p { font-family: sans-serif; font-size: 14px; color: #4a5a80; }
   </style>
 </head>
 <body>
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>Chargement de SubCraft...</p>
+  </div>
   <div id="root"></div>
-  <script type="text/babel" src="./subcraft-v9.jsx" data-presets="react"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+  <script>
+    window.useState = React.useState;
+    window.useEffect = React.useEffect;
+    window.useRef = React.useRef;
+    window.useCallback = React.useCallback;
+    window.useMemo = React.useMemo;
+  </script>
+  <script type="text/babel" data-presets="react" src="./app-bundle.js"></script>
 </body>
 </html>
