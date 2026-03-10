@@ -1662,7 +1662,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
               </button>
             </div>
           </div>
-          {/* 3-step micro-guide — shows until user has 3+ videos */}
+          {/* 3-step micro-guide — shows until user has 3 or more videos */}
           {files.filter(f=>f.status==="ready").length<3&&(
             <div style={{display:"flex",gap:8,padding:"12px 14px",borderRadius:14,background:"linear-gradient(135deg,rgba(91,108,255,.06),rgba(168,85,247,.04))",border:"1px solid rgba(91,108,255,.12)",flexWrap:"wrap"}}>
               {[["1","📤","Importe ta vidéo","MP4, MOV, URL YouTube"],["2","🤖","L'IA génère tes subs","Whisper · 10s"],["3","🎨","Choisis ton style","24 styles viraux"],].map(([n,ic,t,s])=>(
@@ -1698,7 +1698,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
           ))}
         </div>
 
-        {/* ── CREDIT BAR + UPGRADE ── */}
+        {/* ── CREDIT BAR ET UPGRADE ── */}
         {(creditWarn||user?.plan==="Free")&&(
           <div style={{padding:"14px 20px",borderRadius:16,background:creditWarn?`linear-gradient(135deg,${T.orange}12,${T.yellow}06)`:`linear-gradient(135deg,${T.acc}10,${T.purple}06)`,border:`1px solid ${creditWarn?T.orange:T.acc}30`,marginBottom:16,display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
             <span style={{fontSize:26}}>{creditWarn?"⚠️":"🚀"}</span>
@@ -1742,7 +1742,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
               <p style={{fontSize:13,color:T.muted,marginBottom:32,maxWidth:320,margin:"0 auto 32px",lineHeight:1.65}}>
                 Importe ta vidéo — l'IA génère tes sous-titres en <strong style={{color:T.text}}>10 secondes</strong> chrono.
               </p>
-              {/* Upload button + drag hint */}
+              {/* Upload button et drag hint */}
               <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
                 <button onClick={()=>setShowUpload(true)} className="shimmer-btn" style={{display:"inline-flex",alignItems:"center",gap:10,padding:"14px 36px",borderRadius:16,background:T.grad,border:"none",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:`0 8px 48px ${T.accGlow}`,transition:"all .3s"}}
                   onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px) scale(1.02)";e.currentTarget.style.boxShadow=`0 16px 64px ${T.accGlow}`;}}
@@ -1776,7 +1776,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
                         ?<div style={{width:18,height:18,borderRadius:"50%",border:`2px solid ${T.yellow}`,borderTopColor:"transparent",animation:"spin 1s linear infinite"}}/>
                         :f.thumb}
                     </div>
-                    {/* Name + meta */}
+                    {/* Name et meta */}
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontWeight:700,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",letterSpacing:"-.01em",marginBottom:3}}>{f.name}</div>
                       <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap"}}>
@@ -5381,7 +5381,7 @@ const AdminPanel=({onExit})=>{
               ))}
             </div>
 
-            {/* Traffic sources + top pages */}
+            {/* Traffic sources et top pages */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}} className="mobile-grid1">
               {/* Sources */}
               <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:"18px 20px"}}>
@@ -5427,7 +5427,7 @@ const AdminPanel=({onExit})=>{
             </div>
             </div>
 
-            {/* Geographic + devices */}
+            {/* Geographic et devices */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}} className="mobile-grid1">
               <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:"18px 20px"}}>
                 <div style={{fontWeight:700,fontSize:14,marginBottom:16}}>🌍 Pays top visiteurs</div>
@@ -5515,7 +5515,7 @@ const AdminPanel=({onExit})=>{
                 </div>
               ))}
             </div>
-            {/* Charts + activity */}
+            {/* Charts et activity */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}} className="mobile-grid1">
               <div style={{background:`linear-gradient(145deg,${T.surf},${T.surf2})`,borderRadius:16,border:"1px solid rgba(255,255,255,.06)",padding:18}}>
                 <div style={{fontWeight:700,fontSize:13,marginBottom:4}}>Répartition des plans</div>
