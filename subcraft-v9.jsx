@@ -5425,6 +5425,7 @@ const AdminPanel=({onExit})=>{
                 ))}
               </div>
             </div>
+            </div>
 
             {/* Geographic + devices */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}} className="mobile-grid1">
@@ -5470,7 +5471,6 @@ const AdminPanel=({onExit})=>{
                 </div>
               </div>
             </div>
-          </div>
           </div>
           </div>
           </div>
