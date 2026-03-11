@@ -10,11 +10,12 @@
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
 
 const headers = {
   "Content-Type": "application/json",
-  "apikey": SUPABASE_KEY,
-  "Authorization": `Bearer ${SUPABASE_KEY}`,
+  "apikey": SERVICE_KEY,
+  "Authorization": `Bearer ${SERVICE_KEY}`,
 };
 
 async function supabase(path, method = "GET", body = null, token = null) {
@@ -56,7 +57,7 @@ export default async function handler(req, res) {
     // Créer l'utilisateur dans Supabase Auth
     const authRes = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY },
+      headers: { "Content-Type": "application/json", "apikey": SERVICE_KEY },
       body: JSON.stringify({ email, password }),
     });
     const authData = await authRes.json();
@@ -97,7 +98,7 @@ export default async function handler(req, res) {
 
     const authRes = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY },
+      headers: { "Content-Type": "application/json", "apikey": SERVICE_KEY },
       body: JSON.stringify({ email, password }),
     });
     const authData = await authRes.json();
