@@ -211,6 +211,9 @@ const GS = () => (
 
 
 
+/* ── API BASE ── */
+const API_BASE = "https://sub-craft-fxea-git-main-skevnfortnite-7869s-projects.vercel.app";
+
 /* ── TOKENS ── */
 const T = {
   bg:"#02030a",bg2:"#05060f",bg3:"#080912",
@@ -1012,16 +1015,25 @@ const LoginPage=({onAuth,onAdmin,goSignup})=>{
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){setErr("Email invalide.");return;}
     if(btoa(email+":"+pw)===_adm){onAdmin();return;}
     setLoading(true);
-    setTimeout(()=>{
-      setLoading(false);
-      // Simulate wrong password for demo (in prod → server auth)
-      if(pw.length>=6){
-        onAuth({name:email.split("@")[0],email,plan:"Free",isNew:false});
-      } else {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth?action=login`, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({email, password: pw})
+      });
+      const data = await res.json();
+      if (!res.ok) {
         setAttempts(a=>a+1);
-        setErr(`Identifiants incorrects. ${LOCKOUT-(attempts+1)} essai(s) restant(s).`);
+        setErr(data.error || `Identifiants incorrects. ${LOCKOUT-(attempts+1)} essai(s) restant(s).`);
+      } else {
+        localStorage.setItem("sc_token", data.token);
+        onAuth({name:data.user.name, email:data.user.email, plan:data.user.plan, credits:data.user.credits, id:data.user.id, isNew:false});
       }
-    },1200);
+    } catch(e) {
+      setErr("Erreur réseau. Réessaie.");
+    } finally {
+      setLoading(false);
+    }
   };
   return(
     <div style={{minHeight:"100vh",display:"flex",background:T.bg,position:"relative",overflow:"hidden"}} className="mobile-col page">
@@ -1096,7 +1108,24 @@ const SignupPage=({onAuth,goLogin})=>{
     if(pw!==pw2){setErr("Les mots de passe ne correspondent pas.");return;}
     if(!agree){setErr("Accepte les CGU pour continuer.");return;}
     setLoading(true);
-    setTimeout(()=>{setLoading(false);onAuth({name,email,plan:"Free",isNew:true});},1400);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth?action=signup`, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({email, password: pw, name})
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErr(data.error || "Erreur lors de l'inscription.");
+      } else {
+        localStorage.setItem("sc_token", data.token);
+        onAuth({name:data.user.name, email:data.user.email, plan:data.user.plan, credits:data.user.credits, id:data.user.id, isNew:true});
+      }
+    } catch(e) {
+      setErr("Erreur réseau. Réessaie.");
+    } finally {
+      setLoading(false);
+    }
   };
   return(
     <div style={{minHeight:"100vh",display:"flex",background:T.bg,position:"relative",overflow:"hidden"}} className="mobile-col page">
