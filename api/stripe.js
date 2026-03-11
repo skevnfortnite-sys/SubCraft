@@ -93,20 +93,41 @@ async function handleWebhook(req, res, stripe) {
     return res.status(400).json({ error: `Webhook invalide: ${err.message}` });
   }
 
+  // Helper pour mettre à jour Supabase
+  const updateUserPlan = async (userId, plan, credits) => {
+    const creditsMap = { free: 3, basic: 30, expert: 100, pro: Infinity };
+    await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": process.env.SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          plan,
+          credits: credits ?? creditsMap[plan] ?? 3,
+        }),
+      }
+    );
+    console.log(`✅ Supabase mis à jour — user:${userId} plan:${plan}`);
+  };
+
   // Traitement des événements
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object;
       const { userId, planId } = session.metadata;
       console.log(`✅ Paiement réussi — user:${userId} plan:${planId}`);
-      // TODO: mettre à jour Supabase → users.plan = planId
+      await updateUserPlan(userId, planId);
       break;
     }
     case "customer.subscription.deleted": {
       const sub = event.data.object;
       const userId = sub.metadata?.userId;
       console.log(`⚠️ Abonnement annulé — user:${userId}`);
-      // TODO: Supabase → users.plan = "free"
+      await updateUserPlan(userId, "free", 3);
       break;
     }
     case "invoice.payment_failed": {
@@ -116,7 +137,6 @@ async function handleWebhook(req, res, stripe) {
       break;
     }
     default:
-      // Événement non géré, on ignore
       break;
   }
 
