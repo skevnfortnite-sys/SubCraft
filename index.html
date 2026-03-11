@@ -2423,41 +2423,34 @@ const EditorPage=({onBack,file})=>{
         </div>
       </div>
 
-      <div style={{flex:1,display:"grid",gridTemplateColumns:"320px 1fr",overflow:"hidden"}} className="editor-grid">
+      <div style={{flex:1,display:"grid",gridTemplateColumns:"400px 1fr",overflow:"hidden"}} className="editor-grid">
         {/* LEFT: Phone preview */}
-        <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,borderRight:`1px solid rgba(255,255,255,.05)`,background:"linear-gradient(180deg,#02030f,#040510)",overflowY:"auto",padding:"20px 16px",position:"relative"}} className="hide-mobile">
-          {/* Ambient glow behind phone */}
-          <div style={{position:"absolute",top:"30%",left:"50%",transform:"translateX(-50%)",width:260,height:260,borderRadius:"50%",background:`radial-gradient(${T.acc}20,transparent 70%)`,filter:"blur(50px)",pointerEvents:"none"}}/>
-          {/* 3D phone mockup — glowing, floating */}
-          <div style={{position:"relative",zIndex:1,transition:"transform .3s cubic-bezier(.22,1,.36,1)",animation:"float3d 5s ease infinite"}}
-            onMouseEnter={e=>e.currentTarget.style.transform="scale(1.03)"}
-            onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12,borderRight:`1px solid rgba(255,255,255,.05)`,background:"linear-gradient(180deg,#02030f,#040510)",overflowY:"auto",padding:"16px 20px",position:"relative"}} className="hide-mobile">
+          {/* Ambient glow */}
+          <div style={{position:"absolute",top:"30%",left:"50%",transform:"translateX(-50%)",width:300,height:300,borderRadius:"50%",background:`radial-gradient(${T.acc}18,transparent 70%)`,filter:"blur(60px)",pointerEvents:"none"}}/>
+          {/* Phone */}
+          <div style={{position:"relative",zIndex:1,transform:"scale(1.08)",transformOrigin:"center center"}}
+            onMouseEnter={e=>e.currentTarget.style.transform="scale(1.11)"}
+            onMouseLeave={e=>e.currentTarget.style.transform="scale(1.08)"}>
             <div style={{position:"absolute",inset:-20,background:`radial-gradient(${T.acc}18,${T.purple}08 50%,transparent 70%)`,filter:"blur(30px)",animation:"glowPulse 3s ease infinite",pointerEvents:"none"}}/>
             <PhoneMockup subs={subs} currentTime={ct} styleId={styleId} fontSize={fontSize} fontFamily={fontFam} playing={playing} onToggle={()=>setPlaying(p=>!p)} liveStyle={liveSubStyle} subYPos={subYPos} onSubYChange={setSubYPos} stripEmoji={_stripEmoji}/>
           </div>
-          {/* Subtitle position slider */}
-          <div style={{width:"100%",maxWidth:220,position:"relative",zIndex:1}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-              <span style={{fontSize:10,color:T.muted,fontWeight:600,letterSpacing:".04em"}}>POSITION SOUS-TITRES</span>
-              <span style={{fontSize:10,color:T.acc,fontFamily:"JetBrains Mono",fontWeight:700}}>{subYPos}%</span>
-            </div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontSize:10,color:T.dim}}>↓</span>
-              <input type="range" min={4} max={80} value={subYPos} onChange={e=>setSubYPos(+e.target.value)} style={{flex:1,accentColor:T.acc,height:4,cursor:"pointer"}}/>
-              <span style={{fontSize:10,color:T.dim}}>↑</span>
-            </div>
-          </div>
-          {/* Play controls */}
-          <div style={{display:"flex",gap:8,alignItems:"center",position:"relative",zIndex:1}}>
-            <button onClick={()=>setCt(0)} style={{width:32,height:32,borderRadius:9,background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.08)",color:T.muted,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>⏮</button>
-            <button onClick={()=>setPlaying(p=>!p)} style={{width:44,height:44,borderRadius:12,background:T.grad,border:"none",color:"#fff",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:`0 4px 20px ${T.accGlow}`}}>
+          {/* Controls row */}
+          <div style={{display:"flex",gap:8,alignItems:"center",position:"relative",zIndex:1,marginTop:4}}>
+            <button onClick={()=>setCt(0)} style={{width:30,height:30,borderRadius:8,background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.08)",color:T.muted,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>⏮</button>
+            <button onClick={()=>setPlaying(p=>!p)} style={{width:40,height:40,borderRadius:11,background:T.grad,border:"none",color:"#fff",fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:`0 4px 20px ${T.accGlow}`}}>
               {playing?"⏸":"▶"}
             </button>
-            <button onClick={()=>setShowExport(true)} style={{width:32,height:32,borderRadius:9,background:`${T.acc}15`,border:`1px solid ${T.acc}30`,color:T.acc,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>⬆</button>
+            <button onClick={()=>setShowExport(true)} style={{width:30,height:30,borderRadius:8,background:`${T.acc}15`,border:`1px solid ${T.acc}30`,color:T.acc,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>⬆</button>
+            <div style={{padding:"4px 10px",borderRadius:100,background:`${T.acc}10`,border:`1px solid ${T.acc}20`,fontSize:10,color:T.acc,fontWeight:600,marginLeft:4}}>✦ {activeStyle.label}</div>
           </div>
-          {/* Active style badge */}
-          <div style={{position:"relative",zIndex:1,padding:"6px 14px",borderRadius:100,background:`${T.acc}10`,border:`1px solid ${T.acc}20`,fontSize:11,color:T.acc,fontWeight:600}}>
-            ✦ {activeStyle.label}
+          {/* Position slider — compact */}
+          <div style={{width:"100%",maxWidth:240,position:"relative",zIndex:1}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+              <span style={{fontSize:9,color:T.muted,fontWeight:600,letterSpacing:".05em",textTransform:"uppercase"}}>Position sous-titres</span>
+              <span style={{fontSize:9,color:T.acc,fontFamily:"JetBrains Mono",fontWeight:700}}>{subYPos}%</span>
+            </div>
+            <input type="range" min={4} max={80} value={subYPos} onChange={e=>setSubYPos(+e.target.value)} style={{width:"100%",accentColor:T.acc,cursor:"pointer"}}/>
           </div>
         </div>
 
@@ -2471,17 +2464,17 @@ const EditorPage=({onBack,file})=>{
               </button>
             ))}
           </div>
-          <div style={{flex:1,overflowY:"auto",padding:18,scrollbarWidth:"thin"}}>
+          <div style={{flex:1,overflowY:"auto",padding:"14px 16px",scrollbarWidth:"thin"}}>
 
             {/* CAPTIONS */}
             {tab==="captions"&&(
-              <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,padding:"10px 14px",borderRadius:12,background:`${T.acc}06`,border:`1px solid ${T.acc}18`}}>
+              <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,padding:"8px 12px",borderRadius:10,background:`${T.acc}06`,border:`1px solid ${T.acc}18`}}>
                   <div>
-                    <span style={{fontSize:13,fontWeight:700,color:T.text}}>{subs.length} sous-titres</span>
-                    <span style={{fontSize:10,color:T.muted,marginLeft:8}}>Clique sur un mot pour éditer</span>
+                    <span style={{fontSize:12,fontWeight:700,color:T.text}}>{subs.length} sous-titres</span>
+                    <span style={{fontSize:10,color:T.muted,marginLeft:6}}>Clique pour éditer</span>
                   </div>
-                  <div style={{display:"flex",gap:6}}>
+                  <div style={{display:"flex",gap:5}}>
                     <Btn v="dark" size="sm" onClick={()=>{saveSubs([...subs,{id:Date.now(),start:subs[subs.length-1]?.end+0.5||0,end:subs[subs.length-1]?.end+1.5||1,text:"Nouveau sous-titre"}]);}} icon="➕">Ajouter</Btn>
                     <Btn v="ghost" size="sm" onClick={()=>saveSubs(genSubs())} icon="↺">Reset</Btn>
                   </div>
@@ -2490,34 +2483,32 @@ const EditorPage=({onBack,file})=>{
                   const isActive=sub.id===subs.find(s=>ct>=s.start&&ct<=s.end)?.id;
                   const isEditing=editId===sub.id;
                   return(
-                    <div key={sub.id} style={{borderRadius:10,border:`1px solid ${isActive?T.acc:T.border}`,background:isActive?`${T.acc}0a`:T.surf,transition:"all .18s"}}>
-                      <div style={{padding:"6px 10px",display:"flex",alignItems:"center",gap:8,borderBottom:`1px solid ${T.border}`}}>
-                        <span style={{fontSize:9,color:T.dim,fontFamily:"JetBrains Mono",minWidth:90}}>{sub.start.toFixed(2)}s – {sub.end.toFixed(2)}s</span>
-                        <div style={{display:"flex",gap:3,marginLeft:"auto"}}>
-                          <button onClick={()=>{setEditId(sub.id);setEditTxt(sub.text);}} style={{padding:"2px 7px",borderRadius:5,background:"transparent",border:`1px solid ${T.border}`,color:T.muted,fontSize:10,cursor:"pointer"}}>✏️</button>
-                          <button onClick={()=>saveSubs(subs.filter(s=>s.id!==sub.id))} style={{padding:"2px 6px",borderRadius:5,background:"transparent",border:"none",color:T.pink+"80",fontSize:11,cursor:"pointer"}}>✕</button>
-                        </div>
-                      </div>
-                      <div style={{padding:"7px 10px"}}>
+                    <div key={sub.id} style={{borderRadius:8,border:`1px solid ${isActive?T.acc+"80":T.border}`,background:isActive?`${T.acc}08`:T.surf,transition:"all .15s"}}>
+                      {/* Row: timestamp + words + actions */}
+                      <div style={{padding:"6px 10px",display:"flex",alignItems:"center",gap:8,minHeight:36}}>
+                        <span style={{fontSize:8.5,color:T.dim,fontFamily:"JetBrains Mono",flexShrink:0,minWidth:72}}>{sub.start.toFixed(1)}–{sub.end.toFixed(1)}s</span>
                         {isEditing?(
-                          <div style={{display:"flex",gap:5}}>
-                            <textarea value={editTxt} onChange={e=>setEditTxt(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();saveSubs(subs.map(s=>s.id===sub.id?{...s,text:editTxt}:s));setEditId(null);}if(e.key==="Escape")setEditId(null);}} style={{flex:1,padding:"6px 10px",borderRadius:8,fontSize:13,resize:"none",minHeight:44,lineHeight:1.5,background:T.surf3,border:`1px solid ${T.acc}`,color:T.text}} autoFocus/>
-                            <div style={{display:"flex",flexDirection:"column",gap:3}}>
-                              <button onClick={()=>{saveSubs(subs.map(s=>s.id===sub.id?{...s,text:editTxt}:s));setEditId(null);}} style={{padding:"4px 8px",borderRadius:6,background:`${T.green}18`,border:`1px solid ${T.green}33`,color:T.green,fontSize:11,cursor:"pointer"}}>✓</button>
-                              <button onClick={()=>setEditId(null)} style={{padding:"4px 8px",borderRadius:6,background:"transparent",border:`1px solid ${T.border}`,color:T.muted,fontSize:11,cursor:"pointer"}}>✕</button>
-                            </div>
+                          <div style={{display:"flex",gap:5,flex:1}}>
+                            <textarea value={editTxt} onChange={e=>setEditTxt(e.target.value)}
+                              onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();saveSubs(subs.map(s=>s.id===sub.id?{...s,text:editTxt}:s));setEditId(null);}if(e.key==="Escape")setEditId(null);}}
+                              style={{flex:1,padding:"4px 8px",borderRadius:6,fontSize:12,resize:"none",height:32,lineHeight:1.4,background:T.surf3,border:`1px solid ${T.acc}`,color:T.text}} autoFocus/>
+                            <button onClick={()=>{saveSubs(subs.map(s=>s.id===sub.id?{...s,text:editTxt}:s));setEditId(null);}} style={{padding:"3px 7px",borderRadius:5,background:`${T.green}20`,border:`1px solid ${T.green}40`,color:T.green,fontSize:11,cursor:"pointer",flexShrink:0}}>✓</button>
+                            <button onClick={()=>setEditId(null)} style={{padding:"3px 6px",borderRadius:5,background:"transparent",border:`1px solid ${T.border}`,color:T.muted,fontSize:11,cursor:"pointer",flexShrink:0}}>✕</button>
                           </div>
                         ):(
-                          <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                              {sub.text.split(" ").map((w,wi)=>(
-                                <span key={wi} onClick={()=>{setEditId(sub.id);setEditTxt(sub.text);}} style={{padding:"3px 9px",borderRadius:6,background:T.surf2,border:`1px solid rgba(255,255,255,.07)`,fontSize:12,fontWeight:500,cursor:"text",transition:"all .15s",letterSpacing:"-.01em"}}
-                                  onMouseEnter={e=>{e.currentTarget.style.borderColor=T.acc+"60";e.currentTarget.style.color=T.acc;e.currentTarget.style.background=`${T.acc}12`;}}
-                                  onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.07)";e.currentTarget.style.color=T.text;e.currentTarget.style.background=T.surf2;}}>{w}</span>
-                              ))}
-                            </div>
+                          <div style={{display:"flex",flexWrap:"wrap",gap:3,flex:1,cursor:"text"}}
+                            onClick={()=>{setEditId(sub.id);setEditTxt(sub.text);}}>
+                            {sub.text.split(" ").map((w,wi)=>(
+                              <span key={wi} style={{padding:"2px 7px",borderRadius:5,background:T.surf2,border:`1px solid rgba(255,255,255,.07)`,fontSize:11,fontWeight:500,transition:"all .12s"}}
+                                onMouseEnter={e=>{e.currentTarget.style.borderColor=T.acc+"60";e.currentTarget.style.color=T.acc;e.currentTarget.style.background=`${T.acc}10`;}}
+                                onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.07)";e.currentTarget.style.color=T.text;e.currentTarget.style.background=T.surf2;}}>{w}</span>
+                            ))}
                           </div>
                         )}
+                        <div style={{display:"flex",gap:2,flexShrink:0,marginLeft:"auto"}}>
+                          <button onClick={()=>{setEditId(sub.id);setEditTxt(sub.text);}} style={{width:22,height:22,borderRadius:5,background:"transparent",border:`1px solid ${T.border}`,color:T.muted,fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✏</button>
+                          <button onClick={()=>saveSubs(subs.filter(s=>s.id!==sub.id))} style={{width:22,height:22,borderRadius:5,background:"transparent",border:"none",color:T.pink+"70",fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                        </div>
                       </div>
                     </div>
                   );
