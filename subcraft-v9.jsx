@@ -288,6 +288,11 @@ const MOCK_FILES=[
 ];
 
 const SUBTITLE_STYLES=[
+  // ── SIMPLES : Styles épurés pour contenu calme ──
+  {id:"clean-white",label:"Clean White",badge:"Simple",preview:{bg:"transparent",color:"#ffffff",font:"DM Sans",weight:600,size:52,shadow:"0 2px 12px rgba(0,0,0,.95),0 1px 3px rgba(0,0,0,1)",transform:"none"}},
+  {id:"clean-white-bold",label:"Clean Bold",badge:"Simple",preview:{bg:"transparent",color:"#ffffff",font:"Outfit",weight:800,size:56,shadow:"0 3px 16px rgba(0,0,0,.95),0 1px 4px rgba(0,0,0,1)",transform:"none"}},
+  {id:"clean-card",label:"Clean Card",badge:"Simple",preview:{bg:"rgba(0,0,0,.72)",color:"#ffffff",font:"DM Sans",weight:600,size:48,shadow:"none",transform:"none"}},
+  {id:"clean-caps",label:"Clean Caps",badge:"Simple",preview:{bg:"transparent",color:"#ffffff",font:"Outfit",weight:700,size:54,shadow:"0 2px 10px rgba(0,0,0,.9)",transform:"uppercase"}},
   // ── TOP : Styles les plus viraux ──
   {id:"mrbeast",label:"MrBeast 🔥",badge:"#1 Viral",preview:{bg:"transparent",color:"#FFE600",font:"Impact",weight:900,size:72,shadow:"4px 4px 0 #000,-4px -4px 0 #000,4px -4px 0 #000,-4px 4px 0 #000,0 0 40px rgba(255,230,0,.7)",transform:"uppercase"}},
   {id:"squeezie",label:"Squeezie ⚡",badge:"Trending",preview:{bg:"transparent",color:"#fff",font:"Outfit",weight:900,size:64,shadow:"0 0 2px #000,3px 3px 0 #4f6dff,-3px -3px 0 #4f6dff,3px -3px 0 #4f6dff,-3px 3px 0 #4f6dff",transform:"uppercase"}},
@@ -568,100 +573,119 @@ const GoogleBtn=({onClick,label="Continuer avec Google"})=>(
 );
 
 /* ── PHONE MOCKUP ── */
-const PhoneMockup=({subs,currentTime,styleId,fontSize,fontFamily,playing,onToggle,liveStyle,subYPos=16,stripEmoji})=>{
+const PhoneMockup=({subs,currentTime,styleId,fontSize,fontFamily,playing,onToggle,liveStyle,subYPos=20,onSubYChange,stripEmoji})=>{
   const st=SUBTITLE_STYLES.find(s=>s.id===styleId)||SUBTITLE_STYLES[0];
   const active=subs.find(s=>currentTime>=s.start&&currentTime<=s.end);
   const totalDur=subs.length>0?subs[subs.length-1].end+2:18;
   const W=270; const H=500;
-  // Scale factor: keep subtitles small, readable, centered
-  const scaledSize=Math.round(st.preview.size*(W/380)*(fontSize/68)*0.72);
-  const clampedSize=Math.max(10,Math.min(scaledSize,22)); // never go above 22px in preview
+  const phoneRef=useRef(null);
+
+  // Drag to reposition subtitle vertically
+  const handleDragMove=(clientY)=>{
+    if(!onSubYChange||!phoneRef.current)return;
+    const rect=phoneRef.current.getBoundingClientRect();
+    const relY=clientY-rect.top;
+    const pct=Math.round((1-(relY/rect.height))*100);
+    onSubYChange(Math.max(2,Math.min(90,pct)));
+  };
+  const startDrag=(e)=>{
+    e.preventDefault();
+    const onMove=(ev)=>handleDragMove(ev.touches?ev.touches[0].clientY:ev.clientY);
+    const onUp=()=>{window.removeEventListener('mousemove',onMove);window.removeEventListener('mouseup',onUp);window.removeEventListener('touchmove',onMove);window.removeEventListener('touchend',onUp);};
+    window.addEventListener('mousemove',onMove);
+    window.addEventListener('mouseup',onUp);
+    window.addEventListener('touchmove',onMove,{passive:false});
+    window.addEventListener('touchend',onUp);
+  };
+
   const _applyText=(t)=>stripEmoji?stripEmoji(t):t;
-  // Always enforce wrapping + center in preview — matches liveSubStyle
-  const _enforceCentered=(s)=>({
-    ...s,
-    maxWidth:s.whiteSpace==="nowrap"?"none":"86%",
-    textAlign:"center",
-    display:"inline-block",
+  // Font size: much smaller to avoid double-line
+  const scaledSize=Math.round(st.preview.size*(W/380)*(fontSize/68)*0.52);
+  const clampedSize=Math.max(9,Math.min(scaledSize,16));
+
+  const isSingleLine=liveStyle&&liveStyle.whiteSpace==='nowrap';
+  const baseStyle=liveStyle||{
+    fontFamily:fontFamily||st.preview.font,
+    fontSize:`${clampedSize}px`,
+    fontWeight:st.preview.weight,
+    color:st.preview.color,
+    textShadow:st.preview.shadow,
+    textTransform:st.preview.transform,
+    background:st.preview.bg,
+    padding:st.preview.bg!=='transparent'?'3px 8px':'0 2px',
+    borderRadius:'6px',
+    animation:'subtitlePop .22s cubic-bezier(.34,1.56,.64,1) both',
+  };
+  const subStyle={
+    ...baseStyle,
+    fontSize:liveStyle?baseStyle.fontSize:`${clampedSize}px`,
+    display:'inline-block',
+    textAlign:'center',
     lineHeight:1.25,
-  });
-  const subStyle=liveStyle
-    ? _enforceCentered(liveStyle)
-    : _enforceCentered({
-        fontFamily:fontFamily||st.preview.font,
-        fontSize:`${clampedSize}px`,
-        fontWeight:st.preview.weight,
-        color:st.preview.color,
-        textShadow:st.preview.shadow,
-        textTransform:st.preview.transform,
-        background:st.preview.bg,
-        padding:st.preview.bg!=="transparent"?"4px 10px":"0 2px",
-        borderRadius:"6px",
-        animation:"subtitlePop .22s cubic-bezier(.34,1.56,.64,1) both",
-      });
+    maxWidth:isSingleLine?'none':'82%',
+    whiteSpace:isSingleLine?'nowrap':'normal',
+    wordBreak:isSingleLine?'normal':'break-word',
+    overflow:isSingleLine?'hidden':'visible',
+    textOverflow:isSingleLine?'ellipsis':'clip',
+  };
+
   return(
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,flexShrink:0}}>
-      <div style={{width:W,height:H,borderRadius:42,background:"linear-gradient(160deg,#070a1c,#040611)",border:"2.5px solid rgba(91,108,255,.25)",boxShadow:"0 0 0 1px rgba(255,255,255,.04),0 40px 80px rgba(0,0,0,.8),0 0 80px rgba(91,108,255,.12),inset 0 1px 0 rgba(255,255,255,.07)",position:"relative",overflow:"hidden",flexShrink:0}}>
-        {/* Notch */}
-        <div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:72,height:24,background:"#040611",borderRadius:"0 0 18px 18px",zIndex:20,borderBottom:"1.5px solid rgba(91,108,255,.15)"}}/>
-        {/* Glare */}
-        <div style={{position:"absolute",top:0,left:0,right:0,height:"45%",background:"linear-gradient(180deg,rgba(255,255,255,.04),transparent)",borderRadius:"42px 42px 0 0",pointerEvents:"none",zIndex:15}}/>
-        <div style={{width:"100%",height:"100%",background:"linear-gradient(180deg,#121a38 0%,#070812 55%,#080318 100%)",position:"relative",display:"flex",alignItems:"center",justifyContent:"center"}}>
-          {/* Scene person silhouette */}
-          <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,flexShrink:0}}>
+      <div ref={phoneRef}
+        style={{width:W,height:H,borderRadius:42,background:'linear-gradient(160deg,#070a1c,#040611)',border:'2.5px solid rgba(91,108,255,.25)',boxShadow:'0 0 0 1px rgba(255,255,255,.04),0 40px 80px rgba(0,0,0,.8),0 0 80px rgba(91,108,255,.12),inset 0 1px 0 rgba(255,255,255,.07)',position:'relative',overflow:'hidden',flexShrink:0,cursor:onSubYChange?'ns-resize':'default',userSelect:'none'}}
+        onMouseDown={onSubYChange?startDrag:undefined}
+        onTouchStart={onSubYChange?startDrag:undefined}>
+        <div style={{position:'absolute',top:0,left:'50%',transform:'translateX(-50%)',width:72,height:24,background:'#040611',borderRadius:'0 0 18px 18px',zIndex:20,borderBottom:'1.5px solid rgba(91,108,255,.15)'}}/>
+        <div style={{position:'absolute',top:0,left:0,right:0,height:'45%',background:'linear-gradient(180deg,rgba(255,255,255,.04),transparent)',borderRadius:'42px 42px 0 0',pointerEvents:'none',zIndex:15}}/>
+        <div style={{width:'100%',height:'100%',background:'linear-gradient(180deg,#121a38 0%,#070812 55%,#080318 100%)',position:'relative',display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
             <div style={{fontSize:100,opacity:.04}}>👤</div>
           </div>
-          {/* Color bleed gradients */}
-          <div style={{position:"absolute",top:0,left:0,right:0,height:"60%",background:"linear-gradient(180deg,rgba(30,42,120,.45) 0%,transparent 100%)"}}/>
-          <div style={{position:"absolute",bottom:0,left:0,right:0,height:"45%",background:"linear-gradient(0deg,rgba(5,2,25,.95) 0%,transparent 100%)"}}/>
-          {/* Ambient orbs */}
-          <div style={{position:"absolute",top:"18%",left:"10%",width:70,height:70,borderRadius:"50%",background:"radial-gradient(#4f6dff25,transparent 70%)",animation:"breathe 3s ease infinite"}}/>
-          <div style={{position:"absolute",top:"30%",right:"8%",width:50,height:50,borderRadius:"50%",background:"radial-gradient(#e8397022,transparent 70%)",animation:"breathe 4.5s ease infinite",animationDelay:".7s"}}/>
-          <div style={{position:"absolute",bottom:"35%",left:"20%",width:40,height:40,borderRadius:"50%",background:"radial-gradient(#34d39918,transparent 70%)",animation:"breathe 3.8s ease infinite",animationDelay:"1.2s"}}/>
-          {/* SUBTITLE OVERLAY */}
-          {active&&(
-            <div key={active.id} style={{position:"absolute",bottom:`${subYPos}%`,left:0,right:0,textAlign:"center",padding:"0 8px",zIndex:10,display:"flex",justifyContent:"center",alignItems:"center"}}>
-              <span style={_enforceCentered(subStyle)}>{_applyText(active.text)}</span>
+          <div style={{position:'absolute',top:0,left:0,right:0,height:'60%',background:'linear-gradient(180deg,rgba(30,42,120,.45) 0%,transparent 100%)'}}/>
+          <div style={{position:'absolute',bottom:0,left:0,right:0,height:'45%',background:'linear-gradient(0deg,rgba(5,2,25,.95) 0%,transparent 100%)'}}/>
+          <div style={{position:'absolute',top:'18%',left:'10%',width:70,height:70,borderRadius:'50%',background:'radial-gradient(#4f6dff25,transparent 70%)',animation:'breathe 3s ease infinite'}}/>
+          <div style={{position:'absolute',top:'30%',right:'8%',width:50,height:50,borderRadius:'50%',background:'radial-gradient(#e8397022,transparent 70%)',animation:'breathe 4.5s ease infinite',animationDelay:'.7s'}}/>
+          {/* SUBTITLE */}
+          <div style={{position:'absolute',bottom:`${subYPos}%`,left:0,right:0,textAlign:'center',padding:'0 8px',zIndex:10,display:'flex',justifyContent:'center',alignItems:'center',pointerEvents:'none'}}>
+            {active?(
+              <span key={active.id} style={subStyle}>{_applyText(active.text)}</span>
+            ):(
+              <span style={{...subStyle,animation:'none',opacity:.2,fontSize:'10px'}}>Sous-titre ici</span>
+            )}
+          </div>
+          {/* Drag hint */}
+          {onSubYChange&&(
+            <div style={{position:'absolute',top:30,left:0,right:0,display:'flex',justifyContent:'center',zIndex:20,pointerEvents:'none'}}>
+              <div style={{fontSize:9,color:'rgba(255,255,255,.28)',background:'rgba(0,0,0,.35)',padding:'2px 8px',borderRadius:20}}>↕ glisser pour déplacer</div>
             </div>
           )}
-          {!active&&(
-            <div style={{position:"absolute",bottom:`${subYPos}%`,left:0,right:0,textAlign:"center",padding:"0 8px",zIndex:10,opacity:.18,display:"flex",justifyContent:"center"}}>
-              <span style={{...subStyle,animation:"none",fontSize:"13px"}}>Sous-titre ici</span>
-            </div>
-          )}
-          {/* TikTok-style UI elements */}
-          <div style={{position:"absolute",right:10,top:"25%",display:"flex",flexDirection:"column",gap:12,alignItems:"center",zIndex:12}}>
-            {[["❤️","12k"],["💬","489"],["↗","1.2k"]].map(([ic,n])=>(
-              <div key={ic} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-                <div style={{fontSize:22,filter:"drop-shadow(0 2px 6px rgba(0,0,0,.6))"}}>{ic}</div>
-                <div style={{fontSize:8,color:"rgba(255,255,255,.65)",fontWeight:700}}>{n}</div>
+          <div style={{position:'absolute',right:10,top:'25%',display:'flex',flexDirection:'column',gap:12,alignItems:'center',zIndex:12}}>
+            {[['❤️','12k'],['💬','489'],['↗','1.2k']].map(([ic,n])=>(
+              <div key={ic} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+                <div style={{fontSize:22,filter:'drop-shadow(0 2px 6px rgba(0,0,0,.6))'}}>{ic}</div>
+                <div style={{fontSize:8,color:'rgba(255,255,255,.65)',fontWeight:700}}>{n}</div>
               </div>
             ))}
           </div>
-          {/* Controls bar */}
-          <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"6px 12px 12px",background:"linear-gradient(transparent,rgba(0,0,0,.75))"}}>
-            <div style={{height:2.5,background:"rgba(255,255,255,.12)",borderRadius:2,marginBottom:7,position:"relative",overflow:"hidden"}}>
-              <div style={{height:"100%",width:`${Math.min((currentTime/totalDur)*100,100)}%`,background:`linear-gradient(90deg,${T.acc},${T.purple})`,borderRadius:2,transition:"width .1s"}}/>
+          <div style={{position:'absolute',bottom:0,left:0,right:0,padding:'6px 12px 12px',background:'linear-gradient(transparent,rgba(0,0,0,.75))'}}>
+            <div style={{height:2.5,background:'rgba(255,255,255,.12)',borderRadius:2,marginBottom:7,position:'relative',overflow:'hidden'}}>
+              <div style={{height:'100%',width:`${Math.min((currentTime/totalDur)*100,100)}%`,background:`linear-gradient(90deg,${T.acc},${T.purple})`,borderRadius:2,transition:'width .1s'}}/>
             </div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <button onClick={onToggle} style={{width:28,height:28,borderRadius:"50%",background:"rgba(255,255,255,.2)",border:"1px solid rgba(255,255,255,.1)",color:"#fff",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",backdropFilter:"blur(4px)"}}>{playing?"⏸":"▶"}</button>
-              <span style={{fontSize:8,color:"rgba(255,255,255,.4)",fontFamily:"JetBrains Mono"}}>{currentTime.toFixed(1)}s / {totalDur.toFixed(0)}s</span>
-              <div style={{marginLeft:"auto",display:"flex",gap:3}}>
-                {["🔊","⛶"].map(ic=><div key={ic} style={{width:20,height:20,borderRadius:4,background:"rgba(255,255,255,.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9}}>{ic}</div>)}
-              </div>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <button onClick={e=>{e.stopPropagation();onToggle();}} style={{width:28,height:28,borderRadius:'50%',background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.1)',color:'#fff',fontSize:11,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',backdropFilter:'blur(4px)'}}>{playing?'⏸':'▶'}</button>
+              <span style={{fontSize:8,color:'rgba(255,255,255,.4)',fontFamily:'JetBrains Mono'}}>{currentTime.toFixed(1)}s / {totalDur.toFixed(0)}s</span>
             </div>
           </div>
         </div>
-        {/* Home indicator */}
-        <div style={{position:"absolute",bottom:5,left:"50%",transform:"translateX(-50%)",width:80,height:3,background:"rgba(255,255,255,.2)",borderRadius:2}}/>
+        <div style={{position:'absolute',bottom:5,left:'50%',transform:'translateX(-50%)',width:80,height:3,background:'rgba(255,255,255,.2)',borderRadius:2}}/>
       </div>
       {/* Mini timeline */}
-      <div style={{width:W,height:22,background:T.surf,borderRadius:8,border:`1px solid ${T.border}`,overflow:"hidden",position:"relative"}}>
+      <div style={{width:W,height:18,background:T.surf,borderRadius:6,border:`1px solid ${T.border}`,overflow:'hidden',position:'relative'}}>
         {subs.map(s=>(
-          <div key={s.id} style={{position:"absolute",top:2,height:"calc(100% - 4px)",left:`${(s.start/totalDur)*100}%`,width:`${Math.max(((s.end-s.start)/totalDur)*100,.5)}%`,background:`${T.acc}30`,border:`1px solid ${T.acc}50`,borderRadius:3}}/>
+          <div key={s.id} style={{position:'absolute',top:2,height:'calc(100% - 4px)',left:`${(s.start/totalDur)*100}%`,width:`${Math.max(((s.end-s.start)/totalDur)*100,.5)}%`,background:`${T.acc}30`,border:`1px solid ${T.acc}50`,borderRadius:3}}/>
         ))}
-        <div style={{position:"absolute",top:0,bottom:0,left:`${Math.min((currentTime/totalDur)*100,100)}%`,width:2,background:T.pink,zIndex:3,borderRadius:1}}>
-          <div style={{width:7,height:7,borderRadius:"50%",background:T.pink,position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",boxShadow:`0 0 6px ${T.pink}`}}/>
+        <div style={{position:'absolute',top:0,bottom:0,left:`${Math.min((currentTime/totalDur)*100,100)}%`,width:2,background:T.pink,zIndex:3,borderRadius:1}}>
+          <div style={{width:6,height:6,borderRadius:'50%',background:T.pink,position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)'}}/>
         </div>
       </div>
     </div>
@@ -1208,7 +1232,7 @@ const LandingPage=({onCTA,setPage,goCheckout})=>{
             <span style={{fontSize:11,color:T.green,letterSpacing:".06em",fontWeight:600}}>PROPULSÉ PAR WHISPER AI · BÊTA OUVERTE</span>
           </div>
           {/* Title */}
-          <h1 className="fu syne text-3d" style={{fontWeight:800,fontSize:"clamp(52px,6vw,96px)",lineHeight:.96,letterSpacing:"-.058em",marginBottom:28,animationDelay:".06s"}}>
+          <h1 className="fu syne text-3d" style={{fontWeight:800,fontSize:"clamp(28px,3.8vw,58px)",lineHeight:.96,letterSpacing:"-.055em",marginBottom:24,animationDelay:".06s"}}>
             <span style={{display:"block",color:T.text}}>Des sous-titres</span>
             <span style={{display:"block",color:T.acc}}>qui explosent</span>
             <span style={{display:"block",color:T.text}}>tes vues <span style={{display:"inline-block",animation:"float 2s ease infinite"}}>🚀</span></span>
@@ -1625,17 +1649,17 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
         </div>
       </nav>
 
-      <div style={{maxWidth:960,margin:"0 auto",padding:"24px 20px",position:"relative",zIndex:1}} className="mobile-p">
+      <div style={{maxWidth:900,margin:"0 auto",padding:"16px 16px",position:"relative",zIndex:1}} className="mobile-p">
 
         {/* ── WELCOME STRIP ── */}
         <div style={{marginBottom:20}}>
           <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:12,marginBottom:16}}>
             <div>
-              <div style={{fontSize:11,color:T.muted,fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>TABLEAU DE BORD</div>
-              <h1 className="syne" style={{fontWeight:800,fontSize:26,letterSpacing:"-.04em",marginBottom:5}}>
+              <div style={{fontSize:10,color:T.muted,fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:3}}>TABLEAU DE BORD</div>
+              <h1 className="syne" style={{fontWeight:800,fontSize:20,letterSpacing:"-.04em",marginBottom:4}}>
                 Bonjour, <span style={{background:T.grad,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>{user?.name?.split(" ")[0]||"Créateur"}</span> 👋
               </h1>
-              <div style={{color:T.muted,fontSize:12.5}}>
+              <div style={{color:T.muted,fontSize:11.5}}>
                 Plan <span style={{color:planColor[user?.plan]||T.muted,fontWeight:700}}>{user?.plan}</span>
                 {" · "}{files.length} vidéo{files.length>1?"s":""} · {files.filter(f=>f.status==="ready").length} prêtes
               </div>
@@ -1679,20 +1703,20 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
         </div>
 
         {/* ── STATS STRIP ── */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:20}} className="mobile-grid2">
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:16}} className="mobile-grid2">
           {[
             {icon:"🎬",label:"Vidéos prêtes",value:files.filter(f=>f.status==="ready").length,color:T.acc},
             {icon:"💎",label:"Crédits restants",value:totalCredits===Infinity?"∞":totalCredits-usedCredits,color:creditWarn?T.orange:T.yellow},
-            {icon:"⬆️",label:"Exports réalisés",value:files.filter(f=>f.exported).length,color:T.green},
+            {icon:"⬆️",label:"Exports",value:files.filter(f=>f.exported).length,color:T.green},
             {icon:"📅",label:"Plan actuel",value:user?.plan||"Free",color:planColor[user?.plan]||T.muted},
           ].map((s,i)=>(
-            <div key={s.label} style={{padding:"18px 16px",borderRadius:18,background:`linear-gradient(145deg,${T.surf},${T.surf2})`,border:`1px solid rgba(255,255,255,.06)`,position:"relative",overflow:"hidden",animation:`fadeUp .35s ease ${i*.06}s both`,transition:"all .3s",boxShadow:"0 4px 20px rgba(0,0,0,.2)"}}
-              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.borderColor=s.color+"44";e.currentTarget.style.boxShadow=`0 12px 40px ${s.color}18`;}}
-              onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.borderColor="rgba(255,255,255,.06)";e.currentTarget.style.boxShadow="0 4px 20px rgba(0,0,0,.2)";}}>
-              <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${s.color}88,transparent)`}}/>
-              <div style={{fontSize:24,marginBottom:10}}>{s.icon}</div>
-              <div className="syne" style={{fontWeight:800,fontSize:26,color:s.color,lineHeight:1,marginBottom:4}}>{s.value}</div>
-              <div style={{fontSize:11,color:T.muted}}>{s.label}</div>
+            <div key={s.label} style={{padding:"12px 14px",borderRadius:12,background:T.surf,border:`1px solid rgba(255,255,255,.06)`,position:"relative",overflow:"hidden",transition:"all .2s"}}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor=s.color+"44";}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.06)";}}>
+              <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${s.color}77,transparent)`}}/>
+              <div style={{fontSize:16,marginBottom:5}}>{s.icon}</div>
+              <div className="syne" style={{fontWeight:800,fontSize:20,color:s.color,lineHeight:1,marginBottom:3}}>{s.value}</div>
+              <div style={{fontSize:10,color:T.muted}}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -1757,22 +1781,21 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
                 const sc={ready:T.green,processing:T.yellow,deleted:T.muted}[f.status]||T.muted;
                 return(
                   <div key={f.id}
-                    style={{display:"flex",alignItems:"center",gap:12,padding:"13px 16px",
+                    style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",
                       borderBottom:i<tabFiles.length-1?"1px solid rgba(255,255,255,.033)":"none",
                       transition:"background .18s",cursor:"pointer",
                       animation:`fadeUp .28s ease ${i*.045}s both`,position:"relative"}}
                     onClick={()=>onOpen(f)}
                     onMouseEnter={e=>e.currentTarget.style.background="rgba(91,108,255,.038)"}
                     onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                    {/* Left accent bar */}
-                    <div style={{position:"absolute",left:0,top:"18%",bottom:"18%",width:3,borderRadius:2,background:sc,opacity:.8}}/>
+                    <div style={{position:"absolute",left:0,top:"20%",bottom:"20%",width:2.5,borderRadius:2,background:sc,opacity:.8}}/>
                     {/* Thumbnail icon */}
-                    <div style={{width:44,height:44,borderRadius:11,flexShrink:0,
+                    <div style={{width:36,height:36,borderRadius:9,flexShrink:0,
                       background:`linear-gradient(135deg,${sc}18,rgba(255,255,255,.04))`,
                       border:`1px solid ${sc}28`,
-                      display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>
+                      display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>
                       {f.status==="processing"
-                        ?<div style={{width:18,height:18,borderRadius:"50%",border:`2px solid ${T.yellow}`,borderTopColor:"transparent",animation:"spin 1s linear infinite"}}/>
+                        ?<div style={{width:14,height:14,borderRadius:"50%",border:`2px solid ${T.yellow}`,borderTopColor:"transparent",animation:"spin 1s linear infinite"}}/>
                         :f.thumb}
                     </div>
                     {/* Name et meta */}
@@ -2365,7 +2388,7 @@ const EditorPage=({onBack,file})=>{
             onMouseEnter={e=>e.currentTarget.style.transform="scale(1.03)"}
             onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}>
             <div style={{position:"absolute",inset:-20,background:`radial-gradient(${T.acc}18,${T.purple}08 50%,transparent 70%)`,filter:"blur(30px)",animation:"glowPulse 3s ease infinite",pointerEvents:"none"}}/>
-            <PhoneMockup subs={subs} currentTime={ct} styleId={styleId} fontSize={fontSize} fontFamily={fontFam} playing={playing} onToggle={()=>setPlaying(p=>!p)} liveStyle={liveSubStyle} subYPos={subYPos} stripEmoji={_stripEmoji}/>
+            <PhoneMockup subs={subs} currentTime={ct} styleId={styleId} fontSize={fontSize} fontFamily={fontFam} playing={playing} onToggle={()=>setPlaying(p=>!p)} liveStyle={liveSubStyle} subYPos={subYPos} onSubYChange={setSubYPos} stripEmoji={_stripEmoji}/>
           </div>
           {/* Subtitle position slider */}
           <div style={{width:"100%",maxWidth:220,position:"relative",zIndex:1}}>
