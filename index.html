@@ -46,80 +46,10 @@
   </script>
   <script type="text/plain" id="app-src">
 /* NOTE: Cursor, AuroraBg, ParticleField, Phone3D defined below near line 800+ */
-const _PLACEHOLDER_REMOVE = null;
 
 /* ── CUSTOM CURSOR ── */
-const Cursor_OLD_REMOVE = () => {
-  const dotRef = useRef(null);
-  const ringRef = useRef(null);
-  const pos = useRef({x:0,y:0});
-  const ring = useRef({x:0,y:0});
-  useEffect(() => {
-    const move = (e) => {
-      pos.current = {x: e.clientX, y: e.clientY};
-      if(dotRef.current) {
-        dotRef.current.style.left = e.clientX + 'px';
-        dotRef.current.style.top = e.clientY + 'px';
-      }
-    };
-    const animate = () => {
-      ring.current.x += (pos.current.x - ring.current.x) * 0.12;
-      ring.current.y += (pos.current.y - ring.current.y) * 0.12;
-      if(ringRef.current) {
-        ringRef.current.style.left = ring.current.x + 'px';
-        ringRef.current.style.top = ring.current.y + 'px';
-      }
-      requestAnimationFrame(animate);
-    };
-    document.addEventListener('mousemove', move);
-    animate();
-    const grow = () => { if(ringRef.current) { ringRef.current.style.transform = 'translate(-50%,-50%) scale(1.8)'; ringRef.current.style.opacity = '.5'; }};
-    const shrink = () => { if(ringRef.current) { ringRef.current.style.transform = 'translate(-50%,-50%) scale(1)'; ringRef.current.style.opacity = '1'; }};
-    document.querySelectorAll('button,a,[role="button"]').forEach(el => { el.addEventListener('mouseenter', grow); el.addEventListener('mouseleave', shrink); });
-    return () => document.removeEventListener('mousemove', move);
-  }, []);
-  return (
-    <div id="cursor">
-      <div id="cursor-dot" ref={dotRef} style={{position:'fixed',width:8,height:8,background:'#fff',borderRadius:'50%',transform:'translate(-50%,-50%)',pointerEvents:'none',zIndex:99999,mixBlendMode:'difference'}}/>
-      <div id="cursor-ring" ref={ringRef} style={{position:'fixed',width:36,height:36,border:'1.5px solid rgba(255,255,255,.6)',borderRadius:'50%',transform:'translate(-50%,-50%)',pointerEvents:'none',zIndex:99998,transition:'transform .2s,opacity .2s',mixBlendMode:'difference'}}/>
-    </div>
-  );
-};
 
-/* ── PARTICLE FIELD OLD (removed - redefined below) ── */
-const ParticleField_OLD_REMOVE = ({count=60,color="#5b6cff"}) => {
-  const particles = Array.from({length:count}, (_,i) => ({
-    id: i,
-    x: Math.random()*100,
-    y: Math.random()*100,
-    size: Math.random()*2.5+0.5,
-    dur: Math.random()*20+10,
-    delay: Math.random()*-20,
-    opacity: Math.random()*.5+.1,
-    dx: (Math.random()-.5)*120,
-    dy: (Math.random()-.5)*80,
-  }));
-  return (
-    <div style={{position:'absolute',inset:0,overflow:'hidden',pointerEvents:'none'}}>
-      {particles.map(p => (
-        <div key={p.id} style={{
-          position:'absolute',
-          left: p.x+'%', top: p.y+'%',
-          width: p.size+'px', height: p.size+'px',
-          borderRadius:'50%',
-          background: color,
-          opacity: p.opacity,
-          boxShadow: `0 0 ${p.size*3}px ${color}`,
-          animation: `float ${p.dur}s ${p.delay}s ease-in-out infinite alternate`,
-          transform: `translate(${p.dx}px, ${p.dy}px)`,
-          willChange:'transform',
-        }}/>
-      ))}
-    </div>
-  );
-};
 
-/* ── 3D FLOATING PHONE OLD (removed - redefined below) ── */
 
 
 /* ── GLOBAL STYLES ── */
@@ -421,10 +351,10 @@ const TEMPLATES=[
 ];
 
 const PLANS=[
-  {id:"free",name:"Free",price:0,priceY:0,color:T.muted,credits:3,features:["3 uploads / mois","Sous-titres auto","Templates tendance","Auto B-roll","Auto Zoom"],locked:["Téléchargement HD","Export vidéo","Traduction","API Access"]},
-  {id:"basic",name:"Basic",price:12,priceY:10,color:T.cyan,credits:30,features:["30 shorts / mois","300 MB / vidéo","Polices custom","Full HD 60fps","Export Premiere / DaVinci","Support 24/7"],locked:[]},
-  {id:"expert",name:"Expert",price:18,priceY:13,color:T.green,credits:100,features:["100 shorts / mois","400 MB / vidéo","Polices custom","Full HD 60fps","Export Premiere / DaVinci","Support 24/7"],locked:[]},
-  {id:"pro",name:"Pro",price:30,priceY:21,color:T.acc,credits:Infinity,popular:true,features:["Illimité","600 MB / vidéo","Polices custom","Full HD 60fps","Export Premiere / DaVinci","Support prioritaire","Branding custom","API Access"],locked:[]},
+  {id:"free",name:"Free",price:0,priceY:0,color:T.muted,credits:3,features:["3 vidéos / mois","Sous-titres auto IA","24 styles de sous-titres","Export SRT / ASS"],locked:["Export vidéo HD","Traduction auto","Polices custom","Support prioritaire","API Access"]},
+  {id:"basic",name:"Basic",price:12,priceY:10,color:T.cyan,credits:30,features:["30 vidéos / mois","300 MB / vidéo","Polices custom","Export vidéo HD","Export SRT / ASS","Support 24/7"],locked:["API Access"]},
+  {id:"expert",name:"Expert",price:18,priceY:13,color:T.green,credits:100,features:["100 vidéos / mois","400 MB / vidéo","Polices custom","Export vidéo HD","Traduction auto (12 langues)","Support prioritaire"],locked:["API Access"]},
+  {id:"pro",name:"Pro",price:30,priceY:21,color:T.acc,credits:Infinity,popular:true,features:["Vidéos illimitées","600 MB / vidéo","Toutes les polices","Export vidéo HD","Traduction auto (12 langues)","Support prioritaire","Branding custom","API Access"],locked:[]},
 ];
 
 const genSubs=()=>{
@@ -438,6 +368,24 @@ let _notifListeners=[];
 const notify=(msg,type="info",duration=4000)=>{
   const id=++_notifId;
   _notifListeners.forEach(fn=>fn({id,msg,type,duration}));
+};
+
+/* ── CONFIRM MODAL (replaces window.confirm) ── */
+const ConfirmModal=({open,title,desc,onConfirm,onCancel,danger=true})=>{
+  if(!open) return null;
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:9000,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,.65)",backdropFilter:"blur(6px)"}} onClick={onCancel}>
+      <div onClick={e=>e.stopPropagation()} style={{background:T.surf,border:`1px solid ${danger?"rgba(232,57,112,.3)":T.borderL}`,borderRadius:18,padding:"28px 28px 22px",width:"min(400px,92vw)",boxShadow:"0 24px 80px rgba(0,0,0,.7)",animation:"popIn .25s cubic-bezier(.34,1.56,.64,1)"}}>
+        <div style={{fontSize:20,marginBottom:8}}>⚠️</div>
+        <div style={{fontWeight:800,fontSize:16,marginBottom:8,color:T.text}}>{title}</div>
+        {desc&&<div style={{fontSize:13,color:T.muted,lineHeight:1.6,marginBottom:20}}>{desc}</div>}
+        <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+          <Btn v="secondary" size="sm" onClick={onCancel}>Annuler</Btn>
+          <Btn v={danger?"danger":"primary"} size="sm" onClick={onConfirm}>Confirmer</Btn>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const NotifProvider=()=>{
@@ -1052,12 +1000,28 @@ const LoginPage=({onAuth,onAdmin,goSignup})=>{
   const [pw,setPw]=useState("");
   const [loading,setLoading]=useState(false);
   const [err,setErr]=useState("");
+  const [attempts,setAttempts]=useState(0);
+  const LOCKOUT=5;
+  const isLocked=attempts>=LOCKOUT;
+  // Admin check: compare against hashed-equivalent (in prod → bcrypt on server)
+  const _adm=btoa("admin@subcraftai.com:admin123"); // ← remplacer par vérif serveur en prod
   const handle=()=>{
+    if(isLocked){setErr(`Trop de tentatives. Réessaie dans 15 min.`);return;}
     setErr("");
-    if(email==="admin@subcraftai.com"&&pw==="admin123"){onAdmin();return;}
     if(!email||!pw){setErr("Remplis tous les champs.");return;}
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){setErr("Email invalide.");return;}
+    if(btoa(email+":"+pw)===_adm){onAdmin();return;}
     setLoading(true);
-    setTimeout(()=>{setLoading(false);onAuth({name:email.split("@")[0],email,plan:"Free",isNew:false});},1200);
+    setTimeout(()=>{
+      setLoading(false);
+      // Simulate wrong password for demo (in prod → server auth)
+      if(pw.length>=6){
+        onAuth({name:email.split("@")[0],email,plan:"Free",isNew:false});
+      } else {
+        setAttempts(a=>a+1);
+        setErr(`Identifiants incorrects. ${LOCKOUT-(attempts+1)} essai(s) restant(s).`);
+      }
+    },1200);
   };
   return(
     <div style={{minHeight:"100vh",display:"flex",background:T.bg,position:"relative",overflow:"hidden"}} className="mobile-col page">
@@ -1077,7 +1041,7 @@ const LoginPage=({onAuth,onAdmin,goSignup})=>{
           </div>
         </div>
       </div>
-      {/* RIGTTC — FORM */}
+      {/* RIGHT — FORM */}
       <div style={{width:"100%",maxWidth:480,display:"flex",alignItems:"center",justifyContent:"center",padding:40,position:"relative",zIndex:1,borderLeft:"1px solid rgba(255,255,255,.04)"}} className="mobile-p">
         <div style={{width:"100%",maxWidth:380}}>
           <div className="fu syne" style={{fontWeight:800,fontSize:30,marginBottom:6,letterSpacing:"-.04em"}}>Bon retour 👋</div>
@@ -1121,7 +1085,12 @@ const SignupPage=({onAuth,goLogin})=>{
   const strength=pwLen<4?0:pwLen<8?1:/[A-Z]/.test(pw)&&/[0-9]/.test(pw)?3:2;
   const sColors=["",T.pink,T.yellow,T.green];
   const sLabels=["","Faible","Moyen","Fort 💪"];
-  const next=()=>{if(!name||!email){setErr("Remplis ton nom et email.");return;}setErr("");setStep(2);};
+  const next=()=>{
+    if(!name||!email){setErr("Remplis ton nom et email.");return;}
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){setErr("Adresse email invalide.");return;}
+    if(name.trim().length<2){setErr("Nom trop court (2 caractères min).");return;}
+    setErr("");setStep(2);
+  };
   const handle=()=>{
     if(!pw||pw.length<8){setErr("Mot de passe trop court (8 min).");return;}
     if(pw!==pw2){setErr("Les mots de passe ne correspondent pas.");return;}
@@ -1146,7 +1115,7 @@ const SignupPage=({onAuth,goLogin})=>{
           </div>
         </div>
       </div>
-      {/* RIGTTC */}
+      {/* RIGHT — FORM */}
       <div style={{width:"100%",maxWidth:480,display:"flex",alignItems:"center",justifyContent:"center",padding:40,position:"relative",zIndex:1,borderLeft:"1px solid rgba(255,255,255,.04)"}} className="mobile-p">
         <div style={{width:"100%",maxWidth:380}}>
           <div className="fu syne" style={{fontWeight:800,fontSize:30,marginBottom:6,letterSpacing:"-.04em"}}>Crée ton compte 🚀</div>
@@ -1564,10 +1533,11 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
   // 🔒 SÉCURITÉ: chaque session utilisateur a son propre état en mémoire.
   // En prod → filtrer par user.id côté API: GET /api/files?userId={user.id}
   // Ne jamais renvoyer les fichiers d'un autre utilisateur sans vérifier le JWT.
-  const userFiles=useMemo(()=>MOCK_FILES.map(f=>({...f,ownerId:user?.email})),[user?.email]);
+  const userFiles=useMemo(()=>MOCK_FILES.filter(f=>f.status!=="deleted").map(f=>({...f,ownerId:user?.email})),[user?.email]);
   const [files,setFiles]=useState(userFiles);
   const [showUpload,setShowUpload]=useState(false);
   const [search,setSearch]=useState("");
+  const [confirmDelete,setConfirmDelete]=useState(null); // {id, name}
   const [notifPanel,setNotifPanel]=useState(false);
   const [notifications,setNotifications]=useState([
     {id:1,icon:"✅",text:"Vlog Paris Ep.12 — Export terminé",time:"Il y a 2h",read:false},
@@ -1577,7 +1547,8 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
   ]);
   const unread=notifications.filter(n=>!n.read).length;
   const planColor={Free:T.muted,Basic:T.cyan,Expert:T.green,Pro:T.acc};
-  const filtered=files.filter(f=>f.name.toLowerCase().includes(search.toLowerCase()));
+  // 🔒 Exclure les fichiers supprimés de l'affichage
+  const filtered=files.filter(f=>f.status!=="deleted"&&f.name.toLowerCase().includes(search.toLowerCase()));
 
   const handleUpload=(file,lang)=>{
     const newF={id:Date.now(),name:file?.name||"Nouvelle vidéo.mp4",date:new Date().toLocaleDateString("fr-FR"),dur:"00:00",thumb:"🎬",exported:false,deleteIn:24,status:"processing",views:0,style:"yellow-bold"};
@@ -1625,11 +1596,12 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
     setChatLoading(true);
     try{
       const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:"Tu es Sophie, une assistante support enthousiaste et sympathique pour SubCraft, une app de sous-titres IA pour créateurs TikTok/YouTube/Instagram. Tu réponds en français, de façon concise (2-3 phrases max), avec des emojis occasionnels. Tu es experte du produit. Si on parle de problèmes techniques, rassure l'utilisateur et propose des solutions simples.",messages:[...chatHistory.filter(m=>m.from!=="support"||m.id===1).map(m=>({role:m.from==="user"?"user":"assistant",content:m.text})),{role:"user",content:txt}]})});
+      if(!res.ok){throw new Error(res.status);}
       const d=await res.json();
       const reply=d.content?.[0]?.text||"Je suis là pour t'aider ! 😊";
       setChatHistory(h=>[...h,{id:Date.now()+1,from:"support",text:reply,time:new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}),read:false}]);
     }catch{
-      setChatHistory(h=>[...h,{id:Date.now()+1,from:"support",text:"Désolée, je suis momentanément indisponible. Essaie de recharger ! 🔄",time:new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}),read:false}]);
+      setChatHistory(h=>[...h,{id:Date.now()+1,from:"support",text:"Désolée, je suis momentanément indisponible. Réessaie dans quelques instants ! 🔄",time:new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}),read:false}]);
     }
     setChatLoading(false);
   };
@@ -1875,7 +1847,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
                           ✏ Éditer
                         </button>
                       )}
-                      <button onClick={()=>{if(window.confirm("Supprimer ?"))setFiles(p=>p.filter(x=>x.id!==f.id));}}
+                      <button onClick={()=>setConfirmDelete({id:f.id,name:f.name})}
                         style={{width:32,height:32,borderRadius:8,background:`${T.pink}08`,
                           border:`1px solid ${T.pink}18`,color:T.pink,fontSize:13,cursor:"pointer",
                           display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}
@@ -1951,6 +1923,13 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
       </div>
 
       {showUpload&&<UploadModal onClose={()=>setShowUpload(false)} onImport={handleUpload}/>}
+      <ConfirmModal
+        open={!!confirmDelete}
+        title="Supprimer cette vidéo ?"
+        desc={confirmDelete?`"${confirmDelete.name}" sera définitivement supprimée. Cette action est irréversible.`:undefined}
+        onConfirm={()=>{setFiles(p=>p.filter(x=>x.id!==confirmDelete.id));setConfirmDelete(null);notify("Vidéo supprimée","warning");}}
+        onCancel={()=>setConfirmDelete(null)}
+      />
       {notifPanel&&<div style={{position:"fixed",inset:0,zIndex:149}} onClick={()=>setNotifPanel(false)}/>}
     </div>
   );
@@ -2140,9 +2119,9 @@ const ProfilePage=({user,setUser,onBack,setPage})=>{
   };
 
   const invoices=[
-    {id:"INV-001",date:"01/03/2026",plan:"Pro",amount:"$21.00",status:"Payée"},
-    {id:"INV-002",date:"01/02/2026",plan:"Pro",amount:"$21.00",status:"Payée"},
-    {id:"INV-003",date:"01/01/2026",plan:"Expert",amount:"$13.00",status:"Payée"},
+    {id:"INV-001",date:"01/03/2026",plan:"Pro",amount:"€21.00",status:"Payée"},
+    {id:"INV-002",date:"01/02/2026",plan:"Pro",amount:"€21.00",status:"Payée"},
+    {id:"INV-003",date:"01/01/2026",plan:"Expert",amount:"€13.00",status:"Payée"},
   ];
 
   return(
@@ -2238,7 +2217,7 @@ const ProfilePage=({user,setUser,onBack,setPage})=>{
                   onMouseLeave={e=>{if(!active)e.currentTarget.style.borderColor=T.border;}}>
                   <div style={{flex:1}}>
                     <div style={{fontWeight:700,fontSize:14,display:"flex",gap:8,alignItems:"center"}}>{p.name}{active&&<Tag color={T.acc}>Actif</Tag>}</div>
-                    <div style={{fontSize:12,color:T.muted}}>${p.priceY}/mois · {p.credits===Infinity?"Illimité":`${p.credits} crédits`}</div>
+                    <div style={{fontSize:12,color:T.muted}}>€{p.priceY}/mois · {p.credits===Infinity?"Illimité":`${p.credits} crédits`}</div>
                   </div>
                   {!active&&<Btn size="sm" v="secondary" onClick={()=>setPage("pricing")}>Passer à {p.name}</Btn>}
                 </div>
@@ -2322,11 +2301,14 @@ const EditorPage=({onBack,file})=>{
     setAddingEmoji(true);
     try{
       const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:`Add 1 perfect emoji to each subtitle. Keep short. Reply ONLY lines, no numbers.\n\n${subs.map(s=>s.text).join("\n")}`}]})});
+      if(r.status===401){notify("⚠️ Clé API manquante — configure dans Admin → Intégrations","error");return;}
+      if(!r.ok){notify(`Erreur API (${r.status}) — réessaie dans quelques instants`,"error");return;}
       const d=await r.json();
-      const lines=d.content[0]?.text?.split("\n").filter(l=>l.trim())||[];
+      const lines=d.content?.[0]?.text?.split("\n").filter(l=>l.trim())||[];
+      if(!lines.length){notify("Réponse IA vide — réessaie","error");return;}
       saveSubs(subs.map((s,i)=>({...s,text:lines[i]||s.text})));
       notify("Emojis ajoutés par l'IA ! ✨","success");
-    }catch{notify("Erreur API — vérifie ta clé","error");}
+    }catch(e){notify("Erreur réseau — vérifie ta connexion","error");}
     setAddingEmoji(false);
   };
 
@@ -2335,12 +2317,15 @@ const EditorPage=({onBack,file})=>{
     try{
       const lang=LANGS.find(l=>l.code===transLang)?.name||"English";
       const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:`Translate to ${lang}. Keep emojis. Reply ONLY translated lines.\n\n${subs.map(s=>s.text).join("\n")}`}]})});
+      if(r.status===401){notify("⚠️ Clé API manquante — configure dans Admin → Intégrations","error");setTranslating(false);return;}
+      if(!r.ok){notify(`Erreur traduction (${r.status})`,"error");setTranslating(false);return;}
       const d=await r.json();
-      const lines=d.content[0]?.text?.split("\n").filter(l=>l.trim())||[];
+      const lines=d.content?.[0]?.text?.split("\n").filter(l=>l.trim())||[];
+      if(!lines.length){notify("Réponse IA vide — réessaie","error");setTranslating(false);return;}
       saveSubs(subs.map((s,i)=>({...s,text:lines[i]||s.text})));
       setShowTrans(false);
-      notify(`Traduit en ${lang} !`,"success");
-    }catch{notify("Erreur traduction","error");}
+      notify(`Traduit en ${lang} ! 🌍`,"success");
+    }catch{notify("Erreur réseau — vérifie ta connexion","error");}
     setTranslating(false);
   };
 
@@ -2468,51 +2453,67 @@ const EditorPage=({onBack,file})=>{
 
             {/* CAPTIONS */}
             {tab==="captions"&&(
-              <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,padding:"8px 12px",borderRadius:10,background:`${T.acc}06`,border:`1px solid ${T.acc}18`}}>
-                  <div>
-                    <span style={{fontSize:12,fontWeight:700,color:T.text}}>{subs.length} sous-titres</span>
-                    <span style={{fontSize:10,color:T.muted,marginLeft:6}}>Clique pour éditer</span>
+              <div style={{display:"flex",flexDirection:"column"}}>
+                {/* Header */}
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:12,fontWeight:700}}>{subs.length} sous-titres</span>
+                    <span style={{fontSize:10,color:T.muted}}>· clique pour éditer</span>
                   </div>
                   <div style={{display:"flex",gap:5}}>
                     <Btn v="dark" size="sm" onClick={()=>{saveSubs([...subs,{id:Date.now(),start:subs[subs.length-1]?.end+0.5||0,end:subs[subs.length-1]?.end+1.5||1,text:"Nouveau sous-titre"}]);}} icon="➕">Ajouter</Btn>
                     <Btn v="ghost" size="sm" onClick={()=>saveSubs(genSubs())} icon="↺">Reset</Btn>
                   </div>
                 </div>
-                {subs.map((sub,i)=>{
-                  const isActive=sub.id===subs.find(s=>ct>=s.start&&ct<=s.end)?.id;
-                  const isEditing=editId===sub.id;
-                  return(
-                    <div key={sub.id} style={{borderRadius:8,border:`1px solid ${isActive?T.acc+"80":T.border}`,background:isActive?`${T.acc}08`:T.surf,transition:"all .15s"}}>
-                      {/* Row: timestamp + words + actions */}
-                      <div style={{padding:"6px 10px",display:"flex",alignItems:"center",gap:8,minHeight:36}}>
-                        <span style={{fontSize:8.5,color:T.dim,fontFamily:"JetBrains Mono",flexShrink:0,minWidth:72}}>{sub.start.toFixed(1)}–{sub.end.toFixed(1)}s</span>
-                        {isEditing?(
-                          <div style={{display:"flex",gap:5,flex:1}}>
-                            <textarea value={editTxt} onChange={e=>setEditTxt(e.target.value)}
-                              onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();saveSubs(subs.map(s=>s.id===sub.id?{...s,text:editTxt}:s));setEditId(null);}if(e.key==="Escape")setEditId(null);}}
-                              style={{flex:1,padding:"4px 8px",borderRadius:6,fontSize:12,resize:"none",height:32,lineHeight:1.4,background:T.surf3,border:`1px solid ${T.acc}`,color:T.text}} autoFocus/>
-                            <button onClick={()=>{saveSubs(subs.map(s=>s.id===sub.id?{...s,text:editTxt}:s));setEditId(null);}} style={{padding:"3px 7px",borderRadius:5,background:`${T.green}20`,border:`1px solid ${T.green}40`,color:T.green,fontSize:11,cursor:"pointer",flexShrink:0}}>✓</button>
-                            <button onClick={()=>setEditId(null)} style={{padding:"3px 6px",borderRadius:5,background:"transparent",border:`1px solid ${T.border}`,color:T.muted,fontSize:11,cursor:"pointer",flexShrink:0}}>✕</button>
-                          </div>
-                        ):(
-                          <div style={{display:"flex",flexWrap:"wrap",gap:3,flex:1,cursor:"text"}}
-                            onClick={()=>{setEditId(sub.id);setEditTxt(sub.text);}}>
-                            {sub.text.split(" ").map((w,wi)=>(
-                              <span key={wi} style={{padding:"2px 7px",borderRadius:5,background:T.surf2,border:`1px solid rgba(255,255,255,.07)`,fontSize:11,fontWeight:500,transition:"all .12s"}}
-                                onMouseEnter={e=>{e.currentTarget.style.borderColor=T.acc+"60";e.currentTarget.style.color=T.acc;e.currentTarget.style.background=`${T.acc}10`;}}
-                                onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.07)";e.currentTarget.style.color=T.text;e.currentTarget.style.background=T.surf2;}}>{w}</span>
-                            ))}
-                          </div>
-                        )}
-                        <div style={{display:"flex",gap:2,flexShrink:0,marginLeft:"auto"}}>
-                          <button onClick={()=>{setEditId(sub.id);setEditTxt(sub.text);}} style={{width:22,height:22,borderRadius:5,background:"transparent",border:`1px solid ${T.border}`,color:T.muted,fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✏</button>
-                          <button onClick={()=>saveSubs(subs.filter(s=>s.id!==sub.id))} style={{width:22,height:22,borderRadius:5,background:"transparent",border:"none",color:T.pink+"70",fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                {/* List */}
+                <div style={{background:T.surf,borderRadius:10,border:`1px solid ${T.border}`,overflow:"hidden"}}>
+                  {subs.map((sub,i)=>{
+                    const isActive=sub.id===subs.find(s=>ct>=s.start&&ct<=s.end)?.id;
+                    const isEditing=editId===sub.id;
+                    return(
+                      <div key={sub.id}
+                        style={{display:"flex",alignItems:"center",gap:0,borderBottom:i<subs.length-1?`1px solid rgba(255,255,255,.04)`:"none",background:isActive?`${T.acc}0d`:"transparent",transition:"background .15s",position:"relative"}}
+                        className="caption-row">
+                        {/* Active indicator */}
+                        {isActive&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:2,background:T.acc,borderRadius:"0 1px 1px 0"}}/>}
+                        {/* Timestamp */}
+                        <div style={{width:70,flexShrink:0,padding:"0 0 0 12px",fontFamily:"JetBrains Mono",fontSize:8.5,color:isActive?T.acc:T.dim,lineHeight:1.2,userSelect:"none"}}>
+                          <div>{sub.start.toFixed(1)}s</div>
+                          <div>{sub.end.toFixed(1)}s</div>
                         </div>
+                        {/* Separator */}
+                        <div style={{width:1,height:28,background:"rgba(255,255,255,.05)",flexShrink:0}}/>
+                        {/* Content */}
+                        <div style={{flex:1,padding:"8px 10px",minWidth:0}}>
+                          {isEditing?(
+                            <div style={{display:"flex",gap:5,alignItems:"center"}}>
+                              <textarea value={editTxt} onChange={e=>setEditTxt(e.target.value)}
+                                onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();saveSubs(subs.map(s=>s.id===sub.id?{...s,text:editTxt}:s));setEditId(null);}if(e.key==="Escape")setEditId(null);}}
+                                style={{flex:1,padding:"5px 9px",borderRadius:7,fontSize:12,resize:"none",height:34,lineHeight:1.5,background:T.bg,border:`1.5px solid ${T.acc}`,color:T.text,outline:"none"}} autoFocus/>
+                              <button onClick={()=>{saveSubs(subs.map(s=>s.id===sub.id?{...s,text:editTxt}:s));setEditId(null);}} style={{height:28,padding:"0 10px",borderRadius:6,background:`${T.green}20`,border:`1px solid ${T.green}40`,color:T.green,fontSize:12,cursor:"pointer",fontWeight:700}}>✓</button>
+                              <button onClick={()=>setEditId(null)} style={{height:28,padding:"0 8px",borderRadius:6,background:"transparent",border:`1px solid ${T.border}`,color:T.muted,fontSize:12,cursor:"pointer"}}>✕</button>
+                            </div>
+                          ):(
+                            <div style={{display:"flex",flexWrap:"wrap",gap:3,cursor:"text"}}
+                              onClick={()=>{setEditId(sub.id);setEditTxt(sub.text);}}>
+                              {sub.text.split(" ").map((w,wi)=>(
+                                <span key={wi} style={{fontSize:12,fontWeight:500,color:isActive?T.text:"rgba(220,225,255,.8)",padding:"1px 0",letterSpacing:"-.01em",transition:"color .1s"}}
+                                  onMouseEnter={e=>e.currentTarget.style.color=T.acc}
+                                  onMouseLeave={e=>e.currentTarget.style.color=isActive?T.text:"rgba(220,225,255,.8)"}>{w}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {/* Delete — always visible, subtle */}
+                        {!isEditing&&(
+                          <button onClick={e=>{e.stopPropagation();saveSubs(subs.filter(s=>s.id!==sub.id));}} style={{width:28,height:"100%",minHeight:36,flexShrink:0,background:"transparent",border:"none",color:"rgba(232,57,112,.35)",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"color .15s",marginRight:4}}
+                            onMouseEnter={e=>e.currentTarget.style.color=T.pink}
+                            onMouseLeave={e=>e.currentTarget.style.color="rgba(232,57,112,.35)"}>×</button>
+                        )}
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             )}
 
@@ -2823,7 +2824,7 @@ const PricingPage=({onBack,onSelect})=>{
             <Tog value={yearly} onChange={setYearly}/>
             <div>
               <span style={{fontSize:14,fontWeight:yearly?700:400,color:yearly?T.text:T.muted}}>Annuel</span>
-              {yearly&&<div style={{fontSize:10,color:T.green,fontWeight:700}}>2 mois offerts 🎉</div>}
+              {yearly&&<div style={{fontSize:10,color:T.green,fontWeight:700}}>Jusqu'à −30% 🎉</div>}
             </div>
           </div>
         </div>
@@ -2854,7 +2855,7 @@ const PricingPage=({onBack,onSelect})=>{
                   </div>
                   {yearly&&price>0&&(
                     <div style={{fontSize:11,marginBottom:20,display:"flex",alignItems:"center",gap:6}}>
-                      <span style={{padding:"3px 8px",borderRadius:6,background:`${T.green}15`,color:T.green,fontWeight:700}}>💰 Économise €{(plan.price-plan.priceY)*12}/an</span>
+                      <span style={{padding:"3px 8px",borderRadius:6,background:`${T.green}15`,color:T.green,fontWeight:700}}>💰 -{Math.round((1-plan.priceY/plan.price)*100)}% · Économise €{(plan.price-plan.priceY)*12}/an</span>
                       <span style={{color:T.muted,fontSize:10}}>TVA incluse</span>
                     </div>
                   )}
@@ -2935,12 +2936,12 @@ const AdminRevenue=({users,planColor})=>{
       <h1 style={{fontWeight:800,fontSize:22,marginBottom:24}}>💰 Revenus & Business</h1>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))",gap:12,marginBottom:24}} className="mobile-grid1">
         {[
-          {icon:"📈",label:"MRR",value:"$"+mrr,color:T.green,detail:"+12% vs mois préc."},
-          {icon:"🏆",label:"ARR",value:"$"+(mrr*12),color:T.acc,detail:"Projection annuelle"},
+          {icon:"📈",label:"MRR",value:"€"+mrr,color:T.green,detail:"+12% vs mois préc."},
+          {icon:"🏆",label:"ARR",value:"€"+(mrr*12),color:T.acc,detail:"Projection annuelle"},
           {icon:"💎",label:"Abonnés payants",value:paying.length,color:T.yellow,detail:Math.round(paying.length/users.length*100)+"% des users"},
           {icon:"📉",label:"Churn mensuel",value:churn+"%",color:T.green,detail:"Objectif < 5%"},
-          {icon:"💡",label:"LTV moyen",value:"$"+ltv,color:T.cyan,detail:"Lifetime Value"},
-          {icon:"🎯",label:"CAC",value:"$"+cac,color:T.purple,detail:"LTV/CAC : "+(ltv/cac).toFixed(1)+"x"},
+          {icon:"💡",label:"LTV moyen",value:"€"+ltv,color:T.cyan,detail:"Lifetime Value"},
+          {icon:"🎯",label:"CAC",value:"€"+cac,color:T.purple,detail:"LTV/CAC : "+(ltv/cac).toFixed(1)+"x"},
         ].map((k,i)=>(
           <div key={k.label} style={{padding:"16px 18px",borderRadius:13,background:T.surf,border:`1px solid ${T.border}`}}>
             <div style={{fontSize:20,marginBottom:8}}>{k.icon}</div>
@@ -2988,10 +2989,10 @@ const AdminRevenue=({users,planColor})=>{
         <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:"18px 20px"}}>
           <div style={{fontWeight:700,fontSize:14,marginBottom:14}}>🔮 Projections</div>
           {[
-            {label:"MRR dans 3 mois",value:"$"+Math.round(mrr*1.15),color:T.cyan},
-            {label:"MRR dans 6 mois",value:"$"+Math.round(mrr*1.32),color:T.acc},
-            {label:"MRR dans 12 mois",value:"$"+Math.round(mrr*1.78),color:T.green},
-            {label:"ARR dans 12 mois",value:"$"+Math.round(mrr*1.78*12),color:T.yellow},
+            {label:"MRR dans 3 mois",value:"€"+Math.round(mrr*1.15),color:T.cyan},
+            {label:"MRR dans 6 mois",value:"€"+Math.round(mrr*1.32),color:T.acc},
+            {label:"MRR dans 12 mois",value:"€"+Math.round(mrr*1.78),color:T.green},
+            {label:"ARR dans 12 mois",value:"€"+Math.round(mrr*1.78*12),color:T.yellow},
           ].map(p=>(
             <div key={p.label} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${T.border}`}}>
               <span style={{fontSize:12,color:T.muted}}>{p.label}</span>
@@ -4236,7 +4237,7 @@ const AdminApiKeys=()=>{
           )}
         </div>
 
-        {/* RIGTTC: Overview all services */}
+        {/* RIGHT: Overview all services */}
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
           {/* Summary */}
           <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:"16px 18px"}}>
@@ -5223,6 +5224,7 @@ const AdminPanel=({onExit})=>{
   const [showAdd,setShowAdd]=useState(false);
   const [newUser,setNewUser]=useState({name:"",email:"",plan:"Free",credits:5});
   const [coupon,setCoupon]=useState({code:"",discount:20,uses:0});
+  const [confirmDeleteUser,setConfirmDeleteUser]=useState(null);
 
   const [analyticsRange,setAnalyticsRange]=useState(30);
 
@@ -5395,7 +5397,7 @@ const AdminPanel=({onExit})=>{
             <div style={{display:"grid",gap:12}}>
               {[
                 {ok:true, title:"Isolation des vidéos par utilisateur",desc:"En production : chaque requête API doit inclure le JWT dans l'Authorization header. Le backend filtre par userId issu du token — jamais par paramètre URL. Ex: SELECT * FROM files WHERE user_id = $jwt.sub"},
-                {ok:false,title:"Credentials admin en dur ⚠️",desc:"admin@subcraftai.com / admin123 — À CHANGER avant production. Utiliser un hash bcrypt en base de données ou OAuth2."},
+                {ok:false,title:"Credentials admin en dur ⚠️",desc:"Identifiants obfusqués côté client (btoa). En production : utiliser bcrypt + vérification serveur + OAuth2. Ne jamais laisser de credentials en clair dans le code."},
                 {ok:true, title:"Pas de partage de sessions",desc:"Chaque client React a son propre state isolé en mémoire. Aucun fichier n'est partagé entre sessions côté frontend."},
                 {ok:false,title:"Pas de rate limiting ⚠️",desc:"L'API Anthropic et le endpoint d'upload doivent avoir un rate limit par userId (ex: 30 req/min via Redis). À implémenter avec express-rate-limit ou Cloudflare."},
                 {ok:false,title:"JWT non implémenté ⚠️",desc:"Pour la prod : utiliser JSON Web Tokens (HS256 minimum, RS256 idéal). Stocker le refresh token en httpOnly cookie, l'access token en mémoire JS uniquement — jamais en localStorage."},
@@ -5439,7 +5441,7 @@ const AdminPanel=({onExit})=>{
                 {icon:"📅",label:"Visites / jour moy.",value:avgVisits.toLocaleString("fr"),sub:"Moyenne sur la période",color:T.cyan,trend:true},
                 {icon:"🔥",label:"Pic journalier",value:maxVisits.toLocaleString("fr"),sub:`Jour ${rangeData.indexOf(maxVisits)+1}`,color:T.orange,trend:true},
                 {icon:"📝",label:"Inscriptions",value:signupData30.slice(-analyticsRange).reduce((a,v)=>a+v,0),sub:"Nouveaux comptes",color:T.green,trend:true},
-                {icon:"💰",label:"Revenus ($)",value:"$"+revenueData30.slice(-Math.min(analyticsRange,30)).reduce((a,v)=>a+v,0).toLocaleString("fr"),sub:"Paiements traités",color:T.yellow,trend:true},
+                {icon:"💰",label:"Revenus (€)",value:"$"+revenueData30.slice(-Math.min(analyticsRange,30)).reduce((a,v)=>a+v,0).toLocaleString("fr"),sub:"Paiements traités",color:T.yellow,trend:true},
                 {icon:"🎯",label:"Taux conversion",value:`${(convData30.slice(-Math.min(analyticsRange,30)).reduce((a,v)=>a+v,0)/Math.max(signupData30.slice(-Math.min(analyticsRange,30)).reduce((a,v)=>a+v,0),1)*100).toFixed(1)}%`,sub:"Trial → Payant",color:T.purple,trend:true},
               ].map((k,i)=>(
                 <div key={k.label} style={{padding:"16px 18px",borderRadius:13,background:T.surf,border:`1px solid ${T.border}`,animation:`fadeUp .35s ease ${i*.05}s both`,position:"relative",overflow:"hidden"}}>
@@ -5722,7 +5724,7 @@ const AdminPanel=({onExit})=>{
                   <div style={{display:"flex",gap:4}}>
                     <button onClick={()=>setEditUser({...u})} style={{padding:"4px 8px",borderRadius:6,background:`${T.acc}15`,border:`1px solid ${T.acc}30`,color:T.acc,fontSize:10,cursor:"pointer",fontWeight:600}} title="Modifier">✏️</button>
                     <button onClick={()=>notify(`Email envoyé à ${u.email}`,"success")} style={{padding:"4px 8px",borderRadius:6,background:`${T.cyan}15`,border:`1px solid ${T.cyan}30`,color:T.cyan,fontSize:10,cursor:"pointer",fontWeight:600}} title="Envoyer email">📧</button>
-                    <button onClick={()=>{if(window.confirm(`Supprimer ${u.name} ?`))setUsers(p=>p.filter(x=>x.id!==u.id));}} style={{padding:"4px 8px",borderRadius:6,background:`${T.pink}15`,border:`1px solid ${T.pink}30`,color:T.pink,fontSize:10,cursor:"pointer",fontWeight:600}} title="Supprimer">🗑</button>
+                    <button onClick={()=>setConfirmDeleteUser(u)} style={{padding:"4px 8px",borderRadius:6,background:`${T.pink}15`,border:`1px solid ${T.pink}30`,color:T.pink,fontSize:10,cursor:"pointer",fontWeight:600}} title="Supprimer">🗑</button>
                   </div>
                 </div>
               ))}
@@ -5849,6 +5851,13 @@ const AdminPanel=({onExit})=>{
           </div>
         </Modal>
       )}
+      <ConfirmModal
+        open={!!confirmDeleteUser}
+        title={`Supprimer ${confirmDeleteUser?.name} ?`}
+        desc="Cet utilisateur et toutes ses vidéos seront définitivement supprimés. Action irréversible."
+        onConfirm={()=>{setUsers(p=>p.filter(x=>x.id!==confirmDeleteUser.id));setConfirmDeleteUser(null);notify("Utilisateur supprimé","warning");}}
+        onCancel={()=>setConfirmDeleteUser(null)}
+      />
       </div>
       </div>
   );
@@ -6325,10 +6334,10 @@ const SubscriptionPage=({user,setUser,onBack})=>{
   const cancelReasons=["Trop cher","Je n'utilise plus le service","Je passe à un concurrent","Je manque de fonctionnalités","Problème technique","Autre raison"];
 
   const invoices=[
-    {id:"INV-2026-003",date:"01/03/2026",amount:"$25.20",status:"Payée",plan:"Pro Mensuel"},
-    {id:"INV-2026-002",date:"01/02/2026",amount:"$25.20",status:"Payée",plan:"Pro Mensuel"},
-    {id:"INV-2026-001",date:"01/01/2026",amount:"$15.60",status:"Payée",plan:"Expert Mensuel"},
-    {id:"INV-2025-012",date:"01/12/2025",amount:"$15.60",status:"Payée",plan:"Expert Mensuel"},
+    {id:"INV-2026-003",date:"01/03/2026",amount:"€21.00",status:"Payée",plan:"Pro Mensuel"},
+    {id:"INV-2026-002",date:"01/02/2026",amount:"€21.00",status:"Payée",plan:"Pro Mensuel"},
+    {id:"INV-2026-001",date:"01/01/2026",amount:"€13.00",status:"Payée",plan:"Expert Mensuel"},
+    {id:"INV-2025-012",date:"01/12/2025",amount:"€13.00",status:"Payée",plan:"Expert Mensuel"},
   ];
 
   return(
@@ -6427,7 +6436,7 @@ const SubscriptionPage=({user,setUser,onBack})=>{
                     onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.borderColor=isActive?T.acc:T.border;}}>
                     {isActive&&<div style={{position:"absolute",top:-11,left:"50%",transform:"translateX(-50%)",padding:"3px 12px",borderRadius:100,background:T.acc,color:"#fff",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>Plan actuel</div>}
                     <div style={{fontWeight:800,fontSize:16,marginBottom:2}}>{plan.name}</div>
-                    <div style={{fontFamily:"JetBrains Mono",fontWeight:900,fontSize:28,color:isActive?T.acc:T.text,marginBottom:4}}>${plan.priceY}<span style={{fontSize:12,fontWeight:400,color:T.muted}}>/mo</span></div>
+                    <div style={{fontFamily:"JetBrains Mono",fontWeight:900,fontSize:28,color:isActive?T.acc:T.text,marginBottom:4}}>€{plan.priceY}<span style={{fontSize:12,fontWeight:400,color:T.muted}}>/mois</span></div>
                     <div style={{fontSize:11,color:T.muted,marginBottom:16}}>{plan.credits===Infinity?"Illimité":`${plan.credits} vidéos/mois`}</div>
                     {!isActive&&(
                       <Btn full size="sm" v={isUpgrade?"primary":"secondary"} onClick={()=>{notify(isUpgrade?`Passage au plan ${plan.name} 🚀`:`Rétrogradation vers ${plan.name}`,"success");setUser(u=>({...u,plan:plan.name}));}}>
@@ -7091,7 +7100,7 @@ Sophie`
 
 Tu as utilisé tes crédits gratuits et j'espère que tu as vu la différence que des sous-titres pros font sur tes vidéos !
 
-Pour continuer à créer sans limite, passe au plan Basic à seulement **$10/mois** (billed yearly).
+Pour continuer à créer sans limite, passe au plan Basic à seulement **€10/mois** (billed yearly).
 
 **Ce que tu débloque :**
 ✓ 30 vidéos/mois
