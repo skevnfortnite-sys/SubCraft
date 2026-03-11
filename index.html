@@ -1595,7 +1595,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
     setChatMsg("");
     setChatLoading(true);
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:"Tu es Sophie, une assistante support enthousiaste et sympathique pour SubCraft, une app de sous-titres IA pour créateurs TikTok/YouTube/Instagram. Tu réponds en français, de façon concise (2-3 phrases max), avec des emojis occasionnels. Tu es experte du produit. Si on parle de problèmes techniques, rassure l'utilisateur et propose des solutions simples.",messages:[...chatHistory.filter(m=>m.from!=="support"||m.id===1).map(m=>({role:m.from==="user"?"user":"assistant",content:m.text})),{role:"user",content:txt}]})});
+      const res=await fetch("https://sub-craft-fxea-git-main-skevnfortnite-7869s-projects.vercel.app/api/anthropic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:"Tu es Sophie, une assistante support enthousiaste et sympathique pour SubCraft, une app de sous-titres IA pour créateurs TikTok/YouTube/Instagram. Tu réponds en français, de façon concise (2-3 phrases max), avec des emojis occasionnels. Tu es experte du produit. Si on parle de problèmes techniques, rassure l'utilisateur et propose des solutions simples.",messages:[...chatHistory.filter(m=>m.from!=="support"||m.id===1).map(m=>({role:m.from==="user"?"user":"assistant",content:m.text})),{role:"user",content:txt}]})});
       if(!res.ok){throw new Error(res.status);}
       const d=await res.json();
       const reply=d.content?.[0]?.text||"Je suis là pour t'aider ! 😊";
@@ -2300,7 +2300,7 @@ const EditorPage=({onBack,file})=>{
   const addEmoji=async()=>{
     setAddingEmoji(true);
     try{
-      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:`Add 1 perfect emoji to each subtitle. Keep short. Reply ONLY lines, no numbers.\n\n${subs.map(s=>s.text).join("\n")}`}]})});
+      const r=await fetch("https://sub-craft-fxea-git-main-skevnfortnite-7869s-projects.vercel.app/api/anthropic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:`Add 1 perfect emoji to each subtitle. Keep short. Reply ONLY lines, no numbers.\n\n${subs.map(s=>s.text).join("\n")}`}]})});
       if(r.status===401){notify("⚠️ Clé API manquante — configure dans Admin → Intégrations","error");return;}
       if(!r.ok){notify(`Erreur API (${r.status}) — réessaie dans quelques instants`,"error");return;}
       const d=await r.json();
@@ -2316,7 +2316,7 @@ const EditorPage=({onBack,file})=>{
     setTranslating(true);
     try{
       const lang=LANGS.find(l=>l.code===transLang)?.name||"English";
-      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:`Translate to ${lang}. Keep emojis. Reply ONLY translated lines.\n\n${subs.map(s=>s.text).join("\n")}`}]})});
+      const r=await fetch("https://sub-craft-fxea-git-main-skevnfortnite-7869s-projects.vercel.app/api/anthropic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:`Translate to ${lang}. Keep emojis. Reply ONLY translated lines.\n\n${subs.map(s=>s.text).join("\n")}`}]})});
       if(r.status===401){notify("⚠️ Clé API manquante — configure dans Admin → Intégrations","error");setTranslating(false);return;}
       if(!r.ok){notify(`Erreur traduction (${r.status})`,"error");setTranslating(false);return;}
       const d=await r.json();
@@ -2410,32 +2410,36 @@ const EditorPage=({onBack,file})=>{
 
       <div style={{flex:1,display:"grid",gridTemplateColumns:"400px 1fr",overflow:"hidden"}} className="editor-grid">
         {/* LEFT: Phone preview */}
-        <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12,borderRight:`1px solid rgba(255,255,255,.05)`,background:"linear-gradient(180deg,#02030f,#040510)",overflowY:"auto",padding:"16px 20px",position:"relative"}} className="hide-mobile">
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",borderRight:`1px solid rgba(255,255,255,.05)`,background:"linear-gradient(180deg,#02030f,#040510)",overflow:"hidden",position:"relative"}} className="hide-mobile">
           {/* Ambient glow */}
-          <div style={{position:"absolute",top:"30%",left:"50%",transform:"translateX(-50%)",width:300,height:300,borderRadius:"50%",background:`radial-gradient(${T.acc}18,transparent 70%)`,filter:"blur(60px)",pointerEvents:"none"}}/>
-          {/* Phone */}
-          <div style={{position:"relative",zIndex:1,transform:"scale(1.08)",transformOrigin:"center center"}}
-            onMouseEnter={e=>e.currentTarget.style.transform="scale(1.11)"}
-            onMouseLeave={e=>e.currentTarget.style.transform="scale(1.08)"}>
-            <div style={{position:"absolute",inset:-20,background:`radial-gradient(${T.acc}18,${T.purple}08 50%,transparent 70%)`,filter:"blur(30px)",animation:"glowPulse 3s ease infinite",pointerEvents:"none"}}/>
-            <PhoneMockup subs={subs} currentTime={ct} styleId={styleId} fontSize={fontSize} fontFamily={fontFam} playing={playing} onToggle={()=>setPlaying(p=>!p)} liveStyle={liveSubStyle} subYPos={subYPos} onSubYChange={setSubYPos} stripEmoji={_stripEmoji}/>
-          </div>
-          {/* Controls row */}
-          <div style={{display:"flex",gap:8,alignItems:"center",position:"relative",zIndex:1,marginTop:4}}>
-            <button onClick={()=>setCt(0)} style={{width:30,height:30,borderRadius:8,background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.08)",color:T.muted,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>⏮</button>
-            <button onClick={()=>setPlaying(p=>!p)} style={{width:40,height:40,borderRadius:11,background:T.grad,border:"none",color:"#fff",fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:`0 4px 20px ${T.accGlow}`}}>
-              {playing?"⏸":"▶"}
-            </button>
-            <button onClick={()=>setShowExport(true)} style={{width:30,height:30,borderRadius:8,background:`${T.acc}15`,border:`1px solid ${T.acc}30`,color:T.acc,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>⬆</button>
-            <div style={{padding:"4px 10px",borderRadius:100,background:`${T.acc}10`,border:`1px solid ${T.acc}20`,fontSize:10,color:T.acc,fontWeight:600,marginLeft:4}}>✦ {activeStyle.label}</div>
-          </div>
-          {/* Position slider — compact */}
-          <div style={{width:"100%",maxWidth:240,position:"relative",zIndex:1}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-              <span style={{fontSize:9,color:T.muted,fontWeight:600,letterSpacing:".05em",textTransform:"uppercase"}}>Position sous-titres</span>
-              <span style={{fontSize:9,color:T.acc,fontFamily:"JetBrains Mono",fontWeight:700}}>{subYPos}%</span>
+          <div style={{position:"absolute",top:"35%",left:"50%",transform:"translateX(-50%)",width:280,height:280,borderRadius:"50%",background:`radial-gradient(${T.acc}15,transparent 70%)`,filter:"blur(60px)",pointerEvents:"none"}}/>
+          {/* Phone — flex:1 so it takes all available space */}
+          <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",position:"relative",zIndex:1,minHeight:0}}>
+            <div style={{position:"relative"}}
+              onMouseEnter={e=>e.currentTarget.style.transform="scale(1.02)"}
+              onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}
+              style={{transition:"transform .25s ease",position:"relative"}}>
+              <div style={{position:"absolute",inset:-16,background:`radial-gradient(${T.acc}14,${T.purple}06 50%,transparent 70%)`,filter:"blur(28px)",animation:"glowPulse 3s ease infinite",pointerEvents:"none"}}/>
+              <PhoneMockup subs={subs} currentTime={ct} styleId={styleId} fontSize={fontSize} fontFamily={fontFam} playing={playing} onToggle={()=>setPlaying(p=>!p)} liveStyle={liveSubStyle} subYPos={subYPos} onSubYChange={setSubYPos} stripEmoji={_stripEmoji}/>
             </div>
-            <input type="range" min={4} max={80} value={subYPos} onChange={e=>setSubYPos(+e.target.value)} style={{width:"100%",accentColor:T.acc,cursor:"pointer"}}/>
+          </div>
+          {/* Controls — fixed compact strip at bottom */}
+          <div style={{flexShrink:0,width:"100%",padding:"10px 20px 14px",borderTop:`1px solid rgba(255,255,255,.05)`,background:"rgba(2,3,10,.7)",backdropFilter:"blur(16px)",zIndex:2,display:"flex",flexDirection:"column",gap:8}}>
+            {/* Play row + style badge */}
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <button onClick={()=>setCt(0)} style={{width:28,height:28,borderRadius:7,background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.08)",color:T.muted,fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>⏮</button>
+              <button onClick={()=>setPlaying(p=>!p)} style={{width:36,height:36,borderRadius:10,background:T.grad,border:"none",color:"#fff",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:`0 3px 14px ${T.accGlow}`,flexShrink:0}}>
+                {playing?"⏸":"▶"}
+              </button>
+              <button onClick={()=>setShowExport(true)} style={{width:28,height:28,borderRadius:7,background:`${T.acc}15`,border:`1px solid ${T.acc}30`,color:T.acc,fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>⬆</button>
+              <div style={{flex:1,padding:"4px 10px",borderRadius:20,background:`${T.acc}10`,border:`1px solid ${T.acc}20`,fontSize:10,color:T.acc,fontWeight:600,textAlign:"center",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>✦ {activeStyle.label}</div>
+            </div>
+            {/* Position slider */}
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:9,color:T.muted,fontWeight:600,flexShrink:0,letterSpacing:".04em",textTransform:"uppercase"}}>Position</span>
+              <input type="range" min={4} max={80} value={subYPos} onChange={e=>setSubYPos(+e.target.value)} style={{flex:1,accentColor:T.acc,cursor:"pointer",height:3}}/>
+              <span style={{fontSize:9,color:T.acc,fontFamily:"JetBrains Mono",fontWeight:700,flexShrink:0,minWidth:28,textAlign:"right"}}>{subYPos}%</span>
+            </div>
           </div>
         </div>
 
