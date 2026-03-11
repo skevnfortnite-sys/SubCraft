@@ -963,7 +963,7 @@ const LoginPage=({onAuth,onAdmin,goSignup})=>{
   const isLocked=attempts>=LOCKOUT;
   // Admin check: compare against hashed-equivalent (in prod → bcrypt on server)
   const _adm=btoa("admin@subcraftai.com:admin123"); // ← remplacer par vérif serveur en prod
-  const handle=()=>{
+  const handle=async()=>{
     if(isLocked){setErr(`Trop de tentatives. Réessaie dans 15 min.`);return;}
     setErr("");
     if(!email||!pw){setErr("Remplis tous les champs.");return;}
@@ -1058,7 +1058,7 @@ const SignupPage=({onAuth,goLogin})=>{
     if(name.trim().length<2){setErr("Nom trop court (2 caractères min).");return;}
     setErr("");setStep(2);
   };
-  const handle=()=>{
+  const handle=async()=>{
     if(!pw||pw.length<8){setErr("Mot de passe trop court (8 min).");return;}
     if(pw!==pw2){setErr("Les mots de passe ne correspondent pas.");return;}
     if(!agree){setErr("Accepte les CGU pour continuer.");return;}
