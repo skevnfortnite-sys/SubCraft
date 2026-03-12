@@ -39,28 +39,25 @@ async function createCheckout(req, res, stripe) {
     return res.status(400).json({ error: "Body invalide" });
   }
 
-  const { planId, yearly, userEmail, userId } = body;
+  const { planId, yearly, email, userId, successUrl, cancelUrl } = body;
   const priceKey = `${planId}_${yearly ? "yearly" : "monthly"}`;
   const priceId = PRICE_IDS[priceKey];
 
   if (!priceId) {
     return res.status(400).json({ error: `Plan inconnu : ${priceKey}` });
   }
-  if (!userEmail || !userId) {
-    return res.status(400).json({ error: "userEmail et userId requis" });
-  }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://subcraftai.com";
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://sub-craft-fxea.vercel.app";
 
   try {
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
-      customer_email: userEmail,
-      metadata: { userId, planId, yearly: String(yearly) },
-      success_url: `${baseUrl}/dashboard?checkout=success&plan=${planId}`,
-      cancel_url:  `${baseUrl}/pricing?checkout=cancelled`,
+      ...(email ? { customer_email: email } : {}),
+      metadata: { userId: userId || "guest", planId, yearly: String(yearly) },
+      success_url: successUrl || `${baseUrl}/?payment=success&plan=${planId}`,
+      cancel_url: cancelUrl || `${baseUrl}/?payment=cancel`,
       subscription_data: {
         metadata: { userId, planId },
         trial_period_days: 0,

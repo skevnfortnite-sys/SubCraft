@@ -6058,15 +6058,37 @@ const CheckoutPage=({plan,yearly,onBack,onSuccess,user})=>{
     else{notify("Code invalide","error");}
   };
 
-  const pay=()=>{
-    if(!validate()) return;
+  const pay=async()=>{
+    if(!email||!email.includes("@")){setErrors({email:"Email invalide"});return;}
     setStep("processing");
-    let p=0;
-    const iv=setInterval(()=>{
-      p+=Math.random()*12+4;
-      if(p>=100){p=100;clearInterval(iv);setTimeout(()=>setStep("done"),600);}
-      setProgress(Math.min(Math.round(p),100));
-    },80);
+    try {
+      const token = localStorage.getItem("sc_token");
+      const res = await fetch("/api/stripe?action=create-checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? {"Authorization": `Bearer ${token}`} : {})
+        },
+        body: JSON.stringify({
+          planId: selectedPlan.id,
+          yearly,
+          userId: user?.id || "guest",
+          email: email || user?.email,
+          successUrl: window.location.origin + "/?payment=success&plan=" + selectedPlan.id,
+          cancelUrl: window.location.origin + "/?payment=cancel",
+        })
+      });
+      const data = await res.json();
+      if(data.url) {
+        window.location.href = data.url; // Redirige vers Stripe Checkout
+      } else {
+        notify("Erreur: " + (data.error || "Impossible de créer la session"), "error");
+        setStep("details");
+      }
+    } catch(e) {
+      notify("Erreur réseau. Réessaie.", "error");
+      setStep("details");
+    }
   };
 
   const CardBrand=()=>{
