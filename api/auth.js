@@ -55,25 +55,34 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Mot de passe trop court (8 min)" });
     }
 
-    // Créer l'utilisateur dans Supabase Auth
-    const authRes = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+    // Créer l'utilisateur via l'API Admin Supabase (contourne le rate limit email)
+    const authRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SERVICE_KEY },
-      body: JSON.stringify({ email, password }),
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SERVICE_KEY,
+        "Authorization": `Bearer ${SERVICE_KEY}`,
+      },
+      body: JSON.stringify({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { name },
+      }),
     });
     const authData = await authRes.json();
+    console.log("Supabase signup response:", JSON.stringify(authData));
 
-    if (authData.error) {
-      return res.status(400).json({ error: authData.error.message || "Erreur inscription" });
+    if (authData.error || authData.msg) {
+      return res.status(400).json({ error: authData.error?.message || authData.msg || "Erreur inscription" });
     }
 
-    // Récupère l'ID utilisateur (confirmation email ou pas)
-    const userId = authData.user?.id || authData.id;
-    const token = authData.access_token || authData.session?.access_token;
+    const userId = authData.id || authData.user?.id;
+    const token = authData.access_token || "session-required";
 
-    // Crée le profil avec la clé SERVICE (pas besoin du token user)
+    // Insère le profil manuellement au cas où le trigger échoue
     if (userId) {
-      await fetch(`${SUPABASE_URL}/rest/v1/users`, {
+      const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -81,25 +90,14 @@ export default async function handler(req, res) {
           "Authorization": `Bearer ${SERVICE_KEY}`,
           "Prefer": "return=minimal",
         },
-        body: JSON.stringify({
-          id: userId,
-          email,
-          name,
-          plan: "free",
-          credits: 3,
-        }),
+        body: JSON.stringify({ id: userId, email, name, plan: "free", credits: 3 }),
       });
+      console.log("Insert user status:", insertRes.status);
     }
 
     return res.status(200).json({
-      user: {
-        id: userId,
-        email,
-        name,
-        plan: "free",
-        credits: 3,
-      },
-      token: token || "pending-email-confirmation",
+      user: { id: userId, email, name, plan: "free", credits: 3 },
+      token,
     });
   }
 
