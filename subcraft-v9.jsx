@@ -171,7 +171,7 @@ const API_BASE = ""; // Même domaine — les appels vont vers /api/...
 const SUPABASE_URL = "https://vinrzhxhgbfilawgbpcq.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_MbqBKTGN_s_uiXDr8o_gWA_RE9YFVPT";
 const signInWithGoogle = () => {
-  const redirectTo = encodeURIComponent(window.location.origin + "/?auth=google");
+  const redirectTo = encodeURIComponent(window.location.origin);
   window.location.href = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${redirectTo}`;
 };
 
@@ -7219,6 +7219,53 @@ export default function App(){
   const [pushToasts,setPushToasts]=useState([]);
 
   const nav=(p)=>setPage(p);
+
+  // Intercepte le token Google OAuth dans l'URL hash
+  useEffect(()=>{
+    const hash = window.location.hash;
+    if(hash && hash.includes("access_token=")) {
+      const params = new URLSearchParams(hash.replace("#",""));
+      const token = params.get("access_token");
+      if(token) {
+        // Décode le JWT pour récupérer les infos
+        try {
+          const payload = JSON.parse(atob(token.split(".")[1]));
+          const u = {
+            id: payload.sub,
+            email: payload.email,
+            name: payload.user_metadata?.full_name || payload.user_metadata?.name || payload.email?.split("@")[0],
+            plan: "free",
+            credits: 3,
+            isNew: false,
+          };
+          localStorage.setItem("sc_token", token);
+          // Nettoie l'URL
+          window.history.replaceState(null, "", window.location.pathname);
+          handleAuth(u);
+        } catch(e) {
+          console.error("Erreur token Google:", e);
+        }
+      }
+    }
+    // Vérifie si déjà connecté
+    const savedToken = localStorage.getItem("sc_token");
+    if(savedToken && page === "landing") {
+      try {
+        const payload = JSON.parse(atob(savedToken.split(".")[1]));
+        const exp = payload.exp * 1000;
+        if(exp > Date.now()) {
+          fetch("/api/auth?action=me", {
+            headers: { "Authorization": `Bearer ${savedToken}` }
+          }).then(r => r.json()).then(d => {
+            if(d.user) { setUser(d.user); setPage("dashboard"); }
+            else { localStorage.removeItem("sc_token"); }
+          }).catch(()=>{ localStorage.removeItem("sc_token"); });
+        } else {
+          localStorage.removeItem("sc_token");
+        }
+      } catch(e) { localStorage.removeItem("sc_token"); }
+    }
+  },[]);
 
   const showPushToast=(title,body)=>{
     const id=Date.now();
