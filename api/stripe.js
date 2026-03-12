@@ -11,7 +11,7 @@
  *   portal           → ouvre le portail de facturation client
  */
 
-import Stripe from "stripe";
+const Stripe = require("stripe");
 
 // IDs de tes produits Stripe (mis à jour le 11/03/2026)
 const PRICE_IDS = {
@@ -27,7 +27,7 @@ export const config = {
   api: { bodyParser: false }, // nécessaire pour webhook signature
 };
 
-import { buffer } from "micro";
+const { buffer } = require("micro");
 
 async function createCheckout(req, res, stripe) {
   // body parsé manuellement pour cette route
@@ -168,7 +168,7 @@ async function createPortal(req, res, stripe) {
   }
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // CORS
   const allowedOrigins = [
     "https://subcraftai.com",

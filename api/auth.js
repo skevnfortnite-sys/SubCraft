@@ -29,7 +29,7 @@ async function supabase(path, method = "GET", body = null, token = null) {
   return res.json();
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // CORS
   // Accepte toutes les origines Vercel + domaine custom
   const origin = req.headers.origin || "";
