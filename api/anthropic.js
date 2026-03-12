@@ -34,7 +34,7 @@ function checkRateLimit(ip) {
   };
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // ── CORS ──────────────────────────────────────────────
   const allowedOrigins = [
     "https://subcraftai.com",

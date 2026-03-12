@@ -17,7 +17,7 @@ import { IncomingForm } from "formidable";
 import fs from "fs";
 import path from "path";
 
-const FormData = require("form-data");
+import FormData from 'form-data';
 
 const rateLimitMap = new Map();
 const RATE_LIMIT = 10;      // transcriptions max
@@ -38,7 +38,7 @@ const ALLOWED_TYPES = [
 ];
 const MAX_SIZE_BYTES = 25 * 1024 * 1024; // 25 MB
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // CORS
   const allowedOrigins = [
     "https://subcraftai.com",

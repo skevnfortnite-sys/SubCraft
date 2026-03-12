@@ -34,7 +34,7 @@ function supabaseHeaders(token) {
   };
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // CORS
   const origin = req.headers.origin || "";
   const isAllowed = !origin || 
