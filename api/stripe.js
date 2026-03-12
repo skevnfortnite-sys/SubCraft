@@ -59,11 +59,8 @@ async function createCheckout(req, res, stripe) {
       success_url: successUrl || `${baseUrl}/?payment=success&plan=${planId}`,
       cancel_url: cancelUrl || `${baseUrl}/?payment=cancel`,
       subscription_data: {
-        metadata: { userId, planId },
+        metadata: { userId: userId || "guest", planId },
       },
-      // TVA automatique (requis pour les SaaS en France)
-      automatic_tax: { enabled: true },
-      tax_id_collection: { enabled: true },
     });
 
     return res.status(200).json({ url: session.url, sessionId: session.id });
