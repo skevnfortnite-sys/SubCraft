@@ -66,26 +66,39 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: authData.error.message || "Erreur inscription" });
     }
 
-    // Créer le profil dans la table users
-    if (authData.user?.id) {
-      await supabase("/rest/v1/users", "POST", {
-        id: authData.user.id,
-        email,
-        name,
-        plan: "free",
-        credits: 3,
-      }, authData.access_token);
+    // Récupère l'ID utilisateur (confirmation email ou pas)
+    const userId = authData.user?.id || authData.id;
+    const token = authData.access_token || authData.session?.access_token;
+
+    // Crée le profil avec la clé SERVICE (pas besoin du token user)
+    if (userId) {
+      await fetch(`${SUPABASE_URL}/rest/v1/users`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SERVICE_KEY,
+          "Authorization": `Bearer ${SERVICE_KEY}`,
+          "Prefer": "return=minimal",
+        },
+        body: JSON.stringify({
+          id: userId,
+          email,
+          name,
+          plan: "free",
+          credits: 3,
+        }),
+      });
     }
 
     return res.status(200).json({
       user: {
-        id: authData.user?.id,
+        id: userId,
         email,
         name,
         plan: "free",
         credits: 3,
       },
-      token: authData.access_token,
+      token: token || "pending-email-confirmation",
     });
   }
 
