@@ -13,7 +13,7 @@
 
 import Stripe from 'stripe';
 
-/// IDs de tes produits Stripe (mis à jour le 11/03/2026)
+// IDs de tes produits Stripe (mis à jour le 11/03/2026)
 const PRICE_IDS = {
   basic_monthly:  process.env.STRIPE_PRICE_BASIC_MONTHLY  || "price_1T9rqoEPK1a79r1P48fndZcd",
   basic_yearly:   process.env.STRIPE_PRICE_BASIC_YEARLY   || "price_1T9s2GEPK1a79r1PUei8TZk4",
@@ -114,6 +114,12 @@ async function handleWebhook(req, res, stripe) {
       const { userId, planId } = session.metadata;
       console.log(`✅ Paiement réussi — user:${userId} plan:${planId}`);
       await updateUserPlan(userId, planId);
+      // Envoie email de confirmation
+      await fetch(`${process.env.VERCEL_URL ? "https://"+process.env.VERCEL_URL : "https://sub-craft-fxea.vercel.app"}/api/email?action=payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: session.customer_email, plan: planId }),
+      });
       break;
     }
     case "customer.subscription.deleted": {
