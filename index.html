@@ -5774,12 +5774,36 @@ const AdminPanel=({onExit})=>{
                     </div>
                   </div>
                   <span style={{fontSize:11,color:T.muted,fontFamily:"JetBrains Mono",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{u.email}</span>
-                  <select value={u.plan} onChange={e=>{setUsers(p=>p.map(x=>x.id===u.id?{...x,plan:e.target.value}:x));notify(`Plan changé → ${e.target.value}`,"success");}} style={{padding:"3px 6px",borderRadius:6,background:`${planColor[u.plan]||T.muted}15`,border:`1px solid ${planColor[u.plan]||T.muted}30`,color:planColor[u.plan]||T.muted,fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                  <select value={u.plan} onChange={async e=>{
+                    const newPlan=e.target.value;
+                    setUsers(p=>p.map(x=>x.id===u.id?{...x,plan:newPlan}:x));
+                    try {
+                      await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id,plan:newPlan.toLowerCase()})});
+                      notify(`✅ Plan → ${newPlan}`,"success");
+                    } catch(e){notify("Erreur API","error");}
+                  }} style={{padding:"3px 6px",borderRadius:6,background:`${planColor[u.plan]||T.muted}15`,border:`1px solid ${planColor[u.plan]||T.muted}30`,color:planColor[u.plan]||T.muted,fontSize:11,fontWeight:700,cursor:"pointer"}}>
                     {["Free","Basic","Expert","Pro"].map(p=><option key={p}>{p}</option>)}
                   </select>
-                  <span style={{fontSize:11,fontFamily:"JetBrains Mono",color:u.credits===Infinity?T.green:u.credits<5?T.pink:T.text}}>{u.credits===Infinity?"∞":u.credits}</span>
+                  <input type="number" defaultValue={u.credits>=999999?9999:u.credits} min={0} max={9999}
+                    style={{width:52,padding:"2px 5px",borderRadius:6,background:`${T.acc}10`,border:`1px solid ${T.acc}25`,color:u.credits>=999999?T.green:u.credits<5?T.pink:T.text,fontSize:11,fontFamily:"JetBrains Mono",fontWeight:700,textAlign:"center"}}
+                    onBlur={async e=>{
+                      const val=+e.target.value;
+                      setUsers(p=>p.map(x=>x.id===u.id?{...x,credits:val}:x));
+                      try {
+                        await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id,credits:val})});
+                        notify(`✅ Crédits → ${val}`,"success");
+                      } catch(e){notify("Erreur API","error");}
+                    }}
+                  />
                   <span style={{fontSize:11,color:T.muted}}>{u.videos}</span>
-                  <select value={u.status} onChange={e=>{setUsers(p=>p.map(x=>x.id===u.id?{...x,status:e.target.value}:x));notify(`Statut → ${e.target.value}`,"success");}} style={{padding:"3px 6px",borderRadius:6,background:`${statusColor[u.status]}15`,border:`1px solid ${statusColor[u.status]}30`,color:statusColor[u.status],fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                  <select value={u.status} onChange={async e=>{
+                    const newStatus=e.target.value;
+                    setUsers(p=>p.map(x=>x.id===u.id?{...x,status:newStatus}:x));
+                    try {
+                      await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id,status:newStatus,plan:newStatus==="suspended"?"free":u.plan.toLowerCase()})});
+                      notify(`✅ Statut → ${newStatus}`,"success");
+                    } catch(e){notify("Erreur API","error");}
+                  }} style={{padding:"3px 6px",borderRadius:6,background:`${statusColor[u.status]||T.muted}15`,border:`1px solid ${statusColor[u.status]||T.muted}30`,color:statusColor[u.status]||T.muted,fontSize:11,fontWeight:700,cursor:"pointer"}}>
                     <option value="active">✓ Actif</option>
                     <option value="trial">⏳ Trial</option>
                     <option value="suspended">🔴 Suspendu</option>
