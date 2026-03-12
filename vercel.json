@@ -1,28 +1,24 @@
 {
   "version": 2,
-  "name": "subcraft-api",
-  "functions": {
-    "api/anthropic.js": { "maxDuration": 30,  "memory": 256  },
-    "api/whisper.js":   { "maxDuration": 60,  "memory": 1024 },
-    "api/stripe.js":    { "maxDuration": 15,  "memory": 256  },
-    "api/auth.js":      { "maxDuration": 10,  "memory": 256  },
-    "api/videos.js":    { "maxDuration": 10,  "memory": 256  }
-  },
-  "crons": [
+  "builds": [
     {
-      "path": "/api/videos?action=cleanup",
-      "schedule": "0 * * * *"
+      "src": "api/*.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
     }
   ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options",  "value": "nosniff" },
-        { "key": "X-Frame-Options",          "value": "DENY" },
-        { "key": "X-XSS-Protection",         "value": "1; mode=block" },
-        { "key": "Referrer-Policy",          "value": "strict-origin-when-cross-origin" }
-      ]
-    }
-  ]
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ],
+  "functions": {
+    "api/anthropic.js": { "maxDuration": 30,  "memory": 256 },
+    "api/whisper.js":   { "maxDuration": 60,  "memory": 1024 },
+    "api/stripe.js":    { "maxDuration": 15,  "memory": 256 },
+    "api/auth.js":      { "maxDuration": 10,  "memory": 256 },
+    "api/videos.js":    { "maxDuration": 10,  "memory": 256 }
+  }
 }
