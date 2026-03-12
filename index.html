@@ -7346,11 +7346,35 @@ function App(){
     else{nav("dashboard");}
   };
 
-  const goCheckout=(planId,yearly=true)=>{
+  const goCheckout=async(planId,yearly=true)=>{
     if(!user){nav("login");return;}
-    setCheckoutPlan(planId||"pro");
-    setCheckoutYearly(yearly);
-    nav("checkout");
+    notify("Redirection vers Stripe...","info");
+    try {
+      const token = localStorage.getItem("sc_token");
+      const res = await fetch("/api/stripe?action=create-checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? {"Authorization": `Bearer ${token}`} : {})
+        },
+        body: JSON.stringify({
+          planId: planId || "pro",
+          yearly,
+          userId: user?.id,
+          email: user?.email,
+          successUrl: window.location.origin + "/?payment=success&plan=" + (planId||"pro"),
+          cancelUrl: window.location.origin + "/?payment=cancel",
+        })
+      });
+      const data = await res.json();
+      if(data.url) {
+        window.location.href = data.url;
+      } else {
+        notify("Erreur: " + (data.error || "Impossible de créer la session"), "error");
+      }
+    } catch(e) {
+      notify("Erreur réseau. Réessaie.", "error");
+    }
   };
 
   const LEGAL_PAGES=["cgu","privacy","cookies","legal","rgpd"];
