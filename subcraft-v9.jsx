@@ -167,7 +167,7 @@ const GS = () => (
 
 
 /* ── API BASE ── */
-const API_BASE = "https://sub-craft-fxea-git-main-skevnfortnite-7869s-projects.vercel.app";
+const API_BASE = ""; // Même domaine — les appels vont vers /api/...
 
 /* ── TOKENS ── */
 const T = {
@@ -1579,7 +1579,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
     setChatMsg("");
     setChatLoading(true);
     try{
-      const res=await fetch("https://sub-craft-fxea-git-main-skevnfortnite-7869s-projects.vercel.app/api/anthropic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:"Tu es Sophie, une assistante support enthousiaste et sympathique pour SubCraft, une app de sous-titres IA pour créateurs TikTok/YouTube/Instagram. Tu réponds en français, de façon concise (2-3 phrases max), avec des emojis occasionnels. Tu es experte du produit. Si on parle de problèmes techniques, rassure l'utilisateur et propose des solutions simples.",messages:[...chatHistory.filter(m=>m.from!=="support"||m.id===1).map(m=>({role:m.from==="user"?"user":"assistant",content:m.text})),{role:"user",content:txt}]})});
+      const res=await fetch("/api/anthropic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:"Tu es Sophie, une assistante support enthousiaste et sympathique pour SubCraft, une app de sous-titres IA pour créateurs TikTok/YouTube/Instagram. Tu réponds en français, de façon concise (2-3 phrases max), avec des emojis occasionnels. Tu es experte du produit. Si on parle de problèmes techniques, rassure l'utilisateur et propose des solutions simples.",messages:[...chatHistory.filter(m=>m.from!=="support"||m.id===1).map(m=>({role:m.from==="user"?"user":"assistant",content:m.text})),{role:"user",content:txt}]})});
       if(!res.ok){throw new Error(res.status);}
       const d=await res.json();
       const reply=d.content?.[0]?.text||"Je suis là pour t'aider ! 😊";
@@ -2284,7 +2284,7 @@ const EditorPage=({onBack,file})=>{
   const addEmoji=async()=>{
     setAddingEmoji(true);
     try{
-      const r=await fetch("https://sub-craft-fxea-git-main-skevnfortnite-7869s-projects.vercel.app/api/anthropic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:`Add 1 perfect emoji to each subtitle. Keep short. Reply ONLY lines, no numbers.\n\n${subs.map(s=>s.text).join("\n")}`}]})});
+      const r=await fetch("/api/anthropic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:`Add 1 perfect emoji to each subtitle. Keep short. Reply ONLY lines, no numbers.\n\n${subs.map(s=>s.text).join("\n")}`}]})});
       if(r.status===401){notify("⚠️ Clé API manquante — configure dans Admin → Intégrations","error");return;}
       if(!r.ok){notify(`Erreur API (${r.status}) — réessaie dans quelques instants`,"error");return;}
       const d=await r.json();
@@ -2300,7 +2300,7 @@ const EditorPage=({onBack,file})=>{
     setTranslating(true);
     try{
       const lang=LANGS.find(l=>l.code===transLang)?.name||"English";
-      const r=await fetch("https://sub-craft-fxea-git-main-skevnfortnite-7869s-projects.vercel.app/api/anthropic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:`Translate to ${lang}. Keep emojis. Reply ONLY translated lines.\n\n${subs.map(s=>s.text).join("\n")}`}]})});
+      const r=await fetch("/api/anthropic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:`Translate to ${lang}. Keep emojis. Reply ONLY translated lines.\n\n${subs.map(s=>s.text).join("\n")}`}]})});
       if(r.status===401){notify("⚠️ Clé API manquante — configure dans Admin → Intégrations","error");setTranslating(false);return;}
       if(!r.ok){notify(`Erreur traduction (${r.status})`,"error");setTranslating(false);return;}
       const d=await r.json();
