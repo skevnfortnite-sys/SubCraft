@@ -60,7 +60,6 @@ async function createCheckout(req, res, stripe) {
       cancel_url: cancelUrl || `${baseUrl}/?payment=cancel`,
       subscription_data: {
         metadata: { userId, planId },
-        trial_period_days: 0,
       },
       // TVA automatique (requis pour les SaaS en France)
       automatic_tax: { enabled: true },
