@@ -110,30 +110,40 @@ export default async function handler(req, res) {
 
     const authRes = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SERVICE_KEY },
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SERVICE_KEY,
+        "Authorization": `Bearer ${SERVICE_KEY}`,
+      },
       body: JSON.stringify({ email, password }),
     });
     const authData = await authRes.json();
 
-    if (authData.error) {
+    if (authData.error || authData.error_code) {
       return res.status(401).json({ error: "Email ou mot de passe incorrect" });
     }
 
-    // Récupérer le profil
+    const userId = authData.user?.id;
+
+    // Récupérer le profil avec la clé service
     const profileRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/users?id=eq.${authData.user.id}&select=*`,
-      { headers: { ...headers, Authorization: `Bearer ${authData.access_token}` } }
+      `${SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=*`,
+      { headers: {
+        "Content-Type": "application/json",
+        "apikey": SERVICE_KEY,
+        "Authorization": `Bearer ${SERVICE_KEY}`,
+      }}
     );
     const profiles = await profileRes.json();
-    const profile = profiles[0] || {};
+    const profile = Array.isArray(profiles) ? profiles[0] : {};
 
     return res.status(200).json({
       user: {
-        id: authData.user.id,
-        email: authData.user.email,
-        name: profile.name || authData.user.email.split("@")[0],
-        plan: profile.plan || "free",
-        credits: profile.credits ?? 3,
+        id: userId,
+        email: authData.user?.email || email,
+        name: profile?.name || email.split("@")[0],
+        plan: profile?.plan || "free",
+        credits: profile?.credits ?? 3,
       },
       token: authData.access_token,
     });
