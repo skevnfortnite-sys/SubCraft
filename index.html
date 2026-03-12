@@ -5249,7 +5249,8 @@ const AdminLandingEditor=()=>{
 }
 
 const AdminPanel=({onExit})=>{
-  const [users,setUsers]=useState(MOCK_USERS);
+  const [users,setUsers]=useState([]);
+  const [loadingUsers,setLoadingUsers]=useState(true);
   const [view,setView]=useState("dashboard");
   const [search,setSearch]=useState("");
   const [filterPlan,setFilterPlan]=useState("all");
@@ -5258,6 +5259,35 @@ const AdminPanel=({onExit})=>{
   const [newUser,setNewUser]=useState({name:"",email:"",plan:"Free",credits:5});
   const [coupon,setCoupon]=useState({code:"",discount:20,uses:0});
   const [confirmDeleteUser,setConfirmDeleteUser]=useState(null);
+
+  // Charge les vrais utilisateurs depuis Supabase
+  useEffect(()=>{
+    const loadUsers = async () => {
+      try {
+        const res = await fetch("/api/admin?action=users");
+        const data = await res.json();
+        if(data.users) {
+          setUsers(data.users.map(u=>({
+            id: u.id,
+            name: u.name || u.email?.split("@")[0] || "Inconnu",
+            email: u.email,
+            plan: u.plan ? (u.plan.charAt(0).toUpperCase() + u.plan.slice(1)) : "Free",
+            credits: u.credits ?? 3,
+            joined: u.created_at ? new Date(u.created_at).toLocaleDateString("fr-FR") : "—",
+            status: "active",
+            videos: 0,
+            avatar: (u.name||u.email||"U").slice(0,2).toUpperCase(),
+          })));
+        }
+      } catch(e) {
+        console.error("Erreur chargement users:", e);
+        setUsers([]);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+    loadUsers();
+  },[]);
 
   const [analyticsRange,setAnalyticsRange]=useState(30);
 
