@@ -13,7 +13,7 @@
 
 import Stripe from 'stripe';
 
-// IDs de tes produits Stripe (mis à jour le 11/03/2026)
+/// IDs de tes produits Stripe (mis à jour le 11/03/2026)
 const PRICE_IDS = {
   basic_monthly:  process.env.STRIPE_PRICE_BASIC_MONTHLY  || "price_1T9rqoEPK1a79r1P48fndZcd",
   basic_yearly:   process.env.STRIPE_PRICE_BASIC_YEARLY   || "price_1T9s2GEPK1a79r1PUei8TZk4",
