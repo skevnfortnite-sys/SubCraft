@@ -213,6 +213,12 @@ const GS = () => (
 
 /* ── API BASE ── */
 const API_BASE = ""; // Même domaine — les appels vont vers /api/...
+const SUPABASE_URL = "https://vinrzhxhgbfilawgbpcq.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_MbqBKTGN_s_uiXDr8o_gWA_RE9YFVPT";
+const signInWithGoogle = () => {
+  const redirectTo = encodeURIComponent(window.location.origin + "/?auth=google");
+  window.location.href = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${redirectTo}`;
+};
 
 /* ── TOKENS ── */
 const T = {
@@ -1059,7 +1065,7 @@ const LoginPage=({onAuth,onAdmin,goSignup})=>{
           <div className="fu syne" style={{fontWeight:800,fontSize:30,marginBottom:6,letterSpacing:"-.04em"}}>Bon retour 👋</div>
           <div className="fu" style={{color:T.muted,fontSize:14,marginBottom:28,animationDelay:".04s"}}>Connecte-toi pour accéder à tes projets.</div>
           <div className="fu" style={{animationDelay:".06s"}}>
-            <GoogleBtn onClick={()=>onAuth({name:"Google User",email:"user@gmail.com",plan:"Free",isNew:false})}/>
+            <GoogleBtn onClick={signInWithGoogle}/>
           </div>
           <Divider label="ou avec email"/>
           <div className="fu" style={{display:"flex",flexDirection:"column",gap:12,marginBottom:16,animationDelay:".1s"}}>
@@ -1153,7 +1159,7 @@ const SignupPage=({onAuth,goLogin})=>{
             {[1,2].map(s=><div key={s} style={{flex:1,height:2,borderRadius:2,background:step>=s?T.acc:"rgba(255,255,255,.08)",transition:"background .35s"}}/>)}
             <span style={{fontSize:10,color:T.muted,marginLeft:8,flexShrink:0}}>Étape {step}/2</span>
           </div>
-          <GoogleBtn onClick={()=>onAuth({name:"Google User",email:"user@gmail.com",plan:"Free",isNew:true})}/>
+          <GoogleBtn onClick={signInWithGoogle}/>
           <Divider label="ou avec email"/>
           {step===1&&(
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
