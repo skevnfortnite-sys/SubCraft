@@ -62,14 +62,21 @@ export default async function handler(req, res) {
 
   // ── UPDATE — modifie un utilisateur ───────────────
   if (action === "update" && req.method === "POST") {
-    const { userId, plan, credits } = req.body || {};
+    const { userId, plan, credits, status, name } = req.body || {};
     if (!userId) return res.status(400).json({ error: "userId requis" });
 
-    await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
+    const updateData = {};
+    if (plan !== undefined) updateData.plan = plan;
+    if (credits !== undefined) updateData.credits = credits >= 999999 ? 999999 : credits;
+    if (name !== undefined) updateData.name = name;
+    if (status !== undefined) updateData.status = status;
+
+    const res2 = await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
       method: "PATCH",
-      headers: supabaseHeaders(),
-      body: JSON.stringify({ plan, credits }),
+      headers: { ...supabaseHeaders(), "Prefer": "return=minimal" },
+      body: JSON.stringify(updateData),
     });
+    console.log(`[admin] update user ${userId}:`, updateData, "status:", res2.status);
     return res.status(200).json({ updated: true });
   }
 

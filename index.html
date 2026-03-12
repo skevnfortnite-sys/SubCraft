@@ -5786,6 +5786,17 @@ const AdminPanel=({onExit})=>{
                   </select>
                   <div style={{display:"flex",gap:4}}>
                     <button onClick={()=>setEditUser({...u})} style={{padding:"4px 8px",borderRadius:6,background:`${T.acc}15`,border:`1px solid ${T.acc}30`,color:T.acc,fontSize:10,cursor:"pointer",fontWeight:600}} title="Modifier">✏️</button>
+                    <button onClick={async()=>{
+                      const newStatus = u.status==="suspended"?"active":"suspended";
+                      const newPlan = newStatus==="suspended"?"free":u.plan.toLowerCase();
+                      try {
+                        await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id,status:newStatus,plan:newPlan})});
+                        setUsers(p=>p.map(x=>x.id===u.id?{...x,status:newStatus,plan:newStatus==="suspended"?"Free":x.plan}:x));
+                        notify(newStatus==="suspended"?`🚫 ${u.name} banni`:`✅ ${u.name} réactivé`, newStatus==="suspended"?"warning":"success");
+                      } catch(e){notify("Erreur","error");}
+                    }} style={{padding:"4px 8px",borderRadius:6,background:u.status==="suspended"?`${T.green}15`:`${T.pink}15`,border:u.status==="suspended"?`1px solid ${T.green}30`:`1px solid ${T.pink}30`,color:u.status==="suspended"?T.green:T.pink,fontSize:10,cursor:"pointer",fontWeight:600}} title={u.status==="suspended"?"Réactiver":"Bannir"}>
+                      {u.status==="suspended"?"✅":"🚫"}
+                    </button>
                     <button onClick={()=>notify(`Email envoyé à ${u.email}`,"success")} style={{padding:"4px 8px",borderRadius:6,background:`${T.cyan}15`,border:`1px solid ${T.cyan}30`,color:T.cyan,fontSize:10,cursor:"pointer",fontWeight:600}} title="Envoyer email">📧</button>
                     <button onClick={()=>setConfirmDeleteUser(u)} style={{padding:"4px 8px",borderRadius:6,background:`${T.pink}15`,border:`1px solid ${T.pink}30`,color:T.pink,fontSize:10,cursor:"pointer",fontWeight:600}} title="Supprimer">🗑</button>
                   </div>
@@ -5883,7 +5894,29 @@ const AdminPanel=({onExit})=>{
           </div>
           <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
             <Btn v="secondary" onClick={()=>setEditUser(null)}>Annuler</Btn>
-            <Btn onClick={()=>{setUsers(p=>p.map(u=>u.id===editUser.id?editUser:u));setEditUser(null);notify("Utilisateur mis à jour !","success");}}>Sauvegarder</Btn>
+            <Btn onClick={async()=>{
+              try {
+                const res = await fetch("/api/admin?action=update", {
+                  method: "POST",
+                  headers: {"Content-Type":"application/json"},
+                  body: JSON.stringify({
+                    userId: editUser.id,
+                    plan: editUser.plan.toLowerCase(),
+                    credits: editUser.credits===Infinity?999999:editUser.credits,
+                    status: editUser.status,
+                    name: editUser.name,
+                  })
+                });
+                const data = await res.json();
+                if(data.updated) {
+                  setUsers(p=>p.map(u=>u.id===editUser.id?editUser:u));
+                  setEditUser(null);
+                  notify("Utilisateur mis à jour !","success");
+                } else {
+                  notify("Erreur: "+(data.error||"inconnue"),"error");
+                }
+              } catch(e) { notify("Erreur réseau","error"); }
+            }}>Sauvegarder</Btn>
           </div>
         </Modal>
       )}
@@ -5918,7 +5951,23 @@ const AdminPanel=({onExit})=>{
         open={!!confirmDeleteUser}
         title={`Supprimer ${confirmDeleteUser?.name} ?`}
         desc="Cet utilisateur et toutes ses vidéos seront définitivement supprimés. Action irréversible."
-        onConfirm={()=>{setUsers(p=>p.filter(x=>x.id!==confirmDeleteUser.id));setConfirmDeleteUser(null);notify("Utilisateur supprimé","warning");}}
+        onConfirm={async()=>{
+          try {
+            const res = await fetch("/api/admin?action=delete", {
+              method: "POST",
+              headers: {"Content-Type":"application/json"},
+              body: JSON.stringify({userId: confirmDeleteUser.id})
+            });
+            const data = await res.json();
+            if(data.deleted) {
+              setUsers(p=>p.filter(x=>x.id!==confirmDeleteUser.id));
+              setConfirmDeleteUser(null);
+              notify("Utilisateur supprimé","warning");
+            } else {
+              notify("Erreur suppression","error");
+            }
+          } catch(e) { notify("Erreur réseau","error"); }
+        }}
         onCancel={()=>setConfirmDeleteUser(null)}
       />
       </div>
