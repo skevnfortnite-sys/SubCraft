@@ -7565,12 +7565,15 @@ function App(){
   // Intercepte le token Google OAuth dans l'URL hash
   useEffect(()=>{
     const hash = window.location.hash;
+    console.log("[Google OAuth] hash:", hash?.slice(0,50));
     if(hash && hash.includes("access_token=")) {
       const params = new URLSearchParams(hash.replace("#",""));
       const token = params.get("access_token");
+      console.log("[Google OAuth] token trouvé:", !!token);
       if(token) {
         try {
           const payload = JSON.parse(atob(token.split(".")[1]));
+          console.log("[Google OAuth] payload:", payload.sub, payload.email);
           localStorage.setItem("sc_token", token);
           window.history.replaceState(null, "", window.location.pathname);
           // Appelle /api/auth?action=me pour récupérer le vrai profil Supabase
