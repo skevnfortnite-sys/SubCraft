@@ -2,15 +2,32 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="theme-color" content="#050508"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <title>SubCraft — Sous-titres IA</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Anton&family=Bebas+Neue&family=Montserrat:wght@700;800;900&family=Oswald:wght@600;700&family=Barlow+Condensed:wght@700;800;900&family=Righteous&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#050508;color:#f8fafc}
+#root>div:first-child{display:flex;align-items:center;justify-content:center;height:100vh;background:#050508}
+.loading-logo{animation:pulse 1.5s ease infinite}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+</style>
 </head>
-<body style="margin:0;padding:0;background:#02030a">
-<div id="root"><div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#02030a;color:#5b6cff;font-family:sans-serif;font-size:18px">Chargement...</div></div>
+<body>
+<div id="root">
+  <div>
+    <div class="loading-logo" style="text-align:center">
+      <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 16px;box-shadow:0 0 32px rgba(99,102,241,.5)">✦</div>
+      <div style="font-family:sans-serif;font-size:13px;color:#475569;letter-spacing:.05em">CHARGEMENT...</div>
+    </div>
+  </div>
+</div>
 <script>
 const { useState, useEffect, useRef, useCallback, useMemo, useReducer, useContext, createContext } = React;
 </script>
@@ -27,8 +44,8 @@ const GS = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Anton&family=Bebas+Neue&family=Montserrat:wght@700;800;900&family=Oswald:wght@600;700&family=Barlow+Condensed:wght@700;800;900&family=Righteous&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html{scroll-behavior:smooth}
-    body{background:#02030a;color:#f0f2ff;font-family:'Space Grotesk','DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+    html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+    body{background:#050508;color:#f8fafc;font-family:'DM Sans',system-ui,sans-serif;min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
     ::-webkit-scrollbar{width:4px}
     ::-webkit-scrollbar-track{background:#02030a}
     ::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#5b6cff,#a855f7);border-radius:10px}
@@ -117,7 +134,7 @@ const GS = () => (
     .glass-bright{background:rgba(255,255,255,.08);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.14)}
 
     /* ── GRADIENT TEXT ── */
-    .grad-text{background:linear-gradient(135deg,#7c8fff 0%,#c084fc 45%,#f472b6 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .grad-text{background:linear-gradient(135deg,#a5b4fc 0%,#c084fc 45%,#f472b6 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
     .grad-text-gold{background:linear-gradient(135deg,#ffd700,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
     .grad-text-chrome{background:linear-gradient(135deg,#e8e8e8,#ffffff,#c0c0c0,#ffffff,#a0a0a0);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 4s linear infinite}
     .grad-text-aurora{background:linear-gradient(90deg,#6ee7f7,#a78bfa,#f472b6,#fb923c,#a78bfa,#6ee7f7);background-size:400% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:gradShift 6s linear infinite}
@@ -148,34 +165,43 @@ const GS = () => (
       .hide-mobile{display:none!important}
       .mobile-full{width:100%!important;max-width:100%!important}
       .mobile-col{flex-direction:column!important}
-      .mobile-p{padding:14px!important}
+      .mobile-p{padding:16px!important}
       .mobile-grid1{grid-template-columns:1fr!important}
       .mobile-grid2{grid-template-columns:1fr 1fr!important}
-      .mobile-p2{padding:10px!important}
+      .mobile-p2{padding:12px!important}
       .mobile-text-sm{font-size:13px!important}
-      nav{padding:0 14px!important}
+      nav{padding:0 16px!important;height:52px!important}
       .mobile-stack{flex-direction:column!important;align-items:stretch!important}
       .mobile-full-btn{width:100%!important;justify-content:center!important}
       .mobile-hide{display:none!important}
-      h1.hero-title{font-size:clamp(30px,9vw,56px)!important;letter-spacing:-.03em!important}
+      h1.hero-title{font-size:clamp(28px,8vw,52px)!important;letter-spacing:-.03em!important}
+      .card-grid{grid-template-columns:1fr!important}
+      .stats-grid{grid-template-columns:1fr 1fr!important}
+      .modal-inner{margin:0!important;border-radius:20px 20px 0 0!important;position:fixed!important;bottom:0!important;left:0!important;right:0!important;max-height:90vh!important;overflow-y:auto!important}
     }
     @media(max-width:480px){
-      .mobile-p{padding:12px!important}
+      .mobile-p{padding:14px!important}
       .mobile-grid1{grid-template-columns:1fr!important}
       .mobile-hide-sm{display:none!important}
       .mobile-text-xs{font-size:11px!important}
+      h1.hero-title{font-size:clamp(24px,7vw,44px)!important}
     }
     /* ── TOUCH: bigger tap targets ── */
     @media(hover:none){
-      button,a,[role="button"]{min-height:40px}
-      input,select{font-size:16px!important} /* prevent iOS zoom on focus */
+      button,a,[role="button"]{min-height:44px}
+      input,select,textarea{font-size:16px!important}
     }
     .no-scroll::-webkit-scrollbar{display:none}
     .no-scroll{-ms-overflow-style:none;scrollbar-width:none}
-    /* Editor mobile: right panel takes full screen */
+    /* Editor mobile */
     @media(max-width:768px){
       .editor-grid{grid-template-columns:1fr!important}
       .editor-grid>div:first-child{display:none!important}
+    }
+    /* Safe area pour iPhone X+ */
+    @supports(padding:max(0px)){
+      nav{padding-left:max(16px,env(safe-area-inset-left))!important;padding-right:max(16px,env(safe-area-inset-right))!important}
+      .page{padding-bottom:max(20px,env(safe-area-inset-bottom))}
     }
   `}</style>
 );
@@ -193,19 +219,20 @@ const signInWithGoogle = () => {
 
 /* ── TOKENS ── */
 const T = {
-  bg:"#02030a",bg2:"#05060f",bg3:"#080912",
-  surf:"#0c0d1a",surf2:"#10111f",surf3:"#141626",
-  border:"#181928",borderL:"#20223a",
-  acc:"#5b6cff",accH:"#7b8cff",accGlow:"#5b6cff3a",
-  pink:"#e83970",cyan:"#22d3ee",green:"#34d399",
-  yellow:"#fbbf24",orange:"#f97316",purple:"#a855f7",
-  red:"#f43f5e",gold:"#ffd700",
-  text:"#f0f2ff",muted:"#8b92c4",dim:"#4a5080",
-  grad:"linear-gradient(135deg,#5b6cff 0%,#a855f7 55%,#ec4899 100%)",
-  gradH:"linear-gradient(135deg,#7b8cff,#c084fc,#f472b6)",
-  gradP:"linear-gradient(135deg,#e83970,#f97316)",
-  gradG:"linear-gradient(135deg,#34d399,#22d3ee)",
-  gradY:"linear-gradient(135deg,#fbbf24,#f97316)",
+  bg:"#050508",bg2:"#070710",bg3:"#09090f",
+  surf:"#0e0e1a",surf2:"#121220",surf3:"#161624",
+  border:"#1e1e2e",borderL:"#262638",
+  acc:"#6366f1",accH:"#818cf8",accGlow:"#6366f140",
+  pink:"#f43f5e",cyan:"#06b6d4",green:"#10b981",
+  yellow:"#f59e0b",orange:"#f97316",purple:"#8b5cf6",
+  red:"#ef4444",gold:"#eab308",
+  text:"#f8fafc",muted:"#94a3b8",dim:"#475569",
+  grad:"linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a855f7 100%)",
+  gradH:"linear-gradient(135deg,#818cf8,#a78bfa,#c084fc)",
+  gradP:"linear-gradient(135deg,#f43f5e,#fb923c)",
+  gradG:"linear-gradient(135deg,#10b981,#06b6d4)",
+  gradY:"linear-gradient(135deg,#f59e0b,#f97316)",
+  gradAcc:"linear-gradient(135deg,#4f46e5,#7c3aed)",
 };
 
 
@@ -438,7 +465,7 @@ const Input=({label,value,onChange,placeholder,type="text",required,icon,hint})=
     {label&&<label style={{fontSize:12,color:T.muted,display:"block",marginBottom:6,fontWeight:600}}>{label}{required&&<span style={{color:T.pink,marginLeft:3}}>*</span>}</label>}
     <div style={{position:"relative"}}>
       {icon&&<span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:15,pointerEvents:"none"}}>{icon}</span>}
-      <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={{width:"100%",padding:icon?"11px 14px 11px 40px":"11px 16px",borderRadius:11,fontSize:14,background:T.surf2,border:"1px solid rgba(255,255,255,.07)",color:T.text,transition:"all .2s"}}
+      <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={{width:"100%",padding:icon?"12px 14px 12px 40px":"12px 16px",borderRadius:12,fontSize:14,background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",color:T.text,transition:"all .2s"}}
         onFocus={e=>{e.target.style.borderColor="rgba(91,108,255,.5)";e.target.style.boxShadow="0 0 0 3px rgba(91,108,255,.08)";}}
         onBlur={e=>{e.target.style.borderColor="rgba(255,255,255,.07)";e.target.style.boxShadow="none";}}/>
     </div>
@@ -1792,11 +1819,11 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
   return(
     <div style={{minHeight:"100vh",background:T.bg,position:"relative"}} className="page"><AuroraBg subtle/><Cursor/>
       {/* NAV */}
-      <nav style={{padding:"0 24px",borderBottom:"1px solid rgba(255,255,255,.04)",display:"flex",alignItems:"center",gap:8,background:"rgba(2,3,10,.92)",backdropFilter:"blur(40px)",height:58,position:"sticky",top:0,zIndex:50}}>
+      <nav style={{padding:"0 24px",borderBottom:"1px solid rgba(255,255,255,.06)",display:"flex",alignItems:"center",gap:8,background:"rgba(5,5,8,.88)",backdropFilter:"blur(48px)",WebkitBackdropFilter:"blur(48px)",height:58,position:"sticky",top:0,zIndex:50,boxShadow:"0 1px 0 rgba(255,255,255,.04),0 4px 32px rgba(0,0,0,.4)"}}>
         {/* Logo */}
         <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-          <div style={{width:28,height:28,borderRadius:8,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,boxShadow:`0 0 16px ${T.accGlow}`}}>✦</div>
-          <span className="syne grad-text-chrome" style={{fontWeight:800,fontSize:15,letterSpacing:"-.025em"}}>SubCraft</span>
+          <div style={{width:30,height:30,borderRadius:9,background:"linear-gradient(135deg,#6366f1,#8b5cf6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,boxShadow:"0 0 20px rgba(99,102,241,.5),0 1px 0 rgba(255,255,255,.15) inset"}}>✦</div>
+          <span className="syne" style={{fontWeight:800,fontSize:15,letterSpacing:"-.03em",background:"linear-gradient(135deg,#c7d2fe,#ffffff,#ddd6fe)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>SubCraft</span>
         </div>
 
         <div style={{marginLeft:"auto",display:"flex",gap:6,alignItems:"center"}}>
@@ -1810,7 +1837,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
               <span style={{fontSize:9,color:T.muted,marginLeft:2}}>▼</span>
             </button>
             {profileDrop&&(
-              <div style={{position:"absolute",top:"calc(100% + 8px)",right:0,width:200,background:T.surf2,border:`1px solid ${T.border}`,borderRadius:14,boxShadow:"0 16px 48px rgba(0,0,0,.6)",zIndex:200,animation:"fadeDown .15s ease",overflow:"hidden"}} onClick={()=>setProfileDrop(false)}>
+              <div style={{position:"absolute",top:"calc(100% + 10px)",right:0,width:210,background:"rgba(14,14,26,.95)",border:"1px solid rgba(255,255,255,.08)",borderRadius:16,boxShadow:"0 24px 64px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.04) inset",zIndex:200,animation:"fadeDown .15s ease",overflow:"hidden",backdropFilter:"blur(24px)"}} onClick={()=>setProfileDrop(false)}>
                 <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.border}`}}>
                   <div style={{fontWeight:700,fontSize:13}}>{user?.name}</div>
                   <div style={{fontSize:11,color:T.muted,marginTop:2}}>{user?.email}</div>
@@ -1846,8 +1873,8 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
         <div style={{marginBottom:20}}>
           <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:12,marginBottom:16}}>
             <div>
-              <div style={{fontSize:10,color:T.muted,fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:3}}>TABLEAU DE BORD</div>
-              <h1 className="syne" style={{fontWeight:800,fontSize:20,letterSpacing:"-.04em",marginBottom:4}}>
+              <div style={{fontSize:10,color:T.acc,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",marginBottom:4,opacity:.8}}>Tableau de bord</div>
+              <h1 className="syne" style={{fontWeight:800,fontSize:22,letterSpacing:"-.04em",marginBottom:4,lineHeight:1.15}}>
                 Bonjour, <span style={{background:T.grad,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>{user?.name?.split(" ")[0]||"Créateur"}</span> 👋
               </h1>
               <div style={{color:T.muted,fontSize:11.5}}>
@@ -1857,13 +1884,13 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
             </div>
             <div style={{display:"flex",gap:7,alignItems:"center",paddingTop:4}} className="mobile-full-btn">
               <button onClick={()=>setShowUpload(true)}
-                style={{display:"flex",alignItems:"center",gap:7,padding:"9px 20px",
-                  borderRadius:10,background:T.grad,border:"none",color:"#fff",
-                  fontSize:13,fontWeight:700,cursor:"pointer",
-                  boxShadow:`0 4px 18px ${T.accGlow}`,transition:"all .18s"}}
-                onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow=`0 8px 28px ${T.accGlow}`;}}
-                onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow=`0 4px 18px ${T.accGlow}`;}}>
-                <span>✦</span> Nouvelle vidéo
+                style={{display:"flex",alignItems:"center",gap:8,padding:"10px 22px",
+                  borderRadius:12,background:"linear-gradient(135deg,#6366f1,#8b5cf6)",border:"none",color:"#fff",
+                  fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:"-.01em",
+                  boxShadow:"0 4px 24px rgba(99,102,241,.45),0 1px 0 rgba(255,255,255,.12) inset",transition:"all .2s cubic-bezier(.22,1,.36,1)"}}
+                onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px) scale(1.02)";e.currentTarget.style.boxShadow="0 8px 32px rgba(99,102,241,.55),0 1px 0 rgba(255,255,255,.15) inset";}}
+                onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 4px 24px rgba(99,102,241,.45),0 1px 0 rgba(255,255,255,.12) inset";}}>
+                <span style={{fontSize:14}}>✦</span> Nouvelle vidéo
               </button>
             </div>
           </div>
@@ -1891,13 +1918,14 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
             {icon:"🎯",label:"Vidéos restantes",value:totalCredits===Infinity?"∞":Math.max(0,realCredits),color:creditWarn?T.orange:T.yellow},
             {icon:"⬆️",label:"Exports réalisés",value:files.filter(f=>f.exported).length,color:T.green},
           ].map((s,i)=>(
-            <div key={s.label} style={{padding:"12px 14px",borderRadius:12,background:T.surf,border:`1px solid rgba(255,255,255,.06)`,position:"relative",overflow:"hidden",transition:"all .2s"}}
-              onMouseEnter={e=>{e.currentTarget.style.borderColor=s.color+"44";}}
-              onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.06)";}}>
-              <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${s.color}77,transparent)`}}/>
-              <div style={{fontSize:16,marginBottom:5}}>{s.icon}</div>
-              <div className="syne" style={{fontWeight:800,fontSize:20,color:s.color,lineHeight:1,marginBottom:3}}>{s.value}</div>
-              <div style={{fontSize:10,color:T.muted}}>{s.label}</div>
+            <div key={s.label} style={{padding:"14px 16px",borderRadius:16,background:`linear-gradient(135deg,${T.surf},${T.surf2})`,border:`1px solid rgba(255,255,255,.07)`,position:"relative",overflow:"hidden",transition:"all .25s cubic-bezier(.22,1,.36,1)",cursor:"default"}}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor=s.color+"55";e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow=`0 12px 40px ${s.color}18`;}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.07)";e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";}}>
+              <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${s.color},${s.color}00)`}}/>
+              <div style={{position:"absolute",top:-20,right:-10,width:60,height:60,borderRadius:"50%",background:`radial-gradient(${s.color}18,transparent 70%)`,pointerEvents:"none"}}/>
+              <div style={{fontSize:18,marginBottom:8,filter:`drop-shadow(0 0 6px ${s.color}66)`}}>{s.icon}</div>
+              <div className="syne" style={{fontWeight:800,fontSize:22,color:s.color,lineHeight:1,marginBottom:4,letterSpacing:"-.02em"}}>{s.value}</div>
+              <div style={{fontSize:10.5,color:T.muted,fontWeight:500,letterSpacing:".02em",textTransform:"uppercase"}}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -1919,7 +1947,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
 
 
         {/* ── FILES SECTION ── */}
-        <div style={{background:`linear-gradient(145deg,${T.surf},${T.surf2})`,borderRadius:16,border:"1px solid rgba(255,255,255,.065)",overflow:"hidden",boxShadow:"0 8px 40px rgba(0,0,0,.3)"}}>
+        <div style={{background:`linear-gradient(145deg,${T.surf},${T.surf2})`,borderRadius:20,border:"1px solid rgba(255,255,255,.07)",overflow:"hidden",boxShadow:"0 4px 6px rgba(0,0,0,.07),0 24px 60px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.05)"}}>
           {/* Section header */}
           <div style={{padding:"12px 14px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
             <div style={{display:"flex",gap:0,background:T.bg,borderRadius:9,padding:3,flexShrink:0}}>
@@ -1962,12 +1990,12 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
                 const sc={ready:T.green,processing:T.yellow,deleted:T.muted}[f.status]||T.muted;
                 return(
                   <div key={f.id}
-                    style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",
-                      borderBottom:i<tabFiles.length-1?"1px solid rgba(255,255,255,.033)":"none",
-                      transition:"background .18s",cursor:"pointer",
-                      animation:`fadeUp .28s ease ${i*.045}s both`,position:"relative"}}
+                    style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",
+                      borderBottom:i<tabFiles.length-1?"1px solid rgba(255,255,255,.04)":"none",
+                      transition:"background .15s",cursor:"pointer",
+                      animation:`fadeUp .25s ease ${i*.04}s both`,position:"relative"}}
                     onClick={()=>onOpen(f)}
-                    onMouseEnter={e=>e.currentTarget.style.background="rgba(91,108,255,.038)"}
+                    onMouseEnter={e=>e.currentTarget.style.background="rgba(99,102,241,.05)"}
                     onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                     <div style={{position:"absolute",left:0,top:"20%",bottom:"20%",width:2.5,borderRadius:2,background:sc,opacity:.8}}/>
                     {/* Thumbnail icon */}
