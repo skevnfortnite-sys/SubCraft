@@ -183,6 +183,7 @@ export default async function handler(req, res) {
         plan: profile.plan || "free",
         credits: profile.credits ?? 3,
         status: profile.status || "active",
+        created_at: profile.created_at || null,
       },
     });
   }

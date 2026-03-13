@@ -7568,24 +7568,38 @@ function App(){
       const params = new URLSearchParams(hash.replace("#",""));
       const token = params.get("access_token");
       if(token) {
-        // Décode le JWT pour récupérer les infos
         try {
           const payload = JSON.parse(atob(token.split(".")[1]));
-          const u = {
-            id: payload.sub,
-            email: payload.email,
-            name: payload.user_metadata?.full_name || payload.user_metadata?.name || payload.email?.split("@")[0],
-            plan: "free",
-            credits: 3,
-            isNew: false,
-          };
           localStorage.setItem("sc_token", token);
-          // Nettoie l'URL
           window.history.replaceState(null, "", window.location.pathname);
-          handleAuth(u);
-        } catch(e) {
-          console.error("Erreur token Google:", e);
-        }
+          // Appelle /api/auth?action=me pour récupérer le vrai profil Supabase
+          fetch("/api/auth?action=me", {
+            headers: { "Authorization": `Bearer ${token}` }
+          }).then(r=>r.json()).then(d=>{
+            if(d.user) {
+              // isNew = vrai si le compte a moins de 60s (tout juste créé via Google)
+              const createdAt = d.user.created_at ? new Date(d.user.created_at).getTime() : 0;
+              const isNew = createdAt > 0 && (Date.now() - createdAt) < 60000;
+              handleAuth({...d.user, isNew});
+            } else {
+              // Fallback avec les infos du JWT
+              const u = {
+                id: payload.sub,
+                email: payload.email,
+                name: payload.user_metadata?.full_name || payload.user_metadata?.name || payload.email?.split("@")[0],
+                plan: "free", credits: 3, isNew: false,
+              };
+              handleAuth(u);
+            }
+          }).catch(()=>{
+            const u = {
+              id: payload.sub, email: payload.email,
+              name: payload.user_metadata?.full_name || payload.email?.split("@")[0],
+              plan: "free", credits: 3, isNew: false,
+            };
+            handleAuth(u);
+          });
+        } catch(e) { console.error("Erreur token Google:", e); }
       }
     }
     // Vérifie si déjà connecté
