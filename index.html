@@ -755,6 +755,7 @@ const OnboardingPage=({user,onComplete})=>{
     {id:"platform",icon:"📱",title:"Sur quelle plateforme publies-tu ?",sub:"On va optimiser SubCraft pour ton format préféré."},
     {id:"goal",icon:"🎯",title:"Quel est ton objectif principal ?",sub:"On va configurer les paramètres parfaits pour toi."},
     {id:"style",icon:"🎨",title:"Quel style de sous-titres préfères-tu ?",sub:"Tu pourras tout changer après — c'est juste pour démarrer."},
+    {id:"howto",icon:"🎬",title:"Comment ça marche ?",sub:"3 étapes simples pour créer des sous-titres viraux en moins de 2 minutes."},
     {id:"ready",icon:"🚀",title:"Tout est prêt !",sub:"Ton compte est configuré. Voici ce que tu peux faire maintenant."},
   ];
   const s=steps[step];
@@ -816,6 +817,27 @@ const OnboardingPage=({user,onComplete})=>{
               ))}
             </div>
           )}
+          {s.id==="howto"&&(
+            <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:4}}>
+              {[
+                {num:"1",icon:"⬆️",title:"Upload ta vidéo",desc:"MP4, MOV, AVI — jusqu'à 2 Go. Ou colle un lien YouTube/TikTok.",color:T.acc},
+                {num:"2",icon:"🤖",title:"L'IA génère tes sous-titres",desc:"Whisper AI transcrit et traduit en moins de 30 secondes.",color:T.purple},
+                {num:"3",icon:"🎨",title:"Personnalise & exporte",desc:"Choisis ton style parmi 28 templates viraux et télécharge.",color:T.green},
+              ].map(({num,icon,title,desc,color})=>(
+                <div key={num} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",borderRadius:14,background:T.bg,border:`1px solid ${color}25`}}>
+                  <div style={{width:40,height:40,borderRadius:12,background:`${color}18`,border:`1px solid ${color}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{icon}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,fontSize:13,color}}>{num}. {title}</div>
+                    <div style={{fontSize:11,color:T.muted,marginTop:2}}>{desc}</div>
+                  </div>
+                  <div style={{width:24,height:24,borderRadius:"50%",background:`${color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color,fontWeight:900,flexShrink:0}}>{num}</div>
+                </div>
+              ))}
+              <div style={{padding:"12px 16px",borderRadius:12,background:`${T.yellow}10`,border:`1px solid ${T.yellow}25`,textAlign:"center",fontSize:12,color:T.yellow,fontWeight:600,marginTop:4}}>
+                🎁 Tu as 3 vidéos gratuites pour tester — aucune carte bancaire requise !
+              </div>
+            </div>
+          )}
           {s.id==="ready"&&(
             <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:4}}>
               {[["⬆️","Upload ta première vidéo","Glisse un fichier ou colle un lien YouTube/TikTok",T.acc],["🎨","Style sélectionné","Modifiable à tout moment dans l'éditeur",T.green],["🎁","3 vidéos offertes en Free","Pas de carte bancaire requise",T.yellow],["👥","Invite un ami, gagne 1 mois","Depuis ton dashboard → Parrainage",T.purple]].map(([ic,title,desc,color])=>(
@@ -834,7 +856,19 @@ const OnboardingPage=({user,onComplete})=>{
             }
             <div style={{display:"flex",gap:8,alignItems:"center"}}>
               {step>0&&step<steps.length-1&&<button onClick={onComplete} style={{background:"none",border:"none",color:T.dim,fontSize:12,cursor:"pointer"}}>Passer</button>}
-              <button onClick={()=>step<steps.length-1?setStep(s=>s+1):onComplete()} disabled={!canNext} className="btn-shimmer" style={{padding:"11px 26px",borderRadius:12,background:T.grad,border:"none",color:"#fff",fontSize:14,fontWeight:800,cursor:"pointer",opacity:canNext?1:.45,transition:"all .2s"}}>
+              <button onClick={async()=>{
+                if(step<steps.length-1){setStep(s=>s+1);return;}
+                // Sauvegarde les préférences dans Supabase
+                try {
+                  const token=localStorage.getItem("sc_token");
+                  await fetch("/api/auth?action=update-profile",{
+                    method:"POST",
+                    headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+                    body:JSON.stringify({platform,goal,defaultStyle:style,onboardingDone:true})
+                  });
+                } catch(e){}
+                onComplete();
+              }} disabled={!canNext} className="btn-shimmer" style={{padding:"11px 26px",borderRadius:12,background:T.grad,border:"none",color:"#fff",fontSize:14,fontWeight:800,cursor:"pointer",opacity:canNext?1:.45,transition:"all .2s"}}>
                 {step===steps.length-1?"Allons-y ! 🚀":"Continuer →"}
               </button>
             </div>
@@ -1592,18 +1626,21 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
     onOpen(newF);
   };
 
+  // Stats réelles depuis user + files
+  const realCredits = user?.credits ?? 3;
+  const planCredits={free:3,basic:30,expert:100,pro:Infinity};
+  const totalCredits = user?.plan==="pro"||user?.plan==="Pro" ? Infinity : (planCredits[user?.plan?.toLowerCase()]||3);
+  const usedCredits = files.filter(f=>f.status==="ready").length;
+  const creditPct = totalCredits===Infinity ? 15 : Math.round(((totalCredits - realCredits) / totalCredits)*100);
+  const creditWarn = totalCredits!==Infinity && realCredits<=Math.ceil(totalCredits*0.2);
+  const joinedDate = user?.created_at ? new Date(user.created_at).toLocaleDateString("fr-FR",{month:"long",year:"numeric"}) : "—";
+
   const statsCards=[
     {icon:"🎬",label:"Vidéos traitées",value:files.filter(f=>f.status==="ready").length,color:T.acc},
-    {icon:"💎",label:"Crédits restants",value:user?.plan==="Pro"?"∞":user?.plan==="Expert"?"41":"12",color:T.yellow},
+    {icon:"💎",label:"Crédits restants",value:totalCredits===Infinity?"∞":realCredits,color:creditWarn?T.pink:T.yellow},
     {icon:"⬆",label:"Exports réalisés",value:files.filter(f=>f.exported).length,color:T.green},
-    {icon:"📅",label:"Membre depuis",value:"Mars 2026",color:T.cyan},
+    {icon:"📅",label:"Membre depuis",value:joinedDate,color:T.cyan},
   ];
-
-  const planCredits={Free:3,Basic:30,Expert:100,Pro:Infinity};
-  const usedCredits=files.filter(f=>f.status==="ready").length;
-  const totalCredits=planCredits[user?.plan]||3;
-  const creditPct=totalCredits===Infinity?15:Math.round((usedCredits/totalCredits)*100);
-  const creditWarn=totalCredits!==Infinity&&creditPct>=70;
 
   const [activeTab,setActiveTab]=useState("all");
   const [chatOpen,setChatOpen]=useState(false);
@@ -6002,15 +6039,36 @@ const AdminPanel=({onExit})=>{
 /* ══════════════════════════════════════════════
    PAGE: 404
 ══════════════════════════════════════════════ */
-const NotFound=({onHome})=>(
-  <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",textAlign:"center",padding:24}}>
-    <div style={{fontSize:80,marginBottom:20,animation:"float 3s ease infinite"}}>🌌</div>
-    <div style={{fontFamily:"JetBrains Mono",fontSize:80,fontWeight:900,color:T.dim,lineHeight:1}}>404</div>
-    <div style={{fontWeight:800,fontSize:24,marginBottom:12,marginTop:8}}>Page introuvable</div>
-    <div style={{color:T.muted,fontSize:15,marginBottom:32}}>Cette page n'existe pas ou a été supprimée.</div>
-    <Btn onClick={onHome}>← Retour à l'accueil</Btn>
+const NotFound=({onHome})=>{
+  const [count,setCount]=useState(8);
+  useEffect(()=>{
+    if(count<=0){onHome();return;}
+    const t=setTimeout(()=>setCount(c=>c-1),1000);
+    return()=>clearTimeout(t);
+  },[count]);
+  return(
+  <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",textAlign:"center",padding:24,position:"relative",overflow:"hidden"}}>
+    <AuroraBg subtle/>
+    <div style={{position:"relative",zIndex:1}}>
+      <div style={{fontFamily:"JetBrains Mono",fontSize:"clamp(80px,18vw,140px)",fontWeight:900,lineHeight:1,background:`linear-gradient(135deg,${T.acc},${T.pink})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:8}}>404</div>
+      <div style={{fontWeight:800,fontSize:"clamp(18px,4vw,26px)",marginBottom:12}}>Page introuvable</div>
+      <div style={{color:T.muted,fontSize:15,marginBottom:8,maxWidth:400}}>Cette page n'existe pas ou a été supprimée.</div>
+      <div style={{color:T.dim,fontSize:13,marginBottom:36}}>Redirection automatique dans <strong style={{color:T.acc}}>{count}s</strong>...</div>
+      <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap",marginBottom:40}}>
+        <Btn onClick={onHome} icon="🏠">Accueil</Btn>
+        <Btn v="secondary" onClick={()=>window.history.back()}>← Retour</Btn>
+      </div>
+      <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap",maxWidth:400,margin:"0 auto"}}>
+        {[["📊","Dashboard","dashboard"],["💳","Tarifs","pricing"],["🎬","Templates","templates"],["❓","Support","support"]].map(([ic,label,page])=>(
+          <button key={page} onClick={()=>{window.location.hash=page;onHome();}} style={{padding:"8px 14px",borderRadius:10,background:`${T.acc}10`,border:`1px solid ${T.acc}20`,color:T.acc,fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+            {ic} {label}
+          </button>
+        ))}
+      </div>
+    </div>
   </div>
-);
+  );
+};
 
 /* ══════════════════════════════════════════════
    PAGE: SUPPORT / CONTACT
