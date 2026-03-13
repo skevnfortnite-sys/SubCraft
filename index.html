@@ -7609,9 +7609,9 @@ function App(){
         } catch(e) { console.error("Erreur token Google:", e); }
       }
     }
-    // Vérifie si déjà connecté
+    // Vérifie si déjà connecté — mais pas si on vient de traiter un token Google
     const savedToken = localStorage.getItem("sc_token");
-    if(savedToken && page === "landing") {
+    if(savedToken && page === "landing" && !hash?.includes("access_token=")) {
       try {
         const payload = JSON.parse(atob(savedToken.split(".")[1]));
         const exp = payload.exp * 1000;
