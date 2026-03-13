@@ -1709,7 +1709,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
   // 🔒 Exclure les fichiers supprimés de l'affichage
   const filtered=files.filter(f=>f.status!=="deleted"&&f.name.toLowerCase().includes(search.toLowerCase()));
 
-  const handleUpload=async(file,lang)=>{
+  const handleUpload=async(file,lang,realSubs=null)=>{
     // Vérifie les crédits
     const planCreditsMap={free:3,basic:30,expert:100,pro:Infinity};
     const userPlan=(user?.plan||"free").toLowerCase();
@@ -1720,7 +1720,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
       setPage("pricing");
       return;
     }
-    const newF={id:Date.now(),name:file?.name||"Nouvelle vidéo.mp4",date:new Date().toLocaleDateString("fr-FR"),dur:"00:00",thumb:"🎬",exported:false,deleteIn:24,status:"processing",views:0,style:"yellow-bold"};
+    const newF={id:Date.now(),name:file?.name||"Nouvelle vidéo.mp4",date:new Date().toLocaleDateString("fr-FR"),dur:"00:00",thumb:"🎬",exported:false,deleteIn:24,status:"processing",views:0,style:"yellow-bold",subs:realSubs||null};
     setFiles(p=>[newF,...p]);
     setShowUpload(false);
     notify("Vidéo uploadée ! Transcription en cours...","info");
@@ -2154,15 +2154,61 @@ const UploadModal=({onClose,onImport})=>{
     setUrlOk(v.length>8?(ok?"ok":"err"):null);
   };
 
-  const doImport=()=>{
+  const doImport=async()=>{
+    if(!file&&tab==="file"){notify("Sélectionne une vidéo d'abord !","warning");return;}
+    if(tab==="url"&&urlOk!=="ok"){notify("Colle un lien valide !","warning");return;}
     if(!lang){notify("Sélectionne la langue de ta vidéo !","warning");return;}
     setUploading(true);
-    let p=0;
-    const iv=setInterval(()=>{
-      p+=Math.random()*18+5;
-      if(p>=100){p=100;clearInterval(iv);setTimeout(()=>onImport(file,lang),600);}
-      setProgress(Math.min(p,100));
-    },100);
+    setProgress(10);
+
+    try {
+      let whisperData = null;
+
+      if(tab==="file" && file) {
+        // Vérif taille max 25MB
+        if(file.size > 25*1024*1024){
+          notify("Fichier trop lourd ! Max 25 MB pour Whisper.","error");
+          setUploading(false); setProgress(0); return;
+        }
+        setProgress(20);
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("language", lang||"fr");
+
+        const res = await fetch("/api/whisper", {
+          method: "POST",
+          body: formData,
+        });
+        setProgress(70);
+        if(!res.ok) {
+          const err = await res.json().catch(()=>({}));
+          throw new Error(err.error || `Erreur Whisper (${res.status})`);
+        }
+        whisperData = await res.json();
+      }
+
+      setProgress(90);
+
+      // Convertit les segments Whisper en sous-titres SubCraft
+      let subs = null;
+      if(whisperData?.segments?.length > 0) {
+        subs = whisperData.segments.map((seg, i) => ({
+          id: i + 1,
+          start: Math.round(seg.start * 10) / 10,
+          end: Math.round(seg.end * 10) / 10,
+          text: seg.text.trim(),
+        }));
+      }
+
+      setProgress(100);
+      setTimeout(() => onImport(file || {name: urlVal}, lang, subs), 400);
+
+    } catch(e) {
+      console.error("[Whisper]", e);
+      notify("Erreur transcription : " + e.message, "error");
+      setUploading(false);
+      setProgress(0);
+    }
   };
 
   return(
@@ -2184,7 +2230,7 @@ const UploadModal=({onClose,onImport})=>{
           </div>
           <div style={{fontFamily:"JetBrains Mono",fontSize:13,color:T.acc,fontWeight:600}}>{Math.round(progress)}%</div>
           <div style={{marginTop:18,fontSize:12,color:T.muted}}>
-            {progress<30?"Lecture du fichier audio...":progress<60?"Transcription avec Whisper AI...":progress<85?"Génération des sous-titres...":"Finalisation..."}
+            {progress<25?"Envoi du fichier...":progress<75?"Transcription Whisper AI en cours...":progress<92?"Formatage des sous-titres...":"Presque terminé !"}
           </div>
         </div>
       ):(
@@ -2453,7 +2499,7 @@ const ProfilePage=({user,setUser,onBack,setPage})=>{
 ══════════════════════════════════════════════ */
 const EditorPage=({onBack,file})=>{
   const [tab,setTab]=useState("captions");
-  const [subs,setSubs]=useState(genSubs());
+  const [subs,setSubs]=useState(file?.subs?.length>0 ? file.subs : genSubs());
   const [ct,setCt]=useState(0);
   const [playing,setPlaying]=useState(false);
   const [editId,setEditId]=useState(null);
