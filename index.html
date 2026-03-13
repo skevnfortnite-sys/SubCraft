@@ -3,29 +3,26 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-<meta name="theme-color" content="#050508"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#030305"/>
 <title>SubCraft — Sous-titres IA</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Anton&family=Bebas+Neue&family=Montserrat:wght@700;800;900&family=Oswald:wght@600;700&family=Barlow+Condensed:wght@700;800;900&family=Righteous&display=swap" rel="stylesheet"/>
 <style>
-*{box-sizing:border-box}
-body{margin:0;background:#050508;color:#f8fafc}
-#root>div:first-child{display:flex;align-items:center;justify-content:center;height:100vh;background:#050508}
-.loading-logo{animation:pulse 1.5s ease infinite}
-@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#030305;color:#fff;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+#root>div:first-child{display:flex;align-items:center;justify-content:center;height:100vh;background:#030305;flex-direction:column;gap:16px}
+@keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+.ldr{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#7c3aed,#a855f7);display:flex;align-items:center;justify-content:center;font-size:20px;animation:pulse 1.5s ease infinite;box-shadow:0 0 40px rgba(124,58,237,.5)}
+.ldr-txt{font-size:12px;color:rgba(255,255,255,.3);letter-spacing:.12em;font-family:sans-serif}
 </style>
 </head>
 <body>
 <div id="root">
   <div>
-    <div class="loading-logo" style="text-align:center">
-      <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 16px;box-shadow:0 0 32px rgba(99,102,241,.5)">✦</div>
-      <div style="font-family:sans-serif;font-size:13px;color:#475569;letter-spacing:.05em">CHARGEMENT...</div>
-    </div>
+    <div class="ldr">✦</div>
+    <div class="ldr-txt">CHARGEMENT</div>
   </div>
 </div>
 <script>
@@ -45,7 +42,7 @@ const GS = () => (
     @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Anton&family=Bebas+Neue&family=Montserrat:wght@700;800;900&family=Oswald:wght@600;700&family=Barlow+Condensed:wght@700;800;900&family=Righteous&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
-    body{background:#050508;color:#f8fafc;font-family:'DM Sans',system-ui,sans-serif;min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+    body{background:#030305;color:#ffffff;font-family:'DM Sans',system-ui,sans-serif;min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
     ::-webkit-scrollbar{width:4px}
     ::-webkit-scrollbar-track{background:#02030a}
     ::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#5b6cff,#a855f7);border-radius:10px}
@@ -219,20 +216,20 @@ const signInWithGoogle = () => {
 
 /* ── TOKENS ── */
 const T = {
-  bg:"#050508",bg2:"#070710",bg3:"#09090f",
-  surf:"#0e0e1a",surf2:"#121220",surf3:"#161624",
-  border:"#1e1e2e",borderL:"#262638",
-  acc:"#6366f1",accH:"#818cf8",accGlow:"#6366f140",
-  pink:"#f43f5e",cyan:"#06b6d4",green:"#10b981",
-  yellow:"#f59e0b",orange:"#f97316",purple:"#8b5cf6",
-  red:"#ef4444",gold:"#eab308",
-  text:"#f8fafc",muted:"#94a3b8",dim:"#475569",
-  grad:"linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a855f7 100%)",
-  gradH:"linear-gradient(135deg,#818cf8,#a78bfa,#c084fc)",
+  bg:"#030305",bg2:"#060608",bg3:"#08080c",
+  surf:"#0d0d12",surf2:"#111116",surf3:"#15151c",
+  border:"#1c1c28",borderL:"#24243a",
+  acc:"#7c3aed",accH:"#9d5df7",accGlow:"#7c3aed45",
+  pink:"#f43f5e",cyan:"#22d3ee",green:"#22c55e",
+  yellow:"#facc15",orange:"#fb923c",purple:"#a855f7",
+  red:"#ef4444",gold:"#fbbf24",
+  text:"#ffffff",muted:"#8b8ba0",dim:"#4a4a60",
+  grad:"linear-gradient(135deg,#7c3aed 0%,#a855f7 50%,#c084fc 100%)",
+  gradH:"linear-gradient(135deg,#9d5df7,#b975f7,#d09dfc)",
   gradP:"linear-gradient(135deg,#f43f5e,#fb923c)",
-  gradG:"linear-gradient(135deg,#10b981,#06b6d4)",
-  gradY:"linear-gradient(135deg,#f59e0b,#f97316)",
-  gradAcc:"linear-gradient(135deg,#4f46e5,#7c3aed)",
+  gradG:"linear-gradient(135deg,#22c55e,#22d3ee)",
+  gradY:"linear-gradient(135deg,#facc15,#fb923c)",
+  gradAcc:"linear-gradient(135deg,#6d28d9,#9d5df7)",
 };
 
 
@@ -1352,11 +1349,11 @@ const LandingPage=({onCTA,setPage,goCheckout})=>{
       <Cursor/>
 
       {/* NAV — clean glass pill */}
-      <nav style={{position:"sticky",top:0,zIndex:100,height:60,padding:"0 32px",display:"flex",alignItems:"center",gap:10,backdropFilter:"blur(40px)",background:"rgba(2,3,10,.78)",borderBottom:"1px solid rgba(255,255,255,.04)"}} className="mobile-p">
+      <nav style={{position:"sticky",top:0,zIndex:100,height:60,padding:"0 32px",display:"flex",alignItems:"center",gap:10,backdropFilter:"blur(48px)",WebkitBackdropFilter:"blur(48px)",background:"rgba(3,3,5,.82)",borderBottom:"1px solid rgba(255,255,255,.06)",boxShadow:"0 1px 0 rgba(255,255,255,.04)"}} className="mobile-p">
         {/* Logo */}
         <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-          <div style={{width:30,height:30,borderRadius:9,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,boxShadow:`0 0 18px ${T.accGlow}`}}>✦</div>
-          <span className="syne grad-text-chrome" style={{fontWeight:800,fontSize:16,letterSpacing:"-.025em"}}>SubCraft</span>
+          <div style={{width:30,height:30,borderRadius:9,background:"linear-gradient(135deg,#7c3aed,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,boxShadow:"0 0 24px rgba(124,58,237,.6),0 1px 0 rgba(255,255,255,.12) inset"}}>✦</div>
+          <span className="syne" style={{fontWeight:800,fontSize:16,letterSpacing:"-.03em",color:"#fff"}}>SubCraft</span>
         </div>
         {/* Center links */}
         <div style={{flex:1,display:"flex",justifyContent:"center",gap:0}} className="hide-mobile">
@@ -1373,9 +1370,9 @@ const LandingPage=({onCTA,setPage,goCheckout})=>{
             onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.09)";e.currentTarget.style.color=T.muted;}}>
             Connexion
           </button>
-          <button onClick={onCTA} className="shimmer-btn" style={{padding:"8px 20px",borderRadius:10,background:T.grad,border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:`0 4px 20px ${T.accGlow}`,transition:"all .2s"}}
-            onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.04)";e.currentTarget.style.boxShadow=`0 8px 32px ${T.accGlow}`;}}
-            onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow=`0 4px 20px ${T.accGlow}`;}}>
+          <button onClick={onCTA} style={{padding:"8px 20px",borderRadius:10,background:"#7c3aed",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(124,58,237,.5)",transition:"all .2s",letterSpacing:"-.01em"}}
+            onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.04)";e.currentTarget.style.boxShadow="0 8px 32px rgba(124,58,237,.7)";}}
+            onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 4px 20px rgba(124,58,237,.5)";}}>
             Commencer gratuit →
           </button>
         </div>
@@ -1386,26 +1383,26 @@ const LandingPage=({onCTA,setPage,goCheckout})=>{
         {/* LEFT: Text */}
         <div style={{flex:1,minWidth:0}}>
           {/* Badge */}
-          <div className="fu" style={{display:"inline-flex",alignItems:"center",gap:8,padding:"6px 16px",borderRadius:100,background:"rgba(52,211,153,.07)",border:"1px solid rgba(52,211,153,.22)",marginBottom:36,boxShadow:"0 0 20px rgba(52,211,153,.08)"}}>
-            <span style={{width:6,height:6,borderRadius:"50%",background:T.green,animation:"pulseDotGreen 2s infinite"}}/>
-            <span style={{fontSize:11,color:T.green,letterSpacing:".06em",fontWeight:600}}>PROPULSÉ PAR WHISPER AI · BÊTA OUVERTE</span>
+          <div className="fu" style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 14px",borderRadius:100,background:"rgba(124,58,237,.1)",border:"1px solid rgba(124,58,237,.25)",marginBottom:32}}>
+            <span style={{width:5,height:5,borderRadius:"50%",background:"#a855f7",animation:"pulseDot 2s infinite"}}/>
+            <span style={{fontSize:11,color:"#c084fc",letterSpacing:".08em",fontWeight:600}}>WHISPER AI · BÊTA OUVERTE</span>
           </div>
           {/* Title */}
-          <h1 className="fu syne text-3d" style={{fontWeight:800,fontSize:"clamp(28px,3.8vw,58px)",lineHeight:.96,letterSpacing:"-.055em",marginBottom:24,animationDelay:".06s"}}>
-            <span style={{display:"block",color:T.text}}>Des sous-titres</span>
-            <span style={{display:"block",color:T.acc}}>qui explosent</span>
-            <span style={{display:"block",color:T.text}}>tes vues <span style={{display:"inline-block",animation:"float 2s ease infinite"}}>🚀</span></span>
+          <h1 className="fu syne" style={{fontWeight:800,fontSize:"clamp(36px,5vw,76px)",lineHeight:.9,letterSpacing:"-.06em",marginBottom:28,animationDelay:".06s"}}>
+            <span style={{display:"block",color:"#ffffff",textShadow:"0 0 80px rgba(124,58,237,.4)"}}>Sous-titres</span>
+            <span style={{display:"block",background:"linear-gradient(135deg,#c084fc 0%,#a855f7 40%,#7c3aed 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",filter:"drop-shadow(0 0 30px rgba(168,85,247,.5))"}}>qui explosent</span>
+            <span style={{display:"block",color:"#ffffff"}}>tes vues</span>
           </h1>
           {/* Description */}
-          <p className="fu" style={{fontSize:16,color:"rgba(180,185,220,.85)",maxWidth:480,lineHeight:1.85,marginBottom:44,animationDelay:".12s"}}>
-            Colle ton lien TikTok ou YouTube, l'IA transcrit en <strong style={{color:T.text,fontWeight:700}}>10 secondes</strong>. Choisis parmi <strong style={{color:T.text,fontWeight:700}}>24 styles viraux</strong>. Exporte en HD.
+          <p className="fu" style={{fontSize:17,color:"rgba(255,255,255,.55)",maxWidth:460,lineHeight:1.8,marginBottom:44,animationDelay:".12s",fontWeight:400}}>
+            Upload ta vidéo, l'IA génère les sous-titres en <strong style={{color:"#fff",fontWeight:600}}>10 secondes</strong>. Choisis parmi <strong style={{color:"#fff",fontWeight:600}}>24 styles viraux</strong> et exporte en HD.
           </p>
           {/* CTAs */}
           <div className="fu" style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:52,animationDelay:".17s"}}>
-            <button onClick={onCTA} className="shimmer-btn" style={{display:"flex",alignItems:"center",gap:10,padding:"15px 32px",borderRadius:16,background:T.grad,border:"none",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:`0 8px 48px ${T.accGlow},0 0 100px ${T.acc}22,inset 0 1px 0 rgba(255,255,255,.15)`,transition:"all .3s",letterSpacing:"-.02em"}}
-              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px) scale(1.03)";e.currentTarget.style.boxShadow=`0 16px 60px ${T.accGlow},0 0 120px ${T.acc}33`;}}
-              onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow=`0 8px 48px ${T.accGlow},0 0 100px ${T.acc}22,inset 0 1px 0 rgba(255,255,255,.15)`;}}>
-              <span style={{fontSize:18}}>✦</span> Générer mes sous-titres — Gratuit
+            <button onClick={onCTA} style={{display:"flex",alignItems:"center",gap:10,padding:"16px 36px",borderRadius:14,background:"#7c3aed",border:"none",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 0 0 1px rgba(168,85,247,.3),0 8px 48px rgba(124,58,237,.6),0 20px 80px rgba(124,58,237,.2)",transition:"all .25s cubic-bezier(.22,1,.36,1)",letterSpacing:"-.01em",position:"relative",overflow:"hidden"}}
+              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.background="#8b3cf7";e.currentTarget.style.boxShadow="0 0 0 1px rgba(168,85,247,.4),0 12px 60px rgba(124,58,237,.7),0 24px 100px rgba(124,58,237,.3)";}}
+              onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.background="#7c3aed";e.currentTarget.style.boxShadow="0 0 0 1px rgba(168,85,247,.3),0 8px 48px rgba(124,58,237,.6),0 20px 80px rgba(124,58,237,.2)";}}>
+              ✦ &nbsp;Commencer gratuitement
             </button>
             <button onClick={()=>document.getElementById("exemples")?.scrollIntoView({behavior:"smooth"})} style={{display:"flex",alignItems:"center",gap:8,padding:"15px 26px",borderRadius:16,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.1)",color:T.text,fontSize:15,cursor:"pointer",transition:"all .3s",backdropFilter:"blur(16px)"}}
               onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,255,255,.06)";e.currentTarget.style.borderColor="rgba(255,255,255,.2)";}}
@@ -1414,11 +1411,11 @@ const LandingPage=({onCTA,setPage,goCheckout})=>{
             </button>
           </div>
           {/* Stats */}
-          <div className="fu" style={{display:"flex",gap:0,animationDelay:".22s",background:"rgba(255,255,255,.025)",borderRadius:16,border:"1px solid rgba(255,255,255,.05)",overflow:"hidden",maxWidth:420}}>
-            {[["10k+","Créateurs"],["99%","Précision IA"],["<10s","Génération"],["24","Styles"]].map(([v,l],i)=>(
-              <div key={l} style={{flex:1,padding:"14px 12px",textAlign:"center",borderRight:i<3?"1px solid rgba(255,255,255,.05)":"none"}}>
-                <div className="syne" style={{fontWeight:800,fontSize:20,background:T.grad,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:1}}>{v}</div>
-                <div style={{fontSize:9,color:T.muted,marginTop:3,letterSpacing:".04em",textTransform:"uppercase"}}>{l}</div>
+          <div className="fu" style={{display:"flex",gap:24,animationDelay:".22s",flexWrap:"wrap"}}>
+            {[["10k+","Créateurs","#a855f7"],["99%","Précision IA","#22c55e"],["<10s","Génération","#22d3ee"],["24","Styles","#f43f5e"]].map(([v,l,c],i)=>(
+              <div key={l} style={{textAlign:"left"}}>
+                <div className="syne" style={{fontWeight:800,fontSize:26,color:c,lineHeight:1,letterSpacing:"-.03em"}}>{v}</div>
+                <div style={{fontSize:11,color:"rgba(255,255,255,.35)",marginTop:3,fontWeight:500}}>{l}</div>
               </div>
             ))}
           </div>
@@ -1472,11 +1469,11 @@ const LandingPage=({onCTA,setPage,goCheckout})=>{
       </div>
 
       {/* MARQUEE LOGOS */}
-      <div style={{position:"relative",zIndex:1,borderTop:"1px solid rgba(255,255,255,.04)",borderBottom:"1px solid rgba(255,255,255,.04)",padding:"18px 0",overflow:"hidden",marginBottom:120}}>
-        <div style={{display:"flex",width:"max-content",animation:"marquee 18s linear infinite"}}>
-          {[...["TikTok","YouTube Shorts","Instagram Reels","LinkedIn","Twitter/X","Podcast","Twitch","Snapchat"],...["TikTok","YouTube Shorts","Instagram Reels","LinkedIn","Twitter/X","Podcast","Twitch","Snapchat"]].map((p,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"0 28px",flexShrink:0,color:T.muted,fontSize:13,fontWeight:500,borderRight:"1px solid rgba(255,255,255,.04)"}}>
-              <span style={{width:5,height:5,borderRadius:"50%",background:T.muted,opacity:.3}}/>
+      <div style={{position:"relative",zIndex:1,borderTop:"1px solid rgba(255,255,255,.05)",borderBottom:"1px solid rgba(255,255,255,.05)",padding:"16px 0",overflow:"hidden",marginBottom:120,background:"rgba(255,255,255,.015)"}}>
+        <div style={{display:"flex",width:"max-content",animation:"marquee 22s linear infinite"}}>
+          {[...["TikTok","YouTube Shorts","Instagram Reels","LinkedIn","Twitter / X","Podcast","Twitch","Snapchat"],...["TikTok","YouTube Shorts","Instagram Reels","LinkedIn","Twitter / X","Podcast","Twitch","Snapchat"]].map((p,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"0 32px",flexShrink:0,color:"rgba(255,255,255,.25)",fontSize:12,fontWeight:600,letterSpacing:".04em",textTransform:"uppercase"}}>
+              <span style={{width:4,height:4,borderRadius:"50%",background:"#7c3aed",opacity:.8}}/>
               {p}
             </div>
           ))}
@@ -1485,20 +1482,23 @@ const LandingPage=({onCTA,setPage,goCheckout})=>{
 
       {/* FEATURES */}
       <div id="fonctionnalités" style={{position:"relative",zIndex:1,maxWidth:1160,margin:"0 auto 140px",padding:"0 48px"}} className="mobile-p">
-        <div style={{textAlign:"center",marginBottom:72}}>
-          <span className="fu" style={{display:"inline-block",fontSize:10,padding:"3px 14px",borderRadius:100,background:"rgba(168,85,247,.08)",border:"1px solid rgba(168,85,247,.2)",color:T.purple,fontWeight:700,letterSpacing:".1em",marginBottom:20}}>FONCTIONNALITÉS</span>
-          <h2 className="fu syne" style={{fontWeight:800,fontSize:"clamp(30px,4vw,54px)",letterSpacing:"-.04em",marginBottom:14,animationDelay:".05s"}}>
-            Tout pour <span className="grad-text">exploser tes vues</span>
+        <div style={{textAlign:"center",marginBottom:64}}>
+          <p style={{fontSize:11,color:"#7c3aed",fontWeight:700,letterSpacing:".15em",textTransform:"uppercase",marginBottom:16}}>Fonctionnalités</p>
+          <h2 className="syne" style={{fontWeight:800,fontSize:"clamp(32px,4vw,60px)",letterSpacing:"-.05em",marginBottom:16,color:"#fff",lineHeight:.95}}>
+            Tout ce qu'il faut<br/><span style={{background:"linear-gradient(135deg,#c084fc,#a855f7,#7c3aed)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>pour dominer</span>
           </h2>
-          <p className="fu" style={{fontSize:15,color:T.muted,maxWidth:460,margin:"0 auto",lineHeight:1.75,animationDelay:".1s"}}>Des outils pensés pour les créateurs qui veulent aller vite et aller loin.</p>
+          <p style={{fontSize:16,color:"rgba(255,255,255,.4)",maxWidth:440,margin:"0 auto",lineHeight:1.7}}>Des outils pensés pour les créateurs qui veulent aller vite et aller loin.</p>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}} className="mobile-grid1">
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:2}} className="mobile-grid1">
           {feats.map((f,i)=>(
-            <div key={i} onMouseEnter={()=>setHovFeat(i)} onMouseLeave={()=>setHovFeat(null)} style={{padding:"28px",borderRadius:20,background:hovFeat===i?T.surf2:T.surf,border:`1px solid ${hovFeat===i?"rgba(255,255,255,.12)":"rgba(255,255,255,.055)"}`,transition:"all .3s cubic-bezier(.22,1,.36,1)",cursor:"default",position:"relative",overflow:"hidden",transform:hovFeat===i?"translateY(-4px)":"none",boxShadow:hovFeat===i?"0 20px 50px rgba(0,0,0,.4)":"none"}}>
-              {hovFeat===i&&<ParticleField count={10} color={f.color}/>}
-              <div style={{width:52,height:52,borderRadius:15,background:`${f.color}14`,border:`1px solid ${f.color}28`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,marginBottom:18,position:"relative",zIndex:1}}>{f.icon}</div>
-              <div className="syne" style={{fontWeight:700,fontSize:16,marginBottom:8,letterSpacing:"-.02em",position:"relative",zIndex:1}}>{f.title}</div>
-              <div style={{fontSize:13,color:T.muted,lineHeight:1.7,position:"relative",zIndex:1}}>{f.desc}</div>
+            <div key={i} onMouseEnter={()=>setHovFeat(i)} onMouseLeave={()=>setHovFeat(null)}
+              style={{padding:"32px 28px",background:hovFeat===i?"rgba(124,58,237,.08)":"transparent",
+                borderTop:"1px solid rgba(255,255,255,.06)",borderRight:i%3!==2?"1px solid rgba(255,255,255,.06)":"none",
+                transition:"all .3s cubic-bezier(.22,1,.36,1)",cursor:"default",position:"relative",overflow:"hidden"}}>
+              {hovFeat===i&&<div style={{position:"absolute",inset:0,background:`radial-gradient(circle at 30% 50%,${f.color}12,transparent 70%)`,pointerEvents:"none"}}/>}
+              <div style={{width:44,height:44,borderRadius:12,background:`${f.color}18`,border:`1px solid ${f.color}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,marginBottom:20,position:"relative",zIndex:1,transition:"all .3s",transform:hovFeat===i?"scale(1.1)":"scale(1)"}}>{f.icon}</div>
+              <div className="syne" style={{fontWeight:700,fontSize:15,marginBottom:8,letterSpacing:"-.02em",position:"relative",zIndex:1,color:"#fff"}}>{f.title}</div>
+              <div style={{fontSize:13,color:"rgba(255,255,255,.4)",lineHeight:1.75,position:"relative",zIndex:1}}>{f.desc}</div>
             </div>
           ))}
         </div>
@@ -1534,17 +1534,15 @@ const LandingPage=({onCTA,setPage,goCheckout})=>{
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:20,position:"relative"}} className="mobile-grid1">
           <div style={{position:"absolute",top:38,left:"17%",right:"17%",height:1,background:"linear-gradient(90deg,transparent,rgba(91,108,255,.4),rgba(168,85,247,.35),transparent)"}} className="hide-mobile"/>
-          {[{n:"01",icon:"📁",title:"Upload ta vidéo",desc:"Glisse-dépose ton MP4, MOV ou colle un lien YouTube / TikTok.",color:T.acc},{n:"02",icon:"🤖",title:"L'IA transcrit",desc:"Whisper génère tes sous-titres en 10 secondes avec une précision de 99%.",color:T.purple},{n:"03",icon:"✦",title:"Exporte en 1 clic",desc:"Choisis ton style, peaufine, puis exporte ton MP4 HD avec sous-titres incrustés.",color:T.green}].map((step,i)=>(
-            <div key={i} style={{padding:"30px 26px",borderRadius:22,background:T.surf,border:"1px solid rgba(255,255,255,.055)",position:"relative",overflow:"hidden",transition:"all .3s",animation:`fadeUp .5s ${i*.1}s both`}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.boxShadow="0 20px 50px rgba(0,0,0,.35)";}} onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";}}>
-              <ParticleField count={7} color={step.color}/>
-              <div style={{position:"relative",zIndex:1}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
-                  <div style={{width:54,height:54,borderRadius:16,background:`${step.color}12`,border:`1px solid ${step.color}26`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>{step.icon}</div>
-                  <span className="syne" style={{fontSize:46,fontWeight:800,color:"rgba(255,255,255,.035)",lineHeight:1}}>{step.n}</span>
-                </div>
-                <div className="syne" style={{fontWeight:700,fontSize:17,marginBottom:10,letterSpacing:"-.025em"}}>{step.title}</div>
-                <div style={{fontSize:13,color:T.muted,lineHeight:1.72}}>{step.desc}</div>
-              </div>
+          {[{n:"01",icon:"📁",title:"Upload ta vidéo",desc:"Glisse-dépose ton MP4 ou colle un lien YouTube / TikTok directement.",color:"#7c3aed"},{n:"02",icon:"⚡",title:"L'IA transcrit",desc:"Whisper génère tes sous-titres en 10 secondes. 99% de précision.",color:"#a855f7"},{n:"03",icon:"✦",title:"Exporte en 1 clic",desc:"Choisis ton style parmi 24 templates viraux et exporte ton MP4 HD.",color:"#22c55e"}].map((step,i)=>(
+            <div key={i} style={{padding:"36px 32px",borderRadius:24,background:"rgba(255,255,255,.025)",border:"1px solid rgba(255,255,255,.07)",position:"relative",overflow:"hidden",transition:"all .3s cubic-bezier(.22,1,.36,1)",animation:`fadeUp .5s ${i*.1}s both`}}
+              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-6px)";e.currentTarget.style.borderColor=`${step.color}50`;e.currentTarget.style.boxShadow=`0 24px 60px rgba(0,0,0,.5),0 0 80px ${step.color}15`;}}
+              onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.borderColor="rgba(255,255,255,.07)";e.currentTarget.style.boxShadow="none";}}>
+              <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${step.color}60,transparent)`}}/>
+              <span className="syne" style={{fontSize:64,fontWeight:800,color:"rgba(255,255,255,.04)",lineHeight:1,display:"block",marginBottom:20}}>{step.n}</span>
+              <div style={{fontSize:32,marginBottom:16,filter:`drop-shadow(0 0 12px ${step.color}80)`}}>{step.icon}</div>
+              <div className="syne" style={{fontWeight:700,fontSize:18,marginBottom:10,letterSpacing:"-.03em",color:"#fff"}}>{step.title}</div>
+              <div style={{fontSize:14,color:"rgba(255,255,255,.4)",lineHeight:1.75}}>{step.desc}</div>
             </div>
           ))}
         </div>
@@ -1558,15 +1556,15 @@ const LandingPage=({onCTA,setPage,goCheckout})=>{
           <div style={{fontSize:13,color:T.muted}}>4.9/5 · 2 400+ avis vérifiés</div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}} className="mobile-grid1">
-          {[{name:"Sophie M.",role:"TikToker · 890k abonnés",avatar:"SM",text:"J'ai multiplié mes vues par 3 en 2 semaines. Les styles MrBeast et Squeezie sont juste parfaits pour mon contenu.",color:T.acc},{name:"Lucas D.",role:"YouTubeur · 210k abonnés",avatar:"LD",text:"La transcription en 10 secondes c'est dingue. Avant je passais 2h par vidéo, maintenant c'est 5 minutes.",color:T.purple},{name:"Emma W.",role:"Créatrice Reels · 450k",avatar:"EW",text:"L'interface est magnifique et les styles vraiment pro. Mes Reels ont explosé depuis que j'utilise SubCraft.",color:T.pink}].map((r,i)=>(
-            <div key={i} style={{padding:"24px",borderRadius:20,background:T.surf,border:"1px solid rgba(255,255,255,.055)",position:"relative",overflow:"hidden",transition:"all .3s"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.boxShadow="0 16px 40px rgba(0,0,0,.35)";}} onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";}}>
-              <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${r.color}55,transparent)`}}/>
-              <div style={{display:"flex",gap:2,marginBottom:14}}>{"★★★★★".split("").map((s,j)=><span key={j} style={{color:T.yellow,fontSize:13}}>{s}</span>)}</div>
-              <p style={{fontSize:13,color:"rgba(240,242,255,.68)",lineHeight:1.78,marginBottom:18,fontStyle:"italic"}}>"{r.text}"</p>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <div style={{width:34,height:34,borderRadius:"50%",background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#fff",flexShrink:0}}>{r.avatar}</div>
-                <div><div style={{fontWeight:700,fontSize:13}}>{r.name}</div><div style={{fontSize:11,color:T.muted}}>{r.role}</div></div>
-                <span style={{marginLeft:"auto",fontSize:9,padding:"2px 8px",borderRadius:6,background:`${r.color}10`,color:r.color,fontWeight:800,letterSpacing:".04em"}}>{i===0?"TikTok":i===1?"YouTube":"Instagram"}</span>
+          {[{name:"Sophie M.",role:"TikToker · 890k abonnés",avatar:"SM",text:"J'ai multiplié mes vues par 3 en 2 semaines. Les styles sont juste parfaits pour mon contenu.",color:"#a855f7"},{name:"Lucas D.",role:"YouTubeur · 210k abonnés",avatar:"LD",text:"La transcription en 10 secondes c'est dingue. Avant je passais 2h par vidéo, maintenant c'est 5 minutes.",color:"#22c55e"},{name:"Emma W.",role:"Créatrice Reels · 450k",avatar:"EW",text:"L'interface est magnifique et les styles vraiment pro. Mes Reels ont explosé depuis que j'utilise SubCraft.",color:"#f43f5e"}].map((r,i)=>(
+            <div key={i} style={{padding:"28px",borderRadius:20,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.07)",position:"relative",overflow:"hidden",transition:"all .3s cubic-bezier(.22,1,.36,1)"}}
+              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-5px)";e.currentTarget.style.background="rgba(124,58,237,.07)";e.currentTarget.style.borderColor="rgba(124,58,237,.3)";e.currentTarget.style.boxShadow="0 20px 60px rgba(0,0,0,.4)";}}
+              onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.background="rgba(255,255,255,.03)";e.currentTarget.style.borderColor="rgba(255,255,255,.07)";e.currentTarget.style.boxShadow="none";}}>
+              <div style={{display:"flex",gap:2,marginBottom:16}}>{"★★★★★".split("").map((s,j)=><span key={j} style={{color:"#facc15",fontSize:14}}>{s}</span>)}</div>
+              <p style={{fontSize:14,color:"rgba(255,255,255,.6)",lineHeight:1.8,marginBottom:20}}>"{r.text}"</p>
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                <div style={{width:38,height:38,borderRadius:"50%",background:`linear-gradient(135deg,${r.color}80,${r.color}30)`,border:`1px solid ${r.color}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"#fff",flexShrink:0}}>{r.avatar}</div>
+                <div><div style={{fontWeight:600,fontSize:14,color:"#fff"}}>{r.name}</div><div style={{fontSize:11,color:"rgba(255,255,255,.35)",marginTop:1}}>{r.role}</div></div>
               </div>
             </div>
           ))}
@@ -1590,7 +1588,7 @@ const LandingPage=({onCTA,setPage,goCheckout})=>{
               <div style={{position:"relative",zIndex:1}}>
                 <div style={{fontWeight:600,fontSize:11,color:plan.color,letterSpacing:".1em",marginBottom:8}}>{plan.name.toUpperCase()}</div>
                 <div style={{display:"flex",alignItems:"baseline",gap:3,marginBottom:4}}>
-                  <span className="syne" style={{fontWeight:800,fontSize:34,color:T.text}}>€{billingY?plan.priceY:plan.price}</span>
+                  <span className="syne" style={{fontWeight:800,fontSize:40,color:"#fff",letterSpacing:"-.04em"}}>€{billingY?plan.priceY:plan.price}</span>
                   <span style={{fontSize:11,color:T.muted}}>/mois</span>
                 </div>
                 {billingY&&plan.price>0&&<div style={{fontSize:11,marginBottom:14,display:"flex",alignItems:"center",gap:6}}><span style={{color:T.green,fontWeight:700}}>€{plan.priceY*12}/an</span><span style={{color:T.muted,fontSize:10}}>TVA incluse</span></div>}
@@ -1817,7 +1815,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
   const tabFiles=activeTab==="all"?filtered:activeTab==="ready"?filtered.filter(f=>f.status==="ready"):filtered.filter(f=>f.status==="processing");
 
   return(
-    <div style={{minHeight:"100vh",background:T.bg,position:"relative"}} className="page"><AuroraBg subtle/><Cursor/>
+    <div style={{minHeight:"100vh",background:"#030305",position:"relative"}} className="page"><AuroraBg subtle/><Cursor/>
       {/* NAV */}
       <nav style={{padding:"0 24px",borderBottom:"1px solid rgba(255,255,255,.06)",display:"flex",alignItems:"center",gap:8,background:"rgba(5,5,8,.88)",backdropFilter:"blur(48px)",WebkitBackdropFilter:"blur(48px)",height:58,position:"sticky",top:0,zIndex:50,boxShadow:"0 1px 0 rgba(255,255,255,.04),0 4px 32px rgba(0,0,0,.4)"}}>
         {/* Logo */}
@@ -1913,7 +1911,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
         </div>
 
         {/* ── STATS STRIP ── */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:16}} className="mobile-grid2">
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:20}} className="mobile-grid2">
           {[
             {icon:"🎬",label:"Vidéos traitées",value:files.filter(f=>f.status==="ready").length,color:T.acc},
             {icon:"🎯",label:"Vidéos restantes",value:totalCredits===Infinity?"∞":Math.max(0,realCredits),color:creditWarn?T.orange:T.yellow},
