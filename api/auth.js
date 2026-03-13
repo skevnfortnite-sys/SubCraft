@@ -103,7 +103,7 @@ export default async function handler(req, res) {
     }).catch(e => console.error("Email welcome error:", e));
 
     return res.status(200).json({
-      user: { id: userId, email, name, plan: "free", credits: 3 },
+      user: { id: userId, email, name, plan: "free", credits: 3, status: "active" },
       token,
     });
   }
@@ -151,6 +151,7 @@ export default async function handler(req, res) {
         name: profile?.name || email.split("@")[0],
         plan: profile?.plan || "free",
         credits: profile?.credits ?? 3,
+        status: profile?.status || "active",
       },
       token: authData.access_token,
     });
@@ -181,6 +182,7 @@ export default async function handler(req, res) {
         name: profile.name,
         plan: profile.plan || "free",
         credits: profile.credits ?? 3,
+        status: profile.status || "active",
       },
     });
   }

@@ -7372,6 +7372,32 @@ Sophie & toute l'équipe SubCraft`
 /* ══════════════════════════════════════════════
    ROOT APP
 ══════════════════════════════════════════════ */
+export default 
+/* ══════════════════════════════════════════════
+   PAGE: COMPTE SUSPENDU
+══════════════════════════════════════════════ */
+const BannedPage=({user,onLogout})=>(
+  <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:T.bg,padding:24,flexDirection:"column",gap:0}}>
+    <AuroraBg subtle/>
+    <div style={{position:"relative",zIndex:1,textAlign:"center",maxWidth:480}}>
+      <div style={{fontSize:72,marginBottom:24}}>🚫</div>
+      <h1 className="syne" style={{fontWeight:800,fontSize:28,marginBottom:12,color:T.pink}}>Compte suspendu</h1>
+      <p style={{color:T.muted,fontSize:15,lineHeight:1.7,marginBottom:32}}>
+        Ton compte a été suspendu suite à une violation de nos conditions d'utilisation.<br/>
+        Si tu penses qu'il s'agit d'une erreur, contacte notre support.
+      </p>
+      <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+        <a href="mailto:legal@subcraftai.com" style={{padding:"12px 24px",borderRadius:12,background:`${T.acc}15`,border:`1px solid ${T.acc}30`,color:T.acc,fontSize:14,fontWeight:700,textDecoration:"none",cursor:"pointer"}}>
+          📧 Contacter le support
+        </a>
+        <button onClick={onLogout} style={{padding:"12px 24px",borderRadius:12,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",color:T.muted,fontSize:14,fontWeight:600,cursor:"pointer"}}>
+          Se déconnecter
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 function App(){
   const [page,setPage]=useState("landing");
   const [user,setUser]=useState(null);
@@ -7438,6 +7464,11 @@ function App(){
   };
 
   const handleAuth=(u)=>{
+    if(u.status==="suspended"){
+      setUser(u);
+      nav("banned");
+      return;
+    }
     setUser(u);
     if(u.isNew){nav("onboarding");}
     else{nav("dashboard");}
@@ -7511,7 +7542,8 @@ function App(){
       {page==="signup"&&<SignupPage onAuth={handleAuth} goLogin={()=>nav("login")}/>}
       {page==="auth"&&<LoginPage onAuth={handleAuth} onAdmin={()=>nav("admin")} goSignup={()=>nav("signup")}/>}
       {page==="onboarding"&&<OnboardingPage user={user} onComplete={()=>nav("dashboard")}/>}
-      {page==="dashboard"&&<Dashboard user={user} setUser={setUser} onOpen={f=>{setCurrentFile(f);nav("editor");}} onLogout={()=>{setUser(null);nav("landing");}} setPage={nav}/>}
+      {page==="dashboard"&&(user?.status==="suspended"?nav("banned"):null)||null}
+      {page==="dashboard"&&user?.status!=="suspended"&&<Dashboard user={user} setUser={setUser} onOpen={f=>{setCurrentFile(f);nav("editor");}} onLogout={()=>{setUser(null);nav("landing");}} setPage={nav}/>}
       {page==="editor"&&<EditorPage onBack={()=>nav("dashboard")} file={currentFile}/>}
       {page==="pricing"&&<PricingPage onBack={()=>nav(user?"dashboard":"landing")} onSelect={(planId,yearly)=>goCheckout(planId,yearly)}/>}
       {page==="checkout"&&<CheckoutPage plan={checkoutPlan} yearly={checkoutYearly} onBack={()=>nav("pricing")} user={user} onSuccess={(planId)=>{setUser(u=>({...u,plan:PLANS.find(p=>p.id===planId)?.name||"Pro"}));nav("dashboard");notify("🎉 Bienvenue dans le plan Pro !","success");}}/>}
@@ -7525,6 +7557,7 @@ function App(){
       {page==="referral"&&<ReferralPage user={user} onBack={()=>nav("dashboard")}/>}
       {page==="emails"&&<EmailSequencePage onBack={()=>nav("dashboard")}/>}
       {LEGAL_PAGES.includes(page)&&<LegalPage type={page} onBack={()=>nav(user?"dashboard":"landing")} setPage={nav}/>}
+      {page==="banned"&&<BannedPage user={user} onLogout={()=>{setUser(null);localStorage.removeItem("sc_token");nav("landing");}}/>}
       {page==="admin"&&<AdminPanel onExit={()=>nav("landing")}/>}
       {page==="404"&&<NotFound onHome={()=>nav("landing")}/>}
       {cookieConsent===null&&!["checkout","payment-failed",...LEGAL_PAGES].includes(page)&&(
