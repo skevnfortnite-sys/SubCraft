@@ -1,10 +1,10 @@
 {
   "functions": {
     "api/anthropic.js": { "maxDuration": 30 },
-    "api/whisper.js":   { "maxDuration": 60, "memory": 1024 },
     "api/stripe.js":    { "maxDuration": 15 },
     "api/auth.js":      { "maxDuration": 10 },
-    "api/videos.js":    { "maxDuration": 10 }
+    "api/videos.js":    { "maxDuration": 10 },
+    "api/admin.js":     { "maxDuration": 10 }
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" }
