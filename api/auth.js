@@ -47,7 +47,7 @@ export default async function handler(req, res) {
 
   // ── SIGNUP ─────────────────────────────────────────
   if (action === "signup" && req.method === "POST") {
-    const { email, password, name } = req.body || {};
+    const { email, password, name, referredBy } = req.body || {};
     if (!email || !password || !name) {
       return res.status(400).json({ error: "email, password et name requis" });
     }

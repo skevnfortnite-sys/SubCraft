@@ -838,14 +838,14 @@ const OnboardingPage=({user,onComplete})=>{
                 <div style={{fontSize:13,color:T.muted,marginBottom:12}}>Tu t'es inscrit avec <strong style={{color:T.text}}>{user?.email}</strong></div>
                 <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
                   <div style={{padding:"7px 14px",borderRadius:9,background:`${T.green}15`,border:`1px solid ${T.green}30`,color:T.green,fontSize:12,fontWeight:700}}>✓ Compte créé</div>
-                  <div style={{padding:"7px 14px",borderRadius:9,background:`${T.yellow}15`,border:`1px solid ${T.yellow}30`,color:T.yellow,fontSize:12,fontWeight:700}}>🎁 3 crédits offerts</div>
+                  <div style={{padding:"7px 14px",borderRadius:9,background:`${T.yellow}15`,border:`1px solid ${T.yellow}30`,color:T.yellow,fontSize:12,fontWeight:700}}>🎁 3 vidéos offertes</div>
                 </div>
               </div>
               <div style={{padding:"12px 14px",borderRadius:12,background:T.bg,border:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:10}}>
                 <span style={{fontSize:20}}>👤</span>
                 <div>
                   <div style={{fontWeight:700,fontSize:13}}>{user?.name}</div>
-                  <div style={{fontSize:11,color:T.muted}}>Plan gratuit · 3 crédits disponibles</div>
+                  <div style={{fontSize:11,color:T.muted}}>Plan gratuit · 3 vidéos disponibles</div>
                 </div>
                 <div style={{marginLeft:"auto",padding:"4px 10px",borderRadius:8,background:`${T.acc}15`,border:`1px solid ${T.acc}30`,color:T.acc,fontSize:11,fontWeight:700}}>{user?.plan||"Free"}</div>
               </div>
@@ -1220,6 +1220,7 @@ const SignupPage=({onAuth,goLogin})=>{
       } else {
         localStorage.setItem("sc_token", data.token);
         localStorage.setItem(`sc_onboarded_${data.user.id}`, "1");
+        localStorage.removeItem("sc_ref"); // consommé
         onAuth({name:data.user.name, email:data.user.email, plan:data.user.plan, credits:data.user.credits, id:data.user.id, isNew:true});
       }
     } catch(e) {
@@ -1673,7 +1674,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
   const [notifications,setNotifications]=useState(()=>{
     const notifs=[];
     // Notification de bienvenue toujours présente
-    notifs.push({id:"welcome",icon:"🎉",text:"Bienvenue sur SubCraft ! Tu as 3 crédits gratuits.",time:"Maintenant",read:false});
+    notifs.push({id:"welcome",icon:"🎉",text:"Bienvenue sur SubCraft ! Tu as 3 vidéos gratuites ce mois-ci.",time:"Maintenant",read:false});
     return notifs;
   });
 
@@ -1687,17 +1688,17 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
       const credits=user?.credits??3;
       const total=user?.plan==="pro"||user?.plan==="Pro"?Infinity:({free:3,basic:30,expert:100}[user?.plan?.toLowerCase()]||3);
       if(total!==Infinity && credits<=Math.ceil(total*0.2) && !ids.includes("low-credits")){
-        toAdd.push({id:"low-credits",icon:"⚠️",text:`Plus que ${credits} crédit${credits>1?"s":""} restant${credits>1?"s":""}. Passe au plan supérieur !`,time:"Maintenant",read:false});
+        toAdd.push({id:"low-credits",icon:"⚠️",text:`Plus que ${credits} vidéo${credits>1?"s":""} restante${credits>1?"s":""}. Passe au plan supérieur !`,time:"Maintenant",read:false});
       }
       // Plan payant
       if((user?.plan==="basic"||user?.plan==="Basic") && !ids.includes("plan-basic")){
-        toAdd.push({id:"plan-basic",icon:"💳",text:"Plan Basic activé — 30 crédits disponibles ce mois.",time:"Maintenant",read:false});
+        toAdd.push({id:"plan-basic",icon:"💳",text:"Plan Basic activé — 30 vidéos disponibles ce mois. 🎬",time:"Maintenant",read:false});
       }
       if((user?.plan==="pro"||user?.plan==="Pro") && !ids.includes("plan-pro")){
-        toAdd.push({id:"plan-pro",icon:"🏆",text:"Plan Pro activé — crédits illimités !",time:"Maintenant",read:false});
+        toAdd.push({id:"plan-pro",icon:"🏆",text:"Plan Pro activé — vidéos illimitées ! 🚀",time:"Maintenant",read:false});
       }
       if((user?.plan==="expert"||user?.plan==="Expert") && !ids.includes("plan-expert")){
-        toAdd.push({id:"plan-expert",icon:"⭐",text:"Plan Expert activé — 100 crédits disponibles ce mois.",time:"Maintenant",read:false});
+        toAdd.push({id:"plan-expert",icon:"⭐",text:"Plan Expert activé — 100 vidéos disponibles ce mois. ⭐",time:"Maintenant",read:false});
       }
       return toAdd.length ? [...toAdd,...prev] : prev;
     });
@@ -1708,11 +1709,37 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
   // 🔒 Exclure les fichiers supprimés de l'affichage
   const filtered=files.filter(f=>f.status!=="deleted"&&f.name.toLowerCase().includes(search.toLowerCase()));
 
-  const handleUpload=(file,lang)=>{
+  const handleUpload=async(file,lang)=>{
+    // Vérifie les crédits
+    const planCreditsMap={free:3,basic:30,expert:100,pro:Infinity};
+    const userPlan=(user?.plan||"free").toLowerCase();
+    const maxCredits=planCreditsMap[userPlan]||3;
+    const currentCredits=user?.credits??0;
+    if(maxCredits!==Infinity && currentCredits<=0){
+      notify("❌ Plus de vidéos disponibles ce mois ! Passe au plan supérieur.","error");
+      setPage("pricing");
+      return;
+    }
     const newF={id:Date.now(),name:file?.name||"Nouvelle vidéo.mp4",date:new Date().toLocaleDateString("fr-FR"),dur:"00:00",thumb:"🎬",exported:false,deleteIn:24,status:"processing",views:0,style:"yellow-bold"};
     setFiles(p=>[newF,...p]);
     setShowUpload(false);
     notify("Vidéo uploadée ! Transcription en cours...","info");
+    // Décrémente en Supabase
+    if(maxCredits!==Infinity){
+      const newCredits=Math.max(0,currentCredits-1);
+      setUser(u=>({...u,credits:newCredits}));
+      try {
+        const token=localStorage.getItem("sc_token");
+        await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({userId:user.id,credits:newCredits})});
+        // Email si crédits épuisés
+        if(newCredits===0){
+          fetch("/api/email?action=credits-empty",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:user.email,name:user.name})});
+          notify("⚠️ C'était ta dernière vidéo ce mois-ci ! Pense à upgrader.","warning",6000);
+        } else if(newCredits<=Math.ceil(maxCredits*0.2)){
+          notify(`⚠️ Plus que ${newCredits} vidéo${newCredits>1?"s":""} restante${newCredits>1?"s":""} ce mois...`,"warning");
+        }
+      } catch(e){ console.error("Erreur décrémentation vidéos",e); }
+    }
     setTimeout(()=>{
       setFiles(p=>p.map(f=>f.id===newF.id?{...f,status:"ready"}:f));
       notify("✅ Transcription terminée — Ta vidéo est prête !","success");
@@ -1732,7 +1759,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
 
   const statsCards=[
     {icon:"🎬",label:"Vidéos traitées",value:files.filter(f=>f.status==="ready").length,color:T.acc},
-    {icon:"💎",label:"Crédits restants",value:totalCredits===Infinity?"∞":realCredits,color:creditWarn?T.pink:T.yellow},
+    {icon:"🎬",label:"Vidéos restantes",value:totalCredits===Infinity?"∞":realCredits,color:creditWarn?T.pink:T.yellow},
     {icon:"⬆",label:"Exports réalisés",value:files.filter(f=>f.exported).length,color:T.green},
     {icon:"📅",label:"Membre depuis",value:joinedDate,color:T.cyan},
   ];
@@ -1884,7 +1911,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:16}} className="mobile-grid2">
           {[
             {icon:"🎬",label:"Vidéos prêtes",value:files.filter(f=>f.status==="ready").length,color:T.acc},
-            {icon:"💎",label:"Crédits restants",value:totalCredits===Infinity?"∞":totalCredits-usedCredits,color:creditWarn?T.orange:T.yellow},
+            {icon:"💎",label:"Vidéos restantes",value:totalCredits===Infinity?"∞":totalCredits-usedCredits,color:creditWarn?T.orange:T.yellow},
             {icon:"⬆️",label:"Exports",value:files.filter(f=>f.exported).length,color:T.green},
             {icon:"📅",label:"Plan actuel",value:user?.plan||"Free",color:planColor[user?.plan]||T.muted},
           ].map((s,i)=>(
@@ -2378,7 +2405,7 @@ const ProfilePage=({user,setUser,onBack,setPage})=>{
                   onMouseLeave={e=>{if(!active)e.currentTarget.style.borderColor=T.border;}}>
                   <div style={{flex:1}}>
                     <div style={{fontWeight:700,fontSize:14,display:"flex",gap:8,alignItems:"center"}}>{p.name}{active&&<Tag color={T.acc}>Actif</Tag>}</div>
-                    <div style={{fontSize:12,color:T.muted}}>€{p.priceY}/mois · {p.credits===Infinity?"Illimité":`${p.credits} crédits`}</div>
+                    <div style={{fontSize:12,color:T.muted}}>€{p.priceY}/mois · {p.credits===Infinity?"Illimité":`${p.credits} vidéos/mois`}</div>
                   </div>
                   {!active&&<Btn size="sm" v="secondary" onClick={()=>setPage("pricing")}>Passer à {p.name}</Btn>}
                 </div>
@@ -3056,7 +3083,7 @@ const PricingPage=({onBack,onSelect})=>{
           <h3 style={{fontWeight:800,fontSize:22,textAlign:"center",marginBottom:28}}>Questions fréquentes</h3>
           {[
             ["Puis-je annuler à tout moment ?","Oui, tu peux annuler ton abonnement à tout moment. Tu garderas l'accès jusqu'à la fin de la période payée."],
-            ["Qu'est-ce qu'un crédit ?","Un crédit = une vidéo traitée. L'export du fichier SRT ne consomme pas de crédit."],
+            ["Comment fonctionnent les vidéos ?","Chaque vidéo générée consomme 1 vidéo de ton quota mensuel. L'export SRT ne consomme rien."],
             ["Mes vidéos sont-elles sécurisées ?","Oui. Toutes les vidéos sont supprimées automatiquement 24h après l'upload. On ne stocke jamais tes contenus à long terme."],
             ["Y a-t-il un essai gratuit ?","Le plan Free te permet de tester avec 3 vidéos par mois, sans carte bancaire requise."],
           ].map(([q,a],i)=>(
@@ -3410,7 +3437,7 @@ const AdminEmailTemplates=()=>{
   const [templates,setTemplates]=useState({
     welcome:{subject:"Bienvenue sur SubCraft ✦ — Tes sous-titres IA t'attendent !",preview:"Tu viens de rejoindre la communauté des créateurs qui font des vidéos virales.",trigger:"Inscription confirmée",icon:"🎉",color:T.acc},
     video_ready:{subject:"🎬 Ta vidéo est prête — Télécharge tes sous-titres !",preview:"Bonne nouvelle ! Tes sous-titres ont été générés avec succès.",trigger:"Transcription terminée",icon:"✅",color:T.green},
-    upgrade:{subject:"⭐ Passe au niveau supérieur — Offre spéciale pour toi",preview:"Tu utilises presque tous tes crédits. C'est le moment de passer Pro.",trigger:"70% crédits utilisés",icon:"🚀",color:T.yellow},
+    upgrade:{subject:"⭐ Passe au niveau supérieur — Offre spéciale pour toi",preview:"Tu approches de ta limite de vidéos ce mois. C'est le moment de passer Pro.",trigger:"70% quota utilisé",icon:"🚀",color:T.yellow},
     expiry:{subject:"⚠️ Ta vidéo sera supprimée dans 2h",preview:"N'oublie pas d'exporter ta vidéo avant sa suppression automatique.",trigger:"2h avant suppression",icon:"⏰",color:T.orange},
   });
   const [subjectEdit,setSubjectEdit]=useState("");
@@ -3428,7 +3455,7 @@ Bienvenue sur **SubCraft** — la plateforme de sous-titres IA pour créateurs T
 ✓ Choisir parmi 10+ styles professionnels
 ✓ Exporter en MP4, SRT ou ASS en quelques secondes
 
-Tu as **3 crédits gratuits** pour commencer. 
+Tu as **3 vidéos gratuites** pour commencer. 
 
 [🚀 Accéder à mon espace →](https://subcraftai.com/dashboard)
 
@@ -3462,7 +3489,7 @@ L'équipe SubCraft ✦`,
 
     upgrade:`Salut {{prenom}} ! 🚀
 
-Tu es en train de cartonner sur SubCraft — tu as déjà utilisé **{{pct}}% de tes crédits** ce mois-ci !
+Tu es en train de cartonner sur SubCraft — tu as déjà utilisé **{{pct}}% de ton quota** de vidéos ce mois-ci !
 
 C'est le bon moment pour passer au plan suivant et ne pas être bloqué.
 
@@ -3571,14 +3598,14 @@ const AdminEmailLogs=()=>{
   const MOCK_LOGS=[
     {id:1,type:"welcome",icon:"🎉",to:"sophie@gmail.com",name:"Sophie Martin",subject:"Bienvenue sur SubCraft ✦",status:"delivered",time:"Auj. 14:32",trigger:"Inscription",opened:true,clicked:true},
     {id:2,type:"video_ready",icon:"✅",to:"lucas.dubois@outlook.com",name:"Lucas Dubois",subject:"🎬 Ta vidéo est prête — Télécharge tes sous-titres !",status:"delivered",time:"Auj. 13:17",trigger:"Transcription terminée",opened:true,clicked:false},
-    {id:3,type:"upgrade",icon:"🚀",to:"emma@icloud.com",name:"Emma Wilson",subject:"⭐ Passe au niveau supérieur — Offre spéciale",status:"delivered",time:"Auj. 11:04",trigger:"70% crédits",opened:false,clicked:false},
+    {id:3,type:"upgrade",icon:"🚀",to:"emma@icloud.com",name:"Emma Wilson",subject:"⭐ Passe au niveau supérieur — Offre spéciale",status:"delivered",time:"Auj. 11:04",trigger:"70% quota",opened:false,clicked:false},
     {id:4,type:"expiry",icon:"⏰",to:"carlos@gmail.com",name:"Carlos García",subject:"⚠️ Ta vidéo sera supprimée dans 2h",status:"delivered",time:"Auj. 10:48",trigger:"2h avant suppression",opened:true,clicked:true},
     {id:5,type:"welcome",icon:"🎉",to:"yuki.t@yahoo.jp",name:"Yuki Tanaka",subject:"Bienvenue sur SubCraft ✦",status:"delivered",time:"Hier 23:11",trigger:"Inscription",opened:true,clicked:false},
-    {id:6,type:"upgrade",icon:"🚀",to:"m.lefebvre@free.fr",name:"Marie Lefebvre",subject:"⭐ Passe au niveau supérieur — Offre spéciale",status:"bounced",time:"Hier 20:33",trigger:"70% crédits",opened:false,clicked:false},
+    {id:6,type:"upgrade",icon:"🚀",to:"m.lefebvre@free.fr",name:"Marie Lefebvre",subject:"⭐ Passe au niveau supérieur — Offre spéciale",status:"bounced",time:"Hier 20:33",trigger:"70% quota",opened:false,clicked:false},
     {id:7,type:"video_ready",icon:"✅",to:"james@gmail.com",name:"James O'Brien",subject:"🎬 Ta vidéo est prête !",status:"delivered",time:"Hier 18:55",trigger:"Transcription terminée",opened:false,clicked:false},
     {id:8,type:"expiry",icon:"⏰",to:"priya.s@gmail.com",name:"Priya Sharma",subject:"⚠️ Ta vidéo sera supprimée dans 2h",status:"delivered",time:"Hier 16:22",trigger:"2h avant suppression",opened:true,clicked:false},
     {id:9,type:"welcome",icon:"🎉",to:"a.bernard@gmail.com",name:"Antoine Bernard",subject:"Bienvenue sur SubCraft ✦",status:"delivered",time:"07/03 09:14",trigger:"Inscription",opened:true,clicked:true},
-    {id:10,type:"upgrade",icon:"🚀",to:"lisa.chen@gmail.com",name:"Lisa Chen",subject:"⭐ Passe au niveau supérieur",status:"delivered",time:"07/03 08:02",trigger:"70% crédits",opened:true,clicked:true},
+    {id:10,type:"upgrade",icon:"🚀",to:"lisa.chen@gmail.com",name:"Lisa Chen",subject:"⭐ Passe au niveau supérieur",status:"delivered",time:"07/03 08:02",trigger:"70% quota",opened:true,clicked:true},
     {id:11,type:"video_ready",icon:"✅",to:"m.ali@hotmail.com",name:"Mohamed Ali",subject:"🎬 Ta vidéo est prête !",status:"failed",time:"06/03 21:33",trigger:"Transcription terminée",opened:false,clicked:false},
     {id:12,type:"expiry",icon:"⏰",to:"c.schmidt@gmail.de",name:"Clara Schmidt",subject:"⚠️ Ta vidéo sera supprimée dans 2h",status:"delivered",time:"06/03 19:47",trigger:"2h avant suppression",opened:false,clicked:false},
   ];
@@ -5889,7 +5916,7 @@ const AdminPanel=({onExit})=>{
             </div>
             <div style={{background:"linear-gradient(145deg,rgba(12,13,26,.98),rgba(8,9,20,.98))",borderRadius:16,border:"1px solid rgba(255,255,255,.06)",overflow:"hidden",boxShadow:"0 8px 40px rgba(0,0,0,.3)"}}>
               <div style={{display:"grid",gridTemplateColumns:"28px 1fr 180px 90px 80px 80px 90px 120px",padding:"10px 16px",borderBottom:"1px solid rgba(255,255,255,.06)",fontSize:9.5,fontWeight:700,color:T.dim,textTransform:"uppercase",letterSpacing:".08em",gap:8,background:"rgba(255,255,255,.018)"}}>
-                <span>#</span><span>Utilisateur</span><span>Email</span><span>Plan</span><span>Crédits</span><span>Vidéos</span><span>Statut</span><span>Actions</span>
+                <span>#</span><span>Utilisateur</span><span>Email</span><span>Plan</span><span>Vidéos restantes</span><span>Vidéos</span><span>Statut</span><span>Actions</span>
               </div>
               {filtered.map((u,i)=>(
                 <div key={u.id} style={{display:"grid",gridTemplateColumns:"28px 1fr 180px 90px 80px 80px 90px 120px",alignItems:"center",padding:"10px 16px",borderBottom:i<filtered.length-1?"1px solid rgba(255,255,255,.04)":"none",transition:"background .12s",gap:8}}
@@ -5921,7 +5948,7 @@ const AdminPanel=({onExit})=>{
                       setUsers(p=>p.map(x=>x.id===u.id?{...x,credits:val}:x));
                       try {
                         await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id,credits:val})});
-                        notify(`✅ Crédits → ${val}`,"success");
+                        notify(`✅ Vidéos restantes → ${val}`,"success");
                       } catch(e){notify("Erreur API","error");}
                     }}
                   />
@@ -6040,7 +6067,7 @@ const AdminPanel=({onExit})=>{
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <Select label="Plan" value={editUser.plan} onChange={v=>setEditUser(p=>({...p,plan:v}))} options={["Free","Basic","Expert","Pro"]}/>
               <div>
-                <label style={{fontSize:12,color:T.muted,display:"block",marginBottom:6,fontWeight:600}}>Crédits</label>
+                <label style={{fontSize:12,color:T.muted,display:"block",marginBottom:6,fontWeight:600}}>Vidéos restantes</label>
                 <input type="number" value={editUser.credits===Infinity?9999:editUser.credits} onChange={e=>setEditUser(p=>({...p,credits:+e.target.value>=9999?Infinity:+e.target.value}))} style={{width:"100%",padding:"10px 12px",borderRadius:10,fontSize:14,background:T.surf,border:`1px solid ${T.border}`,color:T.text}}/>
               </div>
             </div>
@@ -6084,7 +6111,7 @@ const AdminPanel=({onExit})=>{
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <Select label="Plan" value={newUser.plan} onChange={v=>setNewUser(p=>({...p,plan:v}))} options={["Free","Basic","Expert","Pro"]}/>
               <div>
-                <label style={{fontSize:12,color:T.muted,display:"block",marginBottom:6,fontWeight:600}}>Crédits</label>
+                <label style={{fontSize:12,color:T.muted,display:"block",marginBottom:6,fontWeight:600}}>Vidéos restantes</label>
                 <input type="number" value={newUser.credits} onChange={e=>setNewUser(p=>({...p,credits:+e.target.value}))} style={{width:"100%",padding:"10px 12px",borderRadius:10,fontSize:14,background:T.surf,border:`1px solid ${T.border}`,color:T.text}}/>
               </div>
             </div>
@@ -6389,7 +6416,7 @@ const CheckoutPage=({plan,yearly,onBack,onSuccess,user})=>{
           {[
             ["Plan",`${selectedPlan.name} ${yearly?"Annuel":"Mensuel"}`],
             ["Montant",yearly?`€${finalPrice*12}/an (TVA incluse)`:`€${finalPrice}/mois (TVA incluse)`],
-            ["Crédits",selectedPlan.credits===Infinity?"Illimité":`${selectedPlan.credits}/mois`],
+            ["Vidéos restantes",selectedPlan.credits===Infinity?"Illimité":`${selectedPlan.credits}/mois`],
             ["Prochain renouvellement",yearly?"1er Mars 2027":"1er Avril 2026"],
           ].map(([k,v])=>(
             <div key={k} style={{display:"flex",justifyContent:"space-between",marginBottom:8,fontSize:13}}>
@@ -6739,7 +6766,7 @@ const SubscriptionPage=({user,setUser,onBack})=>{
           <div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,marginBottom:24}} className="mobile-grid1">
               {[
-                {label:"Vidéos ce mois",used:usage.videos.used,total:usage.videos.total,color:T.acc,icon:"🎬"},
+                {label:"Vidéos utilisées",used:usage.videos.used,total:usage.videos.total,color:T.acc,icon:"🎬"},
                 {label:"Stockage utilisé",used:usage.storage.used,total:usage.storage.total,unit:"GB",color:T.cyan,icon:"💾"},
                 {label:"Exports réalisés",used:usage.exports.used,total:usage.exports.total,color:T.green,icon:"⬆"},
               ].map(u=>{
@@ -6811,7 +6838,7 @@ const SubscriptionPage=({user,setUser,onBack})=>{
               })}
             </div>
             <div style={{marginTop:18,padding:"12px 16px",borderRadius:10,background:`${T.acc}08`,border:`1px solid ${T.acc}18`,fontSize:12,color:T.muted}}>
-              ℹ️ Les changements de plan prennent effet immédiatement. Les crédits non utilisés sont remboursés au prorata sur ta prochaine facture.
+              ℹ️ Les changements de plan prennent effet immédiatement. Les vidéos non utilisées ne sont pas remboursées sur ta prochaine facture.
             </div>
           </div>
         )}
@@ -6887,7 +6914,7 @@ const SubscriptionPage=({user,setUser,onBack})=>{
               <div style={{padding:"16px",borderRadius:12,background:`${T.yellow}08`,border:`1px solid ${T.yellow}20`,marginBottom:20}}>
                 <div style={{fontWeight:700,fontSize:14,color:T.yellow,marginBottom:6}}>⚠️ Ce que tu vas perdre</div>
                 <div style={{display:"flex",flexDirection:"column",gap:5}}>
-                  {["Accès aux {n} crédits restants ce mois".replace("{n}","7"),"Tous tes projets en cours","Les styles et templates sauvegardés","L'accès prioritaire au support"].map(l=>(
+                  {["Accès aux {n} vidéos restantes ce mois".replace("{n}","7"),"Tous tes projets en cours","Les styles et templates sauvegardés","L'accès prioritaire au support"].map(l=>(
                     <div key={l} style={{display:"flex",gap:8,fontSize:12,color:T.muted}}><span style={{color:T.pink}}>✕</span>{l}</div>
                   ))}
                 </div>
@@ -7005,7 +7032,7 @@ const LegalPage=({type,onBack,setPage})=>{
         {title:"Direction de la publication",content:"Directeur de la publication : [Nom du fondateur] · Contact : hello@subcraftai.com"},
         {title:"Hébergement",content:"Vercel Inc. · 340 Pine Street Suite 1200, San Francisco, CA 94104, USA · vercel.com · Données stockées en Europe (région EU Frankfurt)"},
         {title:"Propriété intellectuelle",content:"L'ensemble du contenu de ce site (textes, images, logos, code source) est protégé par le droit d'auteur et appartient à KEVININDUSTRIE ou à ses partenaires. Toute reproduction sans autorisation est interdite."},
-        {title:"Crédits",content:"Technologies utilisées : React (Meta), Whisper AI (OpenAI), Claude AI (Anthropic), Stripe (paiements), Cloudflare R2 (stockage)."},
+        {title:"Vidéos restantes",content:"Technologies utilisées : React (Meta), Whisper AI (OpenAI), Claude AI (Anthropic), Stripe (paiements), Cloudflare R2 (stockage)."},
       ]
     },
     rgpd:{
@@ -7279,8 +7306,8 @@ const StatusPage=({onBack})=>{
 const ReferralPage=({user,onBack})=>{
   const [copied,setCopied]=useState(false);
   const [tab,setTab]=useState("share");
-  const refCode=user?.email?.split("@")[0]?.toUpperCase().slice(0,8)||"CREATOR";
-  const refLink=`https://subcraftai.com/ref/${refCode}`;
+  const refCode=user?.id ? user.id.slice(0,8) : (user?.email?.split("@")[0]?.slice(0,8)||"CREATOR");
+  const refLink=`${window.location.origin}/?ref=${user?.id||refCode}`;
   const [invited,setInvited]=useState("");
   const referrals=[
     {name:"Lucas D.",email:"l***@gmail.com",date:"28/02/2026",status:"Inscrit",reward:"1 mois gratuit",paid:true},
@@ -7309,7 +7336,7 @@ const ReferralPage=({user,onBack})=>{
             {icon:"💰",val:"1 mois gratuit",label:"par ami abonné",color:T.green},
             {icon:"🎁",val:"-20%",label:"réduction pour ton ami",color:T.yellow},
             {icon:"♾️",val:"Illimité",label:"parrainages possibles",color:T.acc},
-            {icon:"⚡",val:"Instantané",label:"crédit appliqué auto",color:T.purple},
+            {icon:"⚡",val:"Instantané",label:"quota mis à jour auto",color:T.purple},
           ].map(s=>(
             <div key={s.label} style={{flex:"1 1 130px",padding:"12px 14px",borderRadius:12,background:T.surf,border:`1px solid ${s.color}25`,display:"flex",alignItems:"center",gap:10}}>
               <div style={{width:32,height:32,borderRadius:8,background:`${s.color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>{s.icon}</div>
@@ -7428,7 +7455,7 @@ Bienvenue dans la famille SubCraft ! On est super contents de t'avoir avec nous.
 
 Tu as créé ton compte il y a quelques instants — voici comment tirer le maximum de SubCraft dès aujourd'hui :
 
-**1. Upload ta première vidéo** → 3 crédits gratuits t'attendent
+**1. Upload ta première vidéo** → 3 vidéos gratuites t'attendent
 **2. Choisis un style** → 10 styles pro disponibles immédiatement
 **3. Exporte ton SRT** → Gratuit, illimité
 
@@ -7466,7 +7493,7 @@ Sophie`
     },
     {
       delay:"J+7 (si pas abonné)",tag:"Conversion",color:T.yellow,icon:"💰",
-      subject:"Tes 3 crédits gratuits expirent bientôt ⚠️",
+      subject:"Tes 3 vidéos gratuites expirent bientôt ⚠️",
       from:"Sophie de SubCraft <hello@subcraftai.com>",
       body:`Salut {{prénom}},
 
@@ -7501,7 +7528,7 @@ P.S. Si tu veux juste plus de temps pour tester, réponds à cet email et on peu
 En ce mois, tu as créé {{nb_vidéos}} vidéos avec des sous-titres pros. C'est énorme !
 
 **Pour fêter ça, on t'offre :**
-🎁 1 mois de crédits bonus (déjà ajoutés à ton compte)
+🎁 Vidéos bonus ajoutées à ton compte
 🔗 Ton lien de parrainage unique pour inviter tes amis
 ⭐ Accès anticipé à SubCraft v5 (bientôt !)
 
@@ -7622,6 +7649,50 @@ function App(){
   const [pushToasts,setPushToasts]=useState([]);
 
   const nav=(p)=>setPage(p);
+
+  // Détecte retour paiement Stripe (?payment=success&plan=xxx)
+  useEffect(()=>{
+    const urlParams = new URLSearchParams(window.location.search);
+    const payment = urlParams.get("payment");
+    const planId = urlParams.get("plan");
+    const pageParam = urlParams.get("page");
+
+    // Retour paiement réussi
+    if(payment === "success" && planId) {
+      window.history.replaceState(null,"",window.location.pathname);
+      const token = localStorage.getItem("sc_token");
+      if(token) {
+        fetch("/api/auth?action=me",{headers:{"Authorization":`Bearer ${token}`}})
+          .then(r=>r.json()).then(d=>{
+            if(d.user){
+              setUser(d.user);
+              setPage("dashboard");
+              notify(`🎉 Plan ${d.user.plan} activé ! Bienvenue dans le plan supérieur.`,"success",6000);
+            }
+          }).catch(()=>{});
+      }
+    }
+    // Retour paiement annulé
+    if(payment === "cancel") {
+      window.history.replaceState(null,"",window.location.pathname);
+      notify("Paiement annulé — ton plan n'a pas changé.","warning");
+    }
+    // Navigation directe via ?page=xxx
+    if(pageParam) {
+      window.history.replaceState(null,"",window.location.pathname);
+      const token = localStorage.getItem("sc_token");
+      if(token && pageParam) setPage(pageParam);
+    }
+    // Parrainage — sauvegarde le ref dans localStorage
+    const refId = urlParams.get("ref");
+    if(refId && !localStorage.getItem("sc_ref")) {
+      localStorage.setItem("sc_ref", refId);
+      // Nettoie l'URL sans perdre la page
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState(null,"",cleanUrl);
+      notify("🎁 Lien de parrainage détecté ! Inscris-toi pour bénéficier d'un bonus.","info",5000);
+    }
+  },[]);
 
   // Intercepte le token Google OAuth dans l'URL hash
   useEffect(()=>{
