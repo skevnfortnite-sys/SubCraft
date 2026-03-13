@@ -744,6 +744,53 @@ const DemoCard=({demo,active,onHover})=>{
 /* ══════════════════════════════════════════════
    PAGE: ONBOARDING / WIZARD
 ══════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════
+   PAGE: SUCCÈS INSCRIPTION
+══════════════════════════════════════════════ */
+const SignupSuccessPage=({user,onContinue})=>{
+  const [count,setCount]=useState(5);
+  useEffect(()=>{
+    if(count<=0){onContinue();return;}
+    const t=setTimeout(()=>setCount(c=>c-1),1000);
+    return()=>clearTimeout(t);
+  },[count]);
+  return(
+    <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:24,position:"relative",overflow:"hidden"}}>
+      <AuroraBg subtle/>
+      <div style={{position:"relative",zIndex:1,textAlign:"center",maxWidth:480,width:"100%"}}>
+        <div style={{width:80,height:80,borderRadius:24,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,margin:"0 auto 24px",boxShadow:`0 0 60px ${T.accGlow}`,animation:"popIn .5s cubic-bezier(.34,1.56,.64,1)"}}>🎉</div>
+        <h1 className="syne" style={{fontWeight:800,fontSize:"clamp(22px,5vw,32px)",marginBottom:10,letterSpacing:"-.03em"}}>
+          Bienvenue {user?.name?.split(" ")[0] || ""} !
+        </h1>
+        <p style={{color:T.muted,fontSize:15,marginBottom:32,lineHeight:1.7}}>
+          Ton compte a bien été créé.<br/>Prépare-toi à créer des vidéos virales ✨
+        </p>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:32,textAlign:"left"}}>
+          {[
+            {icon:"🎬",label:"3 vidéos gratuites",sub:"Pour tester SubCraft",color:T.acc},
+            {icon:"🎨",label:"28 styles viraux",sub:"MrBeast, Squeezie...",color:T.purple},
+            {icon:"🌍",label:"12 langues",sub:"Traduction IA incluse",color:T.cyan},
+            {icon:"🤖",label:"Emojis IA",sub:"Boost d'engagement",color:T.green},
+          ].map(({icon,label,sub,color})=>(
+            <div key={label} style={{padding:"14px",borderRadius:14,background:T.surf,border:`1px solid ${color}20`,display:"flex",alignItems:"flex-start",gap:10}}>
+              <div style={{width:36,height:36,borderRadius:10,background:`${color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{icon}</div>
+              <div>
+                <div style={{fontWeight:700,fontSize:13,color}}>{label}</div>
+                <div style={{fontSize:11,color:T.muted,marginTop:2}}>{sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button onClick={onContinue} className="btn-shimmer" style={{width:"100%",padding:"14px",borderRadius:14,background:T.grad,border:"none",color:"#fff",fontSize:15,fontWeight:800,cursor:"pointer",boxShadow:`0 4px 24px ${T.accGlow}`,marginBottom:12}}>
+          Configurer mon compte →
+        </button>
+        <div style={{fontSize:12,color:T.dim}}>Redirection automatique dans <strong style={{color:T.acc}}>{count}s</strong></div>
+      </div>
+    </div>
+  );
+};
+
 const OnboardingPage=({user,onComplete})=>{
   const [step,setStep]=useState(0);
   const [platform,setPlatform]=useState("");
@@ -785,6 +832,25 @@ const OnboardingPage=({user,onComplete})=>{
             <h2 style={{fontWeight:900,fontSize:24,marginBottom:8,letterSpacing:"-.02em"}}>{s.id==="welcome"?"Bienvenue, "+firstName+" !":s.title}</h2>
             <p style={{color:T.muted,fontSize:14,lineHeight:1.7}}>{s.sub}</p>
           </div>
+          {s.id==="welcome"&&(
+            <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:4}}>
+              <div style={{padding:"14px 16px",borderRadius:14,background:`${T.acc}08`,border:`1px solid ${T.acc}20`,textAlign:"center"}}>
+                <div style={{fontSize:13,color:T.muted,marginBottom:12}}>Tu t'es inscrit avec <strong style={{color:T.text}}>{user?.email}</strong></div>
+                <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
+                  <div style={{padding:"7px 14px",borderRadius:9,background:`${T.green}15`,border:`1px solid ${T.green}30`,color:T.green,fontSize:12,fontWeight:700}}>✓ Compte créé</div>
+                  <div style={{padding:"7px 14px",borderRadius:9,background:`${T.yellow}15`,border:`1px solid ${T.yellow}30`,color:T.yellow,fontSize:12,fontWeight:700}}>🎁 3 crédits offerts</div>
+                </div>
+              </div>
+              <div style={{padding:"12px 14px",borderRadius:12,background:T.bg,border:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontSize:20}}>👤</span>
+                <div>
+                  <div style={{fontWeight:700,fontSize:13}}>{user?.name}</div>
+                  <div style={{fontSize:11,color:T.muted}}>Plan gratuit · 3 crédits disponibles</div>
+                </div>
+                <div style={{marginLeft:"auto",padding:"4px 10px",borderRadius:8,background:`${T.acc}15`,border:`1px solid ${T.acc}30`,color:T.acc,fontSize:11,fontWeight:700}}>{user?.plan||"Free"}</div>
+              </div>
+            </div>
+          )}
           {s.id==="platform"&&(
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:4}}>
               {[["📱","TikTok","#ff0050"],["▶","YouTube Shorts","#ff0000"],["📸","Instagram Reels","#e1306c"],["💼","LinkedIn","#0077b5"],["🎙️","Podcast",T.purple],["✦","Autre",T.acc]].map(([ic,pl,color])=>(
@@ -1602,12 +1668,40 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
   const [search,setSearch]=useState("");
   const [confirmDelete,setConfirmDelete]=useState(null); // {id, name}
   const [notifPanel,setNotifPanel]=useState(false);
-  const [notifications,setNotifications]=useState([
-    {id:1,icon:"✅",text:"Vlog Paris Ep.12 — Export terminé",time:"Il y a 2h",read:false},
-    {id:2,icon:"⚠️",text:"Plus que 3 crédits restants ce mois",time:"Il y a 5h",read:false},
-    {id:3,icon:"🎉",text:"Bienvenue sur SubCraft ! Explore tes outils.",time:"Il y a 1j",read:true},
-    {id:4,icon:"🌍",text:"Traduction ES disponible pour Tutorial React",time:"Il y a 2j",read:true},
-  ]);
+  // Génère les vraies notifications depuis les données réelles
+  const [notifications,setNotifications]=useState(()=>{
+    const notifs=[];
+    // Notification de bienvenue toujours présente
+    notifs.push({id:"welcome",icon:"🎉",text:"Bienvenue sur SubCraft ! Tu as 3 crédits gratuits.",time:"Maintenant",read:false});
+    return notifs;
+  });
+
+  // Ajoute des notifs réelles selon le contexte user
+  useEffect(()=>{
+    if(!user) return;
+    setNotifications(prev=>{
+      const ids=prev.map(n=>n.id);
+      const toAdd=[];
+      // Alerte crédits faibles
+      const credits=user?.credits??3;
+      const total=user?.plan==="pro"||user?.plan==="Pro"?Infinity:({free:3,basic:30,expert:100}[user?.plan?.toLowerCase()]||3);
+      if(total!==Infinity && credits<=Math.ceil(total*0.2) && !ids.includes("low-credits")){
+        toAdd.push({id:"low-credits",icon:"⚠️",text:`Plus que ${credits} crédit${credits>1?"s":""} restant${credits>1?"s":""}. Passe au plan supérieur !`,time:"Maintenant",read:false});
+      }
+      // Plan payant
+      if((user?.plan==="basic"||user?.plan==="Basic") && !ids.includes("plan-basic")){
+        toAdd.push({id:"plan-basic",icon:"💳",text:"Plan Basic activé — 30 crédits disponibles ce mois.",time:"Maintenant",read:false});
+      }
+      if((user?.plan==="pro"||user?.plan==="Pro") && !ids.includes("plan-pro")){
+        toAdd.push({id:"plan-pro",icon:"🏆",text:"Plan Pro activé — crédits illimités !",time:"Maintenant",read:false});
+      }
+      if((user?.plan==="expert"||user?.plan==="Expert") && !ids.includes("plan-expert")){
+        toAdd.push({id:"plan-expert",icon:"⭐",text:"Plan Expert activé — 100 crédits disponibles ce mois.",time:"Maintenant",read:false});
+      }
+      return toAdd.length ? [...toAdd,...prev] : prev;
+    });
+  },[user]);
+
   const unread=notifications.filter(n=>!n.read).length;
   const planColor={Free:T.muted,Basic:T.cyan,Expert:T.green,Pro:T.acc};
   // 🔒 Exclure les fichiers supprimés de l'affichage
@@ -7527,7 +7621,7 @@ function App(){
       return;
     }
     setUser(u);
-    if(u.isNew){nav("onboarding");}
+    if(u.isNew){nav("signup-success");}
     else{nav("dashboard");}
   };
 
@@ -7598,6 +7692,7 @@ function App(){
       {page==="login"&&<LoginPage onAuth={handleAuth} onAdmin={()=>nav("admin")} goSignup={()=>nav("signup")}/>}
       {page==="signup"&&<SignupPage onAuth={handleAuth} goLogin={()=>nav("login")}/>}
       {page==="auth"&&<LoginPage onAuth={handleAuth} onAdmin={()=>nav("admin")} goSignup={()=>nav("signup")}/>}
+      {page==="signup-success"&&<SignupSuccessPage user={user} onContinue={()=>nav("onboarding")}/>}
       {page==="onboarding"&&<OnboardingPage user={user} onComplete={()=>nav("dashboard")}/>}
       {page==="dashboard"&&(user?.status==="suspended"?nav("banned"):null)||null}
       {page==="dashboard"&&user?.status!=="suspended"&&<Dashboard user={user} setUser={setUser} onOpen={f=>{setCurrentFile(f);nav("editor");}} onLogout={()=>{setUser(null);nav("landing");}} setPage={nav}/>}
