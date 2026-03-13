@@ -7,16 +7,14 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Anton&family=Bebas+Neue&family=Montserrat:wght@700;800;900&family=Oswald:wght@600;700&family=Barlow+Condensed:wght@700;800;900&family=Righteous&display=swap" rel="stylesheet"/>
 </head>
 <body style="margin:0;padding:0;background:#02030a">
 <div id="root"><div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#02030a;color:#5b6cff;font-family:sans-serif;font-size:18px">Chargement...</div></div>
 <script>
-// Déstructure les hooks React globalement avant la compilation Babel
 const { useState, useEffect, useRef, useCallback, useMemo, useReducer, useContext, createContext } = React;
 </script>
-<script type="text/babel" data-presets="react" data-type="module">
-const { useState, useEffect, useRef, useCallback, useMemo, useReducer, useContext, createContext } = React;
+<script type="text/babel" data-presets="react">
 /* NOTE: Cursor, AuroraBg, ParticleField, Phone3D defined below near line 800+ */
 
 /* ── CUSTOM CURSOR ── */
@@ -27,7 +25,7 @@ const { useState, useEffect, useRef, useCallback, useMemo, useReducer, useContex
 /* ── GLOBAL STYLES ── */
 const GS = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Anton&family=Bebas+Neue&family=Montserrat:wght@700;800;900&family=Oswald:wght@600;700&family=Barlow+Condensed:wght@700;800;900&family=Righteous&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html{scroll-behavior:smooth}
     body{background:#02030a;color:#f0f2ff;font-family:'Space Grotesk','DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
@@ -46,6 +44,7 @@ const GS = () => (
 
     /* ── ANIMATIONS ── */
     @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes wordPop{from{opacity:0;transform:scale(.7) translateY(6px)}to{opacity:1;transform:scale(1) translateY(0)}}
     @keyframes fadeIn{from{opacity:0}to{opacity:1}}
     @keyframes fadeOut{0%{opacity:1}80%{opacity:.3}100%{opacity:0}}
     @keyframes fadeDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
@@ -238,36 +237,31 @@ const MOCK_USERS=[
 const MOCK_FILES=[];
 
 const SUBTITLE_STYLES=[
-  // ── SIMPLES : Styles épurés pour contenu calme ──
-  {id:"clean-white",label:"Clean White",badge:"Simple",preview:{bg:"transparent",color:"#ffffff",font:"DM Sans",weight:600,size:52,shadow:"0 2px 12px rgba(0,0,0,.95),0 1px 3px rgba(0,0,0,1)",transform:"none"}},
-  {id:"clean-white-bold",label:"Clean Bold",badge:"Simple",preview:{bg:"transparent",color:"#ffffff",font:"Outfit",weight:800,size:56,shadow:"0 3px 16px rgba(0,0,0,.95),0 1px 4px rgba(0,0,0,1)",transform:"none"}},
-  {id:"clean-card",label:"Clean Card",badge:"Simple",preview:{bg:"rgba(0,0,0,.72)",color:"#ffffff",font:"DM Sans",weight:600,size:48,shadow:"none",transform:"none"}},
-  {id:"clean-caps",label:"Clean Caps",badge:"Simple",preview:{bg:"transparent",color:"#ffffff",font:"Outfit",weight:700,size:54,shadow:"0 2px 10px rgba(0,0,0,.9)",transform:"uppercase"}},
-  // ── TOP : Styles les plus viraux ──
-  {id:"mrbeast",label:"MrBeast 🔥",badge:"#1 Viral",preview:{bg:"transparent",color:"#FFE600",font:"Impact",weight:900,size:72,shadow:"4px 4px 0 #000,-4px -4px 0 #000,4px -4px 0 #000,-4px 4px 0 #000,0 0 40px rgba(255,230,0,.7)",transform:"uppercase"}},
-  {id:"squeezie",label:"Squeezie ⚡",badge:"Trending",preview:{bg:"transparent",color:"#fff",font:"Outfit",weight:900,size:64,shadow:"0 0 2px #000,3px 3px 0 #4f6dff,-3px -3px 0 #4f6dff,3px -3px 0 #4f6dff,-3px 3px 0 #4f6dff",transform:"uppercase"}},
-  {id:"double-outline",label:"Double Outline",badge:"TikTok",preview:{bg:"transparent",color:"#fff",font:"Impact",weight:900,size:66,shadow:"3px 3px 0 #ff4f8a,-3px -3px 0 #ff4f8a,0 0 40px rgba(255,79,138,.5)",transform:"uppercase"}},
-  {id:"yellow-bold",label:"Yellow Bold",preview:{bg:"transparent",color:"#FFE600",font:"Impact",weight:900,size:68,shadow:"3px 3px 0 #000,-3px -3px 0 #000",transform:"uppercase"}},
-  {id:"fire-gradient",label:"Fire Gradient",badge:"Reels",preview:{bg:"transparent",color:"#ff7043",font:"Outfit",weight:900,size:62,shadow:"0 0 20px #ff7043,0 0 40px #ff703399,3px 3px 0 #000",transform:"uppercase"}},
-  {id:"cyan-punch",label:"Cyan Punch",badge:"Gaming",preview:{bg:"transparent",color:"#00d4ff",font:"Outfit",weight:900,size:62,shadow:"0 0 18px #00d4ff,0 0 36px #00d4ff66,2px 2px 0 #000",transform:"uppercase"}},
-  {id:"black-yellow",label:"Black & Yellow",preview:{bg:"rgba(0,0,0,.9)",color:"#FFE600",font:"Impact",weight:900,size:58,shadow:"none",transform:"uppercase"}},
-  {id:"lena-sit",label:"Léna Situations",badge:"FR",preview:{bg:"rgba(255,79,138,.92)",color:"#fff",font:"Outfit",weight:900,size:50,shadow:"none",transform:"none"}},
-  {id:"white-outline",label:"White Outline",preview:{bg:"transparent",color:"#fff",font:"Outfit",weight:800,size:60,shadow:"0 0 1px #000,2px 2px 0 #000,0 0 20px rgba(0,0,0,.8)",transform:"uppercase"}},
-  {id:"stroke-white",label:"Stroke Clean",preview:{bg:"transparent",color:"#fff",font:"Outfit",weight:900,size:60,shadow:"-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000",transform:"none"}},
-  {id:"horror",label:"Horror",badge:"Creepy",preview:{bg:"transparent",color:"#ff3b5c",font:"Impact",weight:900,size:64,shadow:"0 0 20px #ff3b5c,0 0 60px #ff3b5c88,4px 0 0 #000,-4px 0 0 #000",transform:"uppercase"}},
-  {id:"neon-blue-pulse",label:"Neon Blue",badge:"Cyber",preview:{bg:"transparent",color:"#4f6dff",font:"Outfit",weight:900,size:62,shadow:"0 0 10px #4f6dff,0 0 30px #4f6dff,0 0 60px #4f6dff66",transform:"uppercase"}},
-  {id:"gold-luxury",label:"Gold Luxury",badge:"Business",preview:{bg:"transparent",color:"#ffd700",font:"Outfit",weight:900,size:58,shadow:"0 0 20px #ffd70099,2px 2px 0 #7c4f00",transform:"uppercase"}},
-  {id:"neon-green",label:"Neon Green",preview:{bg:"transparent",color:"#00e5a0",font:"Outfit",weight:700,size:56,shadow:"0 0 12px #00e5a0,0 0 30px #00e5a066",transform:"none"}},
-  {id:"purple-glow",label:"Purple Glow",preview:{bg:"transparent",color:"#9c6dff",font:"Outfit",weight:700,size:58,shadow:"0 0 16px #9c6dff88",transform:"none"}},
-  {id:"dark-card",label:"Dark Card",preview:{bg:"rgba(0,0,0,.82)",color:"#fff",font:"Outfit",weight:700,size:52,shadow:"none",transform:"none"}},
-  {id:"red-urgent",label:"Red Urgent",preview:{bg:"rgba(220,38,38,.85)",color:"#fff",font:"Outfit",weight:800,size:52,shadow:"none",transform:"uppercase"}},
-  {id:"blue-pop",label:"Blue Pop",preview:{bg:"transparent",color:"#4f6dff",font:"Outfit",weight:900,size:58,shadow:"2px 2px 0 #000",transform:"uppercase"}},
-  {id:"retro",label:"Retro",preview:{bg:"transparent",color:"#ffcc00",font:"Impact",weight:900,size:62,shadow:"4px 4px 0 #7c2d00",transform:"uppercase"}},
-  {id:"pink-fire",label:"Pink Fire",preview:{bg:"transparent",color:"#ff4f8a",font:"Outfit",weight:800,size:60,shadow:"2px 2px 0 #000",transform:"none"}},
-  {id:"minimal-white",label:"Minimal",preview:{bg:"transparent",color:"#fff",font:"Outfit",weight:400,size:46,shadow:"0 2px 8px rgba(0,0,0,.9)",transform:"none"}},
-  {id:"white-blue-card",label:"White Card Blue",preview:{bg:"rgba(12,18,48,.93)",color:"#fff",font:"Outfit",weight:800,size:50,shadow:"none",transform:"none"}},
-  {id:"pop-orange",label:"Pop Orange",preview:{bg:"transparent",color:"#ff7043",font:"Outfit",weight:900,size:64,shadow:"3px 3px 0 #000,-1px -1px 0 #000",transform:"uppercase"}},
-  {id:"gradient-text",label:"Gradient Vibe",preview:{bg:"transparent",color:"#9c6dff",font:"Outfit",weight:900,size:58,shadow:"0 0 30px #9c6dff66,2px 2px 0 #000",transform:"uppercase"}},
+  // ── TOP VIRAL ──
+  {id:"mrbeast",label:"MrBeast",badge:"#1 Viral",preview:{bg:"transparent",color:"#FFE600",font:"Anton",weight:900,size:72,shadow:"4px 4px 0 #000,-4px -4px 0 #000,4px -4px 0 #000,-4px 4px 0 #000,0 0 40px rgba(255,230,0,.5)",transform:"uppercase"}},
+  {id:"captions-white",label:"Captions Classic",badge:"Captions.ai",preview:{bg:"transparent",color:"#ffffff",font:"Montserrat",weight:900,size:68,shadow:"-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000,3px 3px 0 #000",transform:"uppercase"}},
+  {id:"submagic-yellow",label:"Submagic Pop",badge:"Submagic",preview:{bg:"transparent",color:"#FFE600",font:"Barlow Condensed",weight:900,size:74,shadow:"-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000,3px 3px 0 #000",transform:"uppercase"}},
+  {id:"tiktok-clean",label:"TikTok Clean",badge:"TikTok",preview:{bg:"rgba(0,0,0,.75)",color:"#ffffff",font:"Montserrat",weight:800,size:56,shadow:"none",transform:"none"}},
+  {id:"highlight-yellow",label:"Highlight",badge:"Trending",preview:{bg:"#FFE600",color:"#000",font:"Montserrat",weight:900,size:58,shadow:"none",transform:"uppercase"}},
+  {id:"highlight-pink",label:"Highlight Rose",badge:"Reels",preview:{bg:"#e83970",color:"#fff",font:"Montserrat",weight:900,size:56,shadow:"none",transform:"none"}},
+  {id:"squeezie",label:"Squeezie",badge:"FR",preview:{bg:"transparent",color:"#fff",font:"Barlow Condensed",weight:900,size:68,shadow:"0 0 2px #000,3px 3px 0 #4f6dff,-3px -3px 0 #4f6dff",transform:"uppercase"}},
+  {id:"double-outline",label:"Double Outline",badge:"Viral",preview:{bg:"transparent",color:"#fff",font:"Anton",weight:900,size:66,shadow:"3px 3px 0 #ff4f8a,-3px -3px 0 #ff4f8a,0 0 30px rgba(255,79,138,.4)",transform:"uppercase"}},
+  // ── CLEAN / PRO ──
+  {id:"clean-white",label:"Clean White",badge:"Pro",preview:{bg:"transparent",color:"#ffffff",font:"Montserrat",weight:700,size:56,shadow:"0 2px 16px rgba(0,0,0,1),0 1px 4px rgba(0,0,0,1)",transform:"none"}},
+  {id:"bebas-white",label:"Bebas Neue",badge:"Cinéma",preview:{bg:"transparent",color:"#ffffff",font:"Bebas Neue",weight:400,size:72,shadow:"0 3px 20px rgba(0,0,0,1)",transform:"uppercase"}},
+  {id:"oswald-bold",label:"Oswald Bold",badge:"News",preview:{bg:"transparent",color:"#ffffff",font:"Oswald",weight:700,size:66,shadow:"-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000",transform:"uppercase"}},
+  {id:"righteous",label:"Righteous",badge:"Fun",preview:{bg:"transparent",color:"#ffffff",font:"Righteous",weight:400,size:60,shadow:"3px 3px 0 #4f6dff,-1px -1px 0 #000",transform:"none"}},
+  {id:"dark-card",label:"Dark Card",badge:"Podcast",preview:{bg:"rgba(0,0,0,.82)",color:"#fff",font:"Montserrat",weight:700,size:52,shadow:"none",transform:"none"}},
+  {id:"minimal-white",label:"Minimal",badge:"Simple",preview:{bg:"transparent",color:"#fff",font:"DM Sans",weight:500,size:50,shadow:"0 2px 12px rgba(0,0,0,.95)",transform:"none"}},
+  // ── COULEURS / NEON ──
+  {id:"fire-gradient",label:"Fire Orange",badge:"Gaming",preview:{bg:"transparent",color:"#ff7043",font:"Barlow Condensed",weight:900,size:68,shadow:"0 0 20px #ff7043,3px 3px 0 #000",transform:"uppercase"}},
+  {id:"neon-blue-pulse",label:"Neon Blue",badge:"Cyber",preview:{bg:"transparent",color:"#4f6dff",font:"Barlow Condensed",weight:900,size:66,shadow:"0 0 12px #4f6dff,0 0 30px #4f6dff66",transform:"uppercase"}},
+  {id:"neon-green",label:"Neon Green",badge:"Gaming",preview:{bg:"transparent",color:"#00e5a0",font:"Barlow Condensed",weight:900,size:64,shadow:"0 0 14px #00e5a0,0 0 30px #00e5a066",transform:"uppercase"}},
+  {id:"gold-luxury",label:"Gold",badge:"Business",preview:{bg:"transparent",color:"#ffd700",font:"Oswald",weight:700,size:62,shadow:"0 0 20px #ffd70088,2px 2px 0 #7c4f00",transform:"uppercase"}},
+  {id:"pink-fire",label:"Pink",badge:"Reels",preview:{bg:"transparent",color:"#ff4f8a",font:"Montserrat",weight:900,size:62,shadow:"2px 2px 0 #000",transform:"none"}},
+  {id:"horror",label:"Horror",badge:"Creepy",preview:{bg:"transparent",color:"#ff3b5c",font:"Anton",weight:900,size:66,shadow:"0 0 20px #ff3b5c,4px 0 0 #000,-4px 0 0 #000",transform:"uppercase"}},
+  {id:"lena-sit",label:"Léna Situations",badge:"FR",preview:{bg:"rgba(255,79,138,.92)",color:"#fff",font:"Montserrat",weight:900,size:50,shadow:"none",transform:"none"}},
+  {id:"red-urgent",label:"Red Alert",badge:"Urgent",preview:{bg:"rgba(220,38,38,.9)",color:"#fff",font:"Barlow Condensed",weight:900,size:58,shadow:"none",transform:"uppercase"}},
 ];
 
 const ALL_DEMOS=[
@@ -541,6 +535,36 @@ const GoogleBtn=({onClick,label="Continuer avec Google"})=>(
 );
 
 /* ── PHONE MOCKUP ── */
+// Composant mot-par-mot — affiche les mots un à un avec animation
+const WordByWord=({text, style, startTime, currentTime, dur})=>{
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  const total = words.length;
+  if(total === 0) return null;
+  const elapsed = currentTime - startTime;
+  const timePerWord = Math.max(0.12, (dur * 0.85) / total);
+  const visibleCount = Math.min(total, Math.floor(elapsed / timePerWord) + 1);
+
+  return(
+    <div style={{display:'flex',flexWrap:'nowrap',gap:'0.25em',alignItems:'center',justifyContent:'center',maxWidth:'90%'}}>
+      {words.slice(0, visibleCount).map((w, i) => {
+        const isNew = i === visibleCount - 1;
+        return(
+          <span key={i} style={{
+            ...style,
+            display:'inline-block',
+            whiteSpace:'nowrap',
+            animation: isNew ? 'wordPop .18s cubic-bezier(.34,1.56,.64,1) both' : 'none',
+            transform: isNew ? undefined : 'none',
+            opacity: 1,
+            padding: style.background && style.background !== 'transparent' ? '2px 6px' : '0 1px',
+            lineHeight: 1.1,
+          }}>{w}</span>
+        );
+      })}
+    </div>
+  );
+};
+
 const PhoneMockup=({subs,currentTime,styleId,fontSize,fontFamily,playing,onToggle,liveStyle,subYPos=20,onSubYChange,stripEmoji})=>{
   const st=SUBTITLE_STYLES.find(s=>s.id===styleId)||SUBTITLE_STYLES[0];
   const active=subs.find(s=>currentTime>=s.start&&currentTime<=s.end);
@@ -613,12 +637,12 @@ const PhoneMockup=({subs,currentTime,styleId,fontSize,fontFamily,playing,onToggl
           <div style={{position:'absolute',bottom:0,left:0,right:0,height:'45%',background:'linear-gradient(0deg,rgba(5,2,25,.95) 0%,transparent 100%)'}}/>
           <div style={{position:'absolute',top:'18%',left:'10%',width:70,height:70,borderRadius:'50%',background:'radial-gradient(#4f6dff25,transparent 70%)',animation:'breathe 3s ease infinite'}}/>
           <div style={{position:'absolute',top:'30%',right:'8%',width:50,height:50,borderRadius:'50%',background:'radial-gradient(#e8397022,transparent 70%)',animation:'breathe 4.5s ease infinite',animationDelay:'.7s'}}/>
-          {/* SUBTITLE */}
-          <div style={{position:'absolute',bottom:`${subYPos}%`,left:0,right:0,textAlign:'center',padding:'0 8px',zIndex:10,display:'flex',justifyContent:'center',alignItems:'center',pointerEvents:'none'}}>
+          {/* SUBTITLE — Mot par mot */}
+          <div style={{position:'absolute',bottom:`${subYPos}%`,left:0,right:0,textAlign:'center',padding:'0 6px',zIndex:10,display:'flex',justifyContent:'center',alignItems:'center',pointerEvents:'none',flexWrap:'nowrap'}}>
             {active?(
-              <span key={active.id} style={subStyle}>{_applyText(active.text)}</span>
+              <WordByWord key={active.id} text={_applyText(active.text)} style={subStyle} startTime={active.start} currentTime={currentTime} dur={active.end-active.start}/>
             ):(
-              <span style={{...subStyle,animation:'none',opacity:.2,fontSize:'10px'}}>Sous-titre ici</span>
+              <span style={{...subStyle,animation:'none',opacity:.18,fontSize:'9px',whiteSpace:'nowrap'}}>Sous-titre ici</span>
             )}
           </div>
           {/* Drag hint */}
