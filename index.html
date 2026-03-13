@@ -2166,9 +2166,9 @@ const UploadModal=({onClose,onImport})=>{
 
       if(tab==="file" && file) {
         // Vérif taille max 25MB
-        const MAX_MB = 24;
+        const MAX_MB = 300;
         if(file.size > MAX_MB*1024*1024){
-          notify(`Fichier trop lourd ! Max ${MAX_MB} MB. Compresse ta vidéo sur handbrake.fr`,"error");
+          notify(`Fichier trop lourd ! Max ${MAX_MB} MB.`,"error");
           setUploading(false); setProgress(0); return;
         }
         setProgress(20);
@@ -2213,7 +2213,7 @@ const UploadModal=({onClose,onImport})=>{
   };
 
   return(
-    <Modal title="Importer une vidéo" subtitle="Shorts · Reels · TikToks — Max 300 MB" onClose={!uploading?onClose:undefined} width={520}>
+    <Modal title="Importer une vidéo" subtitle="Shorts · Reels · TikToks — Max 300 MB · Compression auto" onClose={!uploading?onClose:undefined} width={520}>
       {!uploading&&(
         <div style={{display:"flex",background:T.bg,borderRadius:10,padding:3,marginBottom:18,gap:3}}>
           {[["file","📁 Fichier vidéo"],["url","🔗 Import URL"]].map(([id,label])=>(
@@ -2243,7 +2243,7 @@ const UploadModal=({onClose,onImport})=>{
               {file?(
                 <>
                   <div style={{fontWeight:700,color:T.acc,fontSize:14,fontFamily:"JetBrains Mono",marginBottom:4}}>{file.name}</div>
-                  <div style={{color:file.size>24*1024*1024?T.pink:T.green,fontSize:12}}>{(file.size/1024/1024).toFixed(1)} MB · {file.size>24*1024*1024?"⚠ Trop lourd (max 24 MB)":"✓ Prête à importer"}</div>
+                  <div style={{color:file.size>300*1024*1024?T.pink:T.green,fontSize:12}}>{(file.size/1024/1024).toFixed(1)} MB · {file.size>300*1024*1024?"⚠ Trop lourd (max 300 MB)":"✓ Prête à importer"}</div>
                 </>
               ):(
                 <>
