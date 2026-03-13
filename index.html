@@ -2154,34 +2154,55 @@ const UploadModal=({onClose,onImport})=>{
     setUrlOk(v.length>8?(ok?"ok":"err"):null);
   };
 
-  // Extrait l'audio d'une vidéo côté navigateur (évite la limite 4.5MB Vercel)
+  // Extrait l'audio via OfflineAudioContext — quasi instantané (pas temps réel)
   const extractAudioBlob = (videoFile) => new Promise((resolve, reject) => {
-    const videoEl = document.createElement("video");
     const url = URL.createObjectURL(videoFile);
-    videoEl.src = url;
-    videoEl.muted = true;
-    videoEl.addEventListener("loadedmetadata", () => {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const dest = audioCtx.createMediaStreamDestination();
-      const source = audioCtx.createMediaElementSource(videoEl);
-      source.connect(dest);
-      source.connect(audioCtx.destination);
-      const recorder = new MediaRecorder(dest.stream, { mimeType: "audio/webm" });
-      const chunks = [];
-      recorder.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
-      recorder.onstop = () => {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    fetch(url)
+      .then(r => r.arrayBuffer())
+      .then(buf => audioCtx.decodeAudioData(buf))
+      .then(decoded => {
         URL.revokeObjectURL(url);
-        const blob = new Blob(chunks, { type: "audio/webm" });
-        resolve(blob);
-      };
-      recorder.onerror = reject;
-      recorder.start(1000);
-      videoEl.play();
-      videoEl.onended = () => { recorder.stop(); audioCtx.close(); };
-      // Sécurité: max 30 min
-      setTimeout(() => { if(recorder.state === "recording") { recorder.stop(); audioCtx.close(); } }, 30*60*1000);
-    });
-    videoEl.onerror = reject;
+        // Encode en WAV 16kHz mono
+        const sampleRate = 16000;
+        const offlineCtx = new OfflineAudioContext(1, decoded.duration * sampleRate, sampleRate);
+        const source = offlineCtx.createBufferSource();
+        source.buffer = decoded;
+        source.connect(offlineCtx.destination);
+        source.start(0);
+        return offlineCtx.startRendering();
+      })
+      .then(rendered => {
+        // Convertit AudioBuffer → WAV blob
+        const numFrames = rendered.length;
+        const numChannels = 1;
+        const sampleRate = rendered.sampleRate;
+        const bytesPerSample = 2;
+        const blockAlign = numChannels * bytesPerSample;
+        const byteRate = sampleRate * blockAlign;
+        const dataSize = numFrames * blockAlign;
+        const buffer = new ArrayBuffer(44 + dataSize);
+        const view = new DataView(buffer);
+        const writeStr = (off, str) => { for(let i=0;i<str.length;i++) view.setUint8(off+i, str.charCodeAt(i)); };
+        writeStr(0,"RIFF"); view.setUint32(4, 36+dataSize, true);
+        writeStr(8,"WAVE"); writeStr(12,"fmt ");
+        view.setUint32(16,16,true); view.setUint16(20,1,true);
+        view.setUint16(22,numChannels,true); view.setUint32(24,sampleRate,true);
+        view.setUint32(28,byteRate,true); view.setUint16(32,blockAlign,true);
+        view.setUint16(34,bytesPerSample*8,true);
+        writeStr(36,"data"); view.setUint32(40,dataSize,true);
+        const samples = rendered.getChannelData(0);
+        let off = 44;
+        for(let i=0;i<numFrames;i++){
+          const s = Math.max(-1,Math.min(1,samples[i]));
+          view.setInt16(off, s<0?s*0x8000:s*0x7FFF, true);
+          off += 2;
+        }
+        audioCtx.close();
+        resolve(new Blob([buffer], { type: "audio/wav" }));
+      })
+      .catch(err => { URL.revokeObjectURL(url); audioCtx.close(); reject(err); });
   });
 
   const doImport=async()=>{
@@ -2218,7 +2239,7 @@ const UploadModal=({onClose,onImport})=>{
         }
 
         const formData = new FormData();
-        formData.append("file", audioBlob, isVideo ? "audio.webm" : file.name);
+        formData.append("file", audioBlob, isVideo ? "audio.wav" : file.name);
         formData.append("language", lang||"fr");
 
         setProgress(45);
@@ -2236,13 +2257,29 @@ const UploadModal=({onClose,onImport})=>{
 
       setProgress(92);
       let subs = null;
+
+      // Mots qui indiquent une hallucination Whisper connue
+      const HALLUCINATIONS = [
+        "amara", "sous-titres réalisés", "subtitles by", "transcribed by",
+        "sous titres", "community captions", "translated by", "sous-titrage",
+      ];
+      const isHallucinated = (text) =>
+        HALLUCINATIONS.some(h => text.toLowerCase().includes(h));
+
       if(whisperData?.segments?.length > 0) {
-        subs = whisperData.segments.map((seg, i) => ({
-          id: i + 1,
-          start: Math.round(seg.start * 10) / 10,
-          end: Math.round(seg.end * 10) / 10,
-          text: seg.text.trim(),
-        }));
+        const filtered = whisperData.segments.filter(seg =>
+          seg.text?.trim().length > 1 && !isHallucinated(seg.text)
+        );
+        if(filtered.length > 0) {
+          subs = filtered.map((seg, i) => ({
+            id: i + 1,
+            start: Math.round(seg.start * 10) / 10,
+            end: Math.round(seg.end * 10) / 10,
+            text: seg.text.trim(),
+          }));
+        } else {
+          notify("Whisper n'a pas détecté de voix claire. Vérifie que ta vidéo a bien du son.", "warning");
+        }
       }
 
       setProgress(100);
@@ -2275,7 +2312,7 @@ const UploadModal=({onClose,onImport})=>{
           </div>
           <div style={{fontFamily:"JetBrains Mono",fontSize:13,color:T.acc,fontWeight:600}}>{Math.round(progress)}%</div>
           <div style={{marginTop:18,fontSize:12,color:T.muted}}>
-            {progress<15?"Lecture de la vidéo...":progress<35?"Extraction audio (navigateur)...":progress<45?"Préparation...":progress<80?"Transcription Whisper AI...":progress<95?"Formatage des sous-titres...":"Presque terminé !"}
+            {progress<15?"Lecture de la vidéo...":progress<35?"Extraction audio...":progress<45?"Envoi à Whisper AI...":progress<80?"Transcription en cours...":progress<95?"Formatage des sous-titres...":"Presque terminé !"}
           </div>
         </div>
       ):(

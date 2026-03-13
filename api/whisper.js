@@ -49,6 +49,9 @@ export default async function handler(req) {
     openaiForm.append("language", language);
     openaiForm.append("response_format", "verbose_json");
     openaiForm.append("timestamp_granularities[]", "segment");
+    openaiForm.append("temperature", "0");
+    // Prompt anti-hallucination — évite les faux textes générés par Whisper
+    openaiForm.append("prompt", "Transcris uniquement les paroles prononcées dans cette vidéo. Ne génère pas de texte si il n'y a pas de voix claire.");
 
     const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
