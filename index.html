@@ -2940,9 +2940,7 @@ const EditorPage=({onBack,file})=>{
       {showExport&&(
         <Modal title="⬆ Exporter" subtitle={`${subs.length} sous-titres prêts à l'export`} onClose={()=>setShowExport(false)} width={420}>
           {[
-            {icon:"🎬",title:"Vidéo avec sous-titres",desc:"MP4 avec sous-titres incrustés (FFmpeg backend requis)",action:()=>notify("Export vidéo disponible en production avec FFmpeg","info")},
-            {icon:"📄",title:"Fichier .SRT",desc:"Format universel compatible tous lecteurs",action:exportSRT},
-            {icon:"🎨",title:"Fichier .ASS",desc:"Avec styles et animations avancés",action:()=>{exportSRT();notify(".ASS exporté !","success");}},
+            {icon:"🎬",title:"Vidéo MP4 avec sous-titres",desc:"Sous-titres incrustés dans la vidéo — bientôt disponible",badge:"Bientôt",action:()=>notify("🚀 Export MP4 arrive très bientôt !","info")},
             {icon:"📋",title:"Copier le texte brut",desc:"Juste le texte sans timing",action:()=>{navigator.clipboard?.writeText(subs.map(s=>s.text).join("\n"));notify("Texte copié !","success");}},
           ].map(e=>(
             <button key={e.title} onClick={e.action} style={{width:"100%",padding:"13px 16px",borderRadius:12,background:T.bg,border:`1px solid ${T.border}`,color:T.text,textAlign:"left",display:"flex",alignItems:"center",gap:14,cursor:"pointer",marginBottom:8,transition:"all .15s"}} onMouseEnter={e2=>{e2.currentTarget.style.borderColor=T.acc;e2.currentTarget.style.background=T.surf;}} onMouseLeave={e2=>{e2.currentTarget.style.borderColor=T.border;e2.currentTarget.style.background=T.bg;}}>
@@ -3032,7 +3030,7 @@ const PricingPage=({onBack,onSelect})=>{
                       Commencer →
                     </button>
                   ):(
-                    <button onClick={()=>onSelect?.("free",yearly)} style={{width:"100%",padding:"12px",borderRadius:12,background:"transparent",border:`1px solid rgba(255,255,255,.1)`,color:T.muted,fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:22}}>Gratuit pour toujours</button>
+                    <button onClick={()=>onBack?.()} style={{width:"100%",padding:"12px",borderRadius:12,background:"transparent",border:`1px solid rgba(255,255,255,.1)`,color:T.muted,fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:22}}>Gratuit pour toujours</button>
                   )}
                   <div style={{height:1,background:"rgba(255,255,255,.05)",marginBottom:18}}/>
                   <div style={{display:"flex",flexDirection:"column",gap:7}}>
@@ -6637,7 +6635,54 @@ const SubscriptionPage=({user,setUser,onBack})=>{
   const [cancelFlow,setCancelFlow]=useState(false);
   const [cancelStep,setCancelStep]=useState(0);
   const [cancelReason,setCancelReason]=useState("");
+  const [loadingPortal,setLoadingPortal]=useState(false);
+  const [loadingUpgrade,setLoadingUpgrade]=useState(null);
   const planColor={Free:T.muted,Basic:T.cyan,Expert:T.green,Pro:T.acc};
+
+  const openPortal = async () => {
+    setLoadingPortal(true);
+    try {
+      const token = localStorage.getItem("sc_token");
+      const res = await fetch("/api/stripe?action=portal", {
+        method: "POST",
+        headers: {"Content-Type":"application/json", ...(token?{"Authorization":`Bearer ${token}`}:{})},
+        body: JSON.stringify({
+          customerId: user?.stripe_customer_id,
+          returnUrl: window.location.origin + "/?page=subscription",
+        })
+      });
+      const data = await res.json();
+      if(data.url) {
+        window.location.href = data.url;
+      } else {
+        notify("Erreur portail Stripe: " + (data.error||"inconnue"), "error");
+      }
+    } catch(e) { notify("Erreur réseau", "error"); }
+    setLoadingPortal(false);
+  };
+
+  const upgradePlan = async (planId, yearly=false) => {
+    if(planId === "free") { notify("Tu es déjà sur le plan gratuit ou inférieur", "info"); return; }
+    setLoadingUpgrade(planId);
+    try {
+      const token = localStorage.getItem("sc_token");
+      const res = await fetch("/api/stripe?action=create-checkout", {
+        method: "POST",
+        headers: {"Content-Type":"application/json", ...(token?{"Authorization":`Bearer ${token}`}:{})},
+        body: JSON.stringify({
+          planId, yearly,
+          userId: user?.id,
+          email: user?.email,
+          successUrl: window.location.origin + "/?payment=success&plan=" + planId,
+          cancelUrl: window.location.origin + "/?page=subscription",
+        })
+      });
+      const data = await res.json();
+      if(data.url) { window.location.href = data.url; }
+      else { notify("Erreur: " + (data.error||"inconnue"), "error"); }
+    } catch(e) { notify("Erreur réseau", "error"); }
+    setLoadingUpgrade(null);
+  };
 
   const currentPlan=PLANS.find(p=>p.name===user?.plan)||PLANS[0];
   const usage={videos:{used:23,total:currentPlan.credits===Infinity?Infinity:currentPlan.credits},storage:{used:1.2,total:currentPlan.id==="pro"?6:currentPlan.id==="expert"?4:currentPlan.id==="basic"?3:0.5},exports:{used:14,total:currentPlan.credits===Infinity?Infinity:30}};
@@ -6673,7 +6718,10 @@ const SubscriptionPage=({user,setUser,onBack})=>{
           </div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             <Btn v="secondary" size="sm" onClick={()=>setTab("change")}>Changer de plan</Btn>
-            <Btn v="danger" size="sm" onClick={()=>setCancelFlow(true)}>Annuler</Btn>
+            {user?.stripe_customer_id
+              ? <Btn v="danger" size="sm" onClick={openPortal} loading={loadingPortal}>{loadingPortal?"Chargement...":"Gérer / Annuler"}</Btn>
+              : <Btn v="danger" size="sm" onClick={()=>setCancelFlow(true)}>Annuler</Btn>
+            }
           </div>
         </div>
 
@@ -6750,9 +6798,13 @@ const SubscriptionPage=({user,setUser,onBack})=>{
                     <div style={{fontFamily:"JetBrains Mono",fontWeight:900,fontSize:28,color:isActive?T.acc:T.text,marginBottom:4}}>€{plan.priceY}<span style={{fontSize:12,fontWeight:400,color:T.muted}}>/mois</span></div>
                     <div style={{fontSize:11,color:T.muted,marginBottom:16}}>{plan.credits===Infinity?"Illimité":`${plan.credits} vidéos/mois`}</div>
                     {!isActive&&(
-                      <Btn full size="sm" v={isUpgrade?"primary":"secondary"} onClick={()=>{notify(isUpgrade?`Passage au plan ${plan.name} 🚀`:`Rétrogradation vers ${plan.name}`,"success");setUser(u=>({...u,plan:plan.name}));}}>
-                        {isUpgrade?"⬆ Passer à ce plan":"⬇ Rétrograder"}
-                      </Btn>
+                      plan.id==="free"
+                      ? <Btn full size="sm" v="secondary" onClick={openPortal} loading={loadingPortal}>
+                          ⬇ Rétrograder (portail)
+                        </Btn>
+                      : <Btn full size="sm" v={isUpgrade?"primary":"secondary"} onClick={()=>upgradePlan(plan.id,false)} loading={loadingUpgrade===plan.id}>
+                          {loadingUpgrade===plan.id?"Chargement...":isUpgrade?"⬆ Passer à ce plan":"⬇ Rétrograder"}
+                        </Btn>
                     )}
                   </div>
                 );
@@ -6882,7 +6934,16 @@ const SubscriptionPage=({user,setUser,onBack})=>{
                 </div>
                 <div style={{display:"flex",gap:10}}>
                   <Btn v="secondary" onClick={()=>{setCancelFlow(false);setCancelStep(0);}} full>← Annuler</Btn>
-                  <Btn v="danger" onClick={()=>{setCancelFlow(false);setCancelStep(0);setUser(u=>({...u,plan:"Free"}));notify("Abonnement annulé. À bientôt 😢","warning");}} full>Confirmer l'annulation</Btn>
+                  <Btn v="danger" onClick={async()=>{
+                    if(user?.stripe_customer_id) {
+                      setCancelFlow(false); setCancelStep(0);
+                      await openPortal();
+                    } else {
+                      setCancelFlow(false); setCancelStep(0);
+                      setUser(u=>({...u,plan:"Free"}));
+                      notify("Abonnement annulé. À bientôt 😢","warning");
+                    }
+                  }} full>Confirmer l'annulation</Btn>
                 </div>
               </div>
             </>
@@ -7646,6 +7707,7 @@ function App(){
 
   const goCheckout=async(planId,yearly=true)=>{
     if(!user){nav("login");return;}
+    if(planId==="free"){nav(user?"dashboard":"signup");return;}
     notify("Redirection vers Stripe...","info");
     try {
       const token = localStorage.getItem("sc_token");

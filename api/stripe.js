@@ -151,15 +151,15 @@ async function createPortal(req, res, stripe) {
     return res.status(400).json({ error: "Body invalide" });
   }
 
-  const { customerId } = body;
+  const { customerId, returnUrl } = body;
   if (!customerId) return res.status(400).json({ error: "customerId requis" });
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://subcraftai.com";
+  const baseUrl = returnUrl || process.env.NEXT_PUBLIC_BASE_URL || "https://sub-craft-fxea.vercel.app";
 
   try {
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${baseUrl}/dashboard`,
+      return_url: baseUrl,
     });
     return res.status(200).json({ url: session.url });
   } catch (err) {
