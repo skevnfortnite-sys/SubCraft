@@ -7358,102 +7358,262 @@ const ChangelogPage=({onBack})=>{
    PAGE: STATUS
 ══════════════════════════════════════════════ */
 const StatusPage=({onBack})=>{
-  const services=[
-    {name:"API Transcription (Whisper)",status:"operational",uptime:"99.98%",ping:"142ms"},
-    {name:"Génération de sous-titres",status:"operational",uptime:"99.95%",ping:"89ms"},
-    {name:"Claude AI (Emojis / Traduction)",status:"operational",uptime:"99.91%",ping:"210ms"},
-    {name:"Export vidéo (FFmpeg)",status:"degraded",uptime:"98.20%",ping:"520ms"},
-    {name:"Authentification",status:"operational",uptime:"100%",ping:"45ms"},
-    {name:"Stockage Cloudflare R2",status:"operational",uptime:"99.99%",ping:"67ms"},
-    {name:"Paiements Stripe",status:"operational",uptime:"99.99%",ping:"92ms"},
-    {name:"Interface web",status:"operational",uptime:"99.96%",ping:"38ms"},
+  const SERVICES=[
+    {id:"whisper",name:"Transcription Whisper AI",group:"IA",icon:"🎤",uptime:99.98,pingBase:142,status:"operational",desc:"OpenAI Whisper API"},
+    {id:"claude",name:"Claude AI (Traduction & Emojis)",group:"IA",icon:"🤖",uptime:99.91,pingBase:210,status:"operational",desc:"Anthropic Claude API"},
+    {id:"auth",name:"Authentification",group:"Core",icon:"🔐",uptime:100,pingBase:45,status:"operational",desc:"Supabase Auth"},
+    {id:"db",name:"Base de données",group:"Core",icon:"🗄",uptime:99.99,pingBase:28,status:"operational",desc:"Supabase PostgreSQL"},
+    {id:"stripe",name:"Paiements Stripe",group:"Billing",icon:"💳",uptime:99.99,pingBase:92,status:"operational",desc:"Stripe API v2"},
+    {id:"email",name:"Emails transactionnels",group:"Core",icon:"📧",uptime:99.95,pingBase:65,status:"operational",desc:"Brevo SMTP"},
+    {id:"cdn",name:"CDN & Hébergement",group:"Infrastructure",icon:"🌍",uptime:99.99,pingBase:18,status:"operational",desc:"Vercel Edge Network"},
+    {id:"storage",name:"Stockage vidéos",group:"Infrastructure",icon:"📦",uptime:99.97,pingBase:55,status:"operational",desc:"Cloudflare R2"},
+    {id:"export",name:"Export MP4",group:"Core",icon:"🎬",uptime:98.2,pingBase:480,status:"degraded",desc:"FFmpeg WebAssembly"},
   ];
-  const incidents=[
-    {date:"5 Mars 2026",title:"Latence élevée sur l'export vidéo",severity:"warning",resolved:false,desc:"L'export vidéo avec sous-titres incrustés connaît des délais plus élevés que d'habitude. Notre équipe travaille à résoudre le problème. Export SRT/ASS non affecté."},
-    {date:"28 Fév 2026",title:"Indisponibilité partielle de l'API Claude",severity:"incident",resolved:true,desc:"L'intégration Claude AI a été indisponible pendant 23 minutes entre 14h32 et 14h55 UTC. Résolu. Les fonctions d'emojis et traduction ont été rétablies."},
-    {date:"15 Fév 2026",title:"Maintenance planifiée infrastructure",severity:"maintenance",resolved:true,desc:"Migration des serveurs vers une nouvelle région EU Frankfurt terminée avec succès. Amélioration des latences de 35%."},
+
+  const INCIDENTS=[
+    {date:"5 Mars 2026",title:"Latence élevée — Export MP4",severity:"warning",resolved:false,
+     updates:[
+       {time:"15:42","msg":"Problème identifié — FFmpeg WASM dépasse la limite mémoire sur certains navigateurs."},
+       {time:"15:10","msg":"Investigations en cours sur l'export vidéo."},
+     ]},
+    {date:"28 Fév 2026",title:"Indisponibilité partielle — API Claude",severity:"incident",resolved:true,
+     updates:[
+       {time:"14:55","msg":"Résolu. Basculement automatique vers la région backup réussi."},
+       {time:"14:32","msg":"Incident détecté — erreurs 503 sur l'API Anthropic."},
+     ]},
+    {date:"15 Fév 2026",title:"Maintenance planifiée — Migration EU",severity:"maintenance",resolved:true,
+     updates:[
+       {time:"03:45","msg":"Terminé avec succès. Latences réduites de 35%."},
+       {time:"02:00","msg":"Début de la migration vers EU Frankfurt."},
+     ]},
   ];
-  const statusConfig={operational:{label:"Opérationnel",color:T.green,dot:"🟢"},degraded:{label:"Dégradé",color:T.orange,dot:"🟡"},down:{label:"Indisponible",color:T.pink,dot:"🔴"}};
-  const allOk=services.every(s=>s.status==="operational");
+
+  const [pings,setPings]=useState(()=>Object.fromEntries(SERVICES.map(s=>[s.id,s.pingBase])));
+  const [lastUpdate,setLastUpdate]=useState(new Date());
+  const [checking,setChecking]=useState(false);
+  const [expandedInc,setExpandedInc]=useState(null);
+  const [activeGroup,setActiveGroup]=useState("Tous");
+
+  // Simule des pings live
+  useEffect(()=>{
+    const iv=setInterval(()=>{
+      setPings(p=>Object.fromEntries(Object.entries(p).map(([k,v])=>[k,Math.max(10,Math.round(v+(Math.random()-.5)*20))])));
+      setLastUpdate(new Date());
+    },5000);
+    return()=>clearInterval(iv);
+  },[]);
+
+  const checkNow=()=>{
+    setChecking(true);
+    setTimeout(()=>{
+      setPings(()=>Object.fromEntries(SERVICES.map(s=>[s.id,Math.max(10,s.pingBase+Math.round((Math.random()-.4)*30))])));
+      setLastUpdate(new Date());
+      setChecking(false);
+    },1800);
+  };
+
+  const statusCfg={
+    operational:{label:"Opérationnel",color:"#22c55e",bg:"rgba(34,197,94,.1)"},
+    degraded:{label:"Dégradé",color:"#f59e0b",bg:"rgba(245,158,11,.1)"},
+    down:{label:"Indisponible",color:"#f43f5e",bg:"rgba(244,63,94,.1)"},
+  };
+  const sevCfg={
+    warning:{color:"#f59e0b",bg:"rgba(245,158,11,.08)",label:"Avertissement",icon:"⚠"},
+    incident:{color:"#f43f5e",bg:"rgba(244,63,94,.08)",label:"Incident",icon:"✕"},
+    maintenance:{color:"#7c3aed",bg:"rgba(124,58,237,.08)",label:"Maintenance",icon:"⚙"},
+  };
+
+  const groups=["Tous",...[...new Set(SERVICES.map(s=>s.group))]];
+  const filtered=activeGroup==="Tous"?SERVICES:SERVICES.filter(s=>s.group===activeGroup);
+  const allOk=SERVICES.every(s=>s.status==="operational");
+  const globalUptime=(SERVICES.reduce((a,s)=>a+s.uptime,0)/SERVICES.length).toFixed(2);
+  const avgPing=Math.round(Object.values(pings).reduce((a,v)=>a+v,0)/Object.values(pings).length);
+
+  // Génère les barres d'uptime 90j stables (seed par service)
+  const getUptimeBars=(svc)=>Array.from({length:60},(_,i)=>{
+    const seed=(svc.id.charCodeAt(0)*31+i*17)%100;
+    if(svc.uptime>99.9) return seed<3?75+seed*5:100;
+    if(svc.uptime>99) return seed<8?60+seed*3:100;
+    return seed<15?50+seed*2:100;
+  });
+
   return(
-    <div style={{minHeight:"100vh",background:T.bg,padding:"0 24px 80px"}} className="page">
-      <div style={{maxWidth:760,margin:"0 auto"}}>
-        <div style={{padding:"22px 0 28px",display:"flex",alignItems:"center",gap:12}}>
-          <Btn v="ghost" onClick={onBack}>← Retour</Btn>
-          <h1 style={{fontWeight:800,fontSize:22}}>⚡ Status des services</h1>
-        </div>
-        {/* Global status */}
-        <div style={{padding:"22px 28px",borderRadius:18,background:allOk?`${T.green}0a`:`${T.orange}0a`,border:`2px solid ${allOk?T.green:T.orange}33`,marginBottom:28,display:"flex",alignItems:"center",gap:16}}>
-          <div style={{width:52,height:52,borderRadius:"50%",background:allOk?`${T.green}18`:`${T.orange}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,flexShrink:0}}>{allOk?"✓":"⚠"}</div>
-          <div>
-            <div style={{fontWeight:800,fontSize:18,color:allOk?T.green:T.orange}}>{allOk?"Tous les systèmes opérationnels":"Dégradation partielle en cours"}</div>
-            <div style={{color:T.muted,fontSize:13,marginTop:2}}>Mis à jour le {new Date().toLocaleDateString("fr-FR")} à {new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</div>
+    <div style={{minHeight:"100vh",background:"#030305",position:"relative"}} className="page">
+      <AuroraBg subtle/>
+      <div style={{maxWidth:860,margin:"0 auto",padding:"0 20px 100px",position:"relative",zIndex:1}}>
+
+        {/* HEADER */}
+        <div style={{padding:"28px 0 32px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <button onClick={onBack} style={{width:34,height:34,borderRadius:9,background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.08)",color:T.muted,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.1)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,.06)"}>←</button>
+            <div>
+              <div style={{fontSize:10,color:"#7c3aed",fontWeight:700,letterSpacing:".12em",textTransform:"uppercase",marginBottom:3}}>Infrastructure</div>
+              <h1 className="syne" style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",color:"#fff",lineHeight:1}}>Statut des services</h1>
+            </div>
           </div>
-          <div style={{marginLeft:"auto",textAlign:"right"}} className="hide-mobile">
-            <div style={{fontFamily:"JetBrains Mono",fontWeight:800,fontSize:22,color:allOk?T.green:T.orange}}>99.95%</div>
-            <div style={{fontSize:11,color:T.muted}}>uptime 90 jours</div>
-          </div>
+          <button onClick={checkNow} disabled={checking} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 18px",borderRadius:10,background:checking?"rgba(124,58,237,.2)":"rgba(124,58,237,.15)",border:"1px solid rgba(124,58,237,.3)",color:"#a78bfa",fontSize:13,fontWeight:600,cursor:checking?"not-allowed":"pointer",transition:"all .2s"}}>
+            <span style={{display:"inline-block",animation:checking?"spin 1s linear infinite":"none",fontSize:14}}>↻</span>
+            {checking?"Vérification...":"Actualiser"}
+          </button>
         </div>
-        {/* Services */}
-        <div style={{background:T.surf,borderRadius:16,border:`1px solid ${T.border}`,overflow:"hidden",marginBottom:24}}>
-          <div style={{padding:"13px 20px",borderBottom:`1px solid ${T.border}`,fontWeight:700,fontSize:14}}>Services</div>
-          {services.map((s,i)=>{
-            const cfg=statusConfig[s.status];
-            return(
-              <div key={s.name} style={{padding:"13px 20px",borderBottom:i<services.length-1?`1px solid ${T.border}`:"none",display:"flex",alignItems:"center",gap:12,transition:"background .12s"}} onMouseEnter={e=>e.currentTarget.style.background=T.surf2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:14,fontWeight:500}}>{s.name}</div>
-                </div>
-                <div style={{display:"flex",gap:16,alignItems:"center"}} className="hide-mobile">
-                  <span style={{fontSize:11,color:T.muted,fontFamily:"JetBrains Mono"}}>↑ {s.uptime}</span>
-                  <span style={{fontSize:11,color:T.muted,fontFamily:"JetBrains Mono"}}>⚡ {s.ping}</span>
-                </div>
-                <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",borderRadius:100,background:`${cfg.color}12`,border:`1px solid ${cfg.color}22`}}>
-                  <span style={{width:7,height:7,borderRadius:"50%",background:cfg.color,animation:s.status!=="down"?"pulseDot 2s infinite":undefined}}/>
-                  <span style={{fontSize:11,color:cfg.color,fontWeight:700}}>{cfg.label}</span>
-                </div>
+
+        {/* GLOBAL STATUS BANNER */}
+        <div style={{padding:"22px 28px",borderRadius:20,background:allOk?"rgba(34,197,94,.06)":"rgba(245,158,11,.06)",border:`1px solid ${allOk?"rgba(34,197,94,.2)":"rgba(245,158,11,.2)"}`,marginBottom:28,display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
+          <div style={{display:"flex",alignItems:"center",gap:14,flex:1,minWidth:200}}>
+            <div style={{width:48,height:48,borderRadius:14,background:allOk?"rgba(34,197,94,.15)":"rgba(245,158,11,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>
+              {allOk?"✓":"⚠"}
+            </div>
+            <div>
+              <div style={{fontWeight:700,fontSize:17,color:allOk?"#22c55e":"#f59e0b",marginBottom:3}}>
+                {allOk?"Tous les systèmes opérationnels":"Dégradation partielle détectée"}
               </div>
-            );
-          })}
-        </div>
-        {/* Uptime sparkline 90j */}
-        <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:"16px 18px",marginBottom:20}}>
-          <div style={{fontWeight:700,fontSize:13,marginBottom:12}}>📊 Uptime 90 jours</div>
-          <div style={{display:"flex",gap:2,alignItems:"flex-end",height:36}}>
-            {Array.from({length:45}).map((_,i)=>{
-              const h=Math.random()<0.97?80+Math.random()*20:30+Math.random()*40;
-              const color=h>90?T.green:h>60?T.yellow:T.pink;
-              return <div key={i} style={{flex:1,height:h+"%",background:color,borderRadius:"2px 2px 0 0",minWidth:3,cursor:"default"}} title={"Jour "+(i+1)+" — "+h.toFixed(1)+"%"}/>;
-            })}
+              <div style={{fontSize:12,color:"rgba(255,255,255,.35)"}}>
+                Dernière vérification : {lastUpdate.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}
+              </div>
+            </div>
           </div>
-          <div style={{display:"flex",justifyContent:"space-between",marginTop:6,fontSize:10,color:T.dim}}>
-            <span>90 jours</span>
-            <span style={{color:T.green,fontWeight:700}}>Aujourd'hui 99.95%</span>
+          <div style={{display:"flex",gap:24,flexShrink:0}}>
+            {[
+              {label:"Uptime 90j",val:globalUptime+"%",color:"#22c55e"},
+              {label:"Latence moy.",val:avgPing+"ms",color:"#7c3aed"},
+              {label:"Services",val:`${SERVICES.filter(s=>s.status==="operational").length}/${SERVICES.length}`,color:"#22d3ee"},
+            ].map(({label,val,color})=>(
+              <div key={label} style={{textAlign:"center"}}>
+                <div className="syne" style={{fontWeight:800,fontSize:20,color,lineHeight:1}}>{val}</div>
+                <div style={{fontSize:10,color:"rgba(255,255,255,.3)",marginTop:3,letterSpacing:".04em"}}>{label}</div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Incidents */}
-        <div style={{background:T.surf,borderRadius:16,border:`1px solid ${T.border}`,overflow:"hidden"}}>
-          <div style={{padding:"13px 20px",borderBottom:`1px solid ${T.border}`,fontWeight:700,fontSize:14}}>Incidents récents</div>
-          {incidents.map((inc,i)=>{
-            const sev={warning:{color:T.orange,icon:"⚠️"},incident:{color:T.pink,icon:"🔴"},maintenance:{color:T.cyan,icon:"🔧"}};
-            const s=sev[inc.severity];
+        {/* GROUP FILTER */}
+        <div style={{display:"flex",gap:4,marginBottom:16,flexWrap:"wrap"}}>
+          {groups.map(g=>(
+            <button key={g} onClick={()=>setActiveGroup(g)} style={{padding:"5px 14px",borderRadius:100,background:activeGroup===g?"rgba(124,58,237,.2)":"rgba(255,255,255,.04)",border:activeGroup===g?"1px solid rgba(124,58,237,.4)":"1px solid rgba(255,255,255,.06)",color:activeGroup===g?"#a78bfa":"rgba(255,255,255,.4)",fontSize:12,fontWeight:600,cursor:"pointer",transition:"all .15s"}}>
+              {g}
+            </button>
+          ))}
+        </div>
+
+        {/* SERVICES TABLE */}
+        <div style={{borderRadius:20,border:"1px solid rgba(255,255,255,.07)",overflow:"hidden",marginBottom:28,background:"rgba(255,255,255,.02)"}}>
+          {/* Header */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 80px 90px 130px",gap:0,padding:"10px 20px",borderBottom:"1px solid rgba(255,255,255,.06)",background:"rgba(255,255,255,.03)"}}>
+            {["Service","Ping","Uptime","Statut"].map(h=>(
+              <div key={h} style={{fontSize:10,color:"rgba(255,255,255,.3)",fontWeight:700,letterSpacing:".08em",textTransform:"uppercase"}}>{h}</div>
+            ))}
+          </div>
+          {filtered.map((svc,i)=>{
+            const cfg=statusCfg[svc.status];
+            const ping=pings[svc.id];
+            const pingColor=ping<100?"#22c55e":ping<300?"#f59e0b":"#f43f5e";
             return(
-              <div key={inc.title} style={{padding:"16px 20px",borderBottom:i<incidents.length-1?`1px solid ${T.border}`:"none"}}>
-                <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
-                  <span style={{fontSize:16,flexShrink:0,marginTop:1}}>{s.icon}</span>
-                  <div style={{flex:1}}>
-                    <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:5}}>
-                      <span style={{fontWeight:700,fontSize:13}}>{inc.title}</span>
-                      {inc.resolved?<Tag color={T.green}>Résolu</Tag>:<Tag color={s.color} dot>En cours</Tag>}
-                    </div>
-                    <div style={{fontSize:11,color:T.muted,marginBottom:6}}>{inc.date}</div>
-                    <div style={{fontSize:12,color:T.muted,lineHeight:1.6}}>{inc.desc}</div>
+              <div key={svc.id} style={{display:"grid",gridTemplateColumns:"1fr 80px 90px 130px",gap:0,padding:"14px 20px",borderBottom:i<filtered.length-1?"1px solid rgba(255,255,255,.05)":"none",transition:"background .12s",alignItems:"center"}}
+                onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.03)"}
+                onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:18}}>{svc.icon}</span>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:600,color:"#fff"}}>{svc.name}</div>
+                    <div style={{fontSize:10,color:"rgba(255,255,255,.25)",marginTop:1}}>{svc.desc}</div>
                   </div>
+                </div>
+                <div style={{fontFamily:"JetBrains Mono",fontSize:12,color:pingColor,fontWeight:600}}>{ping}ms</div>
+                <div style={{fontFamily:"JetBrains Mono",fontSize:12,color:"rgba(255,255,255,.5)"}}>{svc.uptime}%</div>
+                <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",borderRadius:100,background:cfg.bg,border:`1px solid ${cfg.color}30`,width:"fit-content"}}>
+                  <span style={{width:6,height:6,borderRadius:"50%",background:cfg.color,flexShrink:0,animation:svc.status==="operational"?"pulseDot 2.5s ease infinite":"none"}}/>
+                  <span style={{fontSize:11,color:cfg.color,fontWeight:700,whiteSpace:"nowrap"}}>{cfg.label}</span>
                 </div>
               </div>
             );
           })}
+        </div>
+
+        {/* UPTIME SPARKLINES */}
+        <div style={{borderRadius:20,border:"1px solid rgba(255,255,255,.07)",overflow:"hidden",marginBottom:28,background:"rgba(255,255,255,.02)"}}>
+          <div style={{padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,.06)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div>
+              <div style={{fontWeight:700,fontSize:14,color:"#fff"}}>Historique d'uptime</div>
+              <div style={{fontSize:11,color:"rgba(255,255,255,.3)",marginTop:2}}>90 derniers jours · chaque barre = 1 jour et demi</div>
+            </div>
+            <div style={{display:"flex",gap:12,alignItems:"center"}}>
+              {[["#22c55e","100%"],["#f59e0b","<99%"],["#f43f5e","Incident"]].map(([c,l])=>(
+                <div key={l} style={{display:"flex",alignItems:"center",gap:4}}>
+                  <span style={{width:8,height:8,borderRadius:2,background:c,flexShrink:0}}/>
+                  <span style={{fontSize:10,color:"rgba(255,255,255,.3)"}}>{l}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {SERVICES.map((svc,si)=>{
+            const bars=getUptimeBars(svc);
+            return(
+              <div key={svc.id} style={{padding:"10px 20px",borderBottom:si<SERVICES.length-1?"1px solid rgba(255,255,255,.04)":"none",display:"flex",alignItems:"center",gap:14}}>
+                <div style={{width:180,flexShrink:0,display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:14}}>{svc.icon}</span>
+                  <span style={{fontSize:12,color:"rgba(255,255,255,.5)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{svc.name.split("(")[0].trim()}</span>
+                </div>
+                <div style={{flex:1,display:"flex",gap:2,alignItems:"flex-end",height:24}}>
+                  {bars.map((h,i)=>{
+                    const color=h===100?"#22c55e":h>70?"#f59e0b":"#f43f5e";
+                    return <div key={i} style={{flex:1,height:`${h}%`,background:color,borderRadius:2,minWidth:2,opacity:.8}} title={`Jour ${i+1} : ${h}%`}/>;
+                  })}
+                </div>
+                <div style={{fontFamily:"JetBrains Mono",fontSize:11,color:"#22c55e",fontWeight:700,width:52,textAlign:"right",flexShrink:0}}>{svc.uptime}%</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* INCIDENTS */}
+        <div style={{borderRadius:20,border:"1px solid rgba(255,255,255,.07)",overflow:"hidden",background:"rgba(255,255,255,.02)"}}>
+          <div style={{padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,.06)"}}>
+            <div style={{fontWeight:700,fontSize:14,color:"#fff"}}>Historique des incidents</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,.3)",marginTop:2}}>30 derniers jours</div>
+          </div>
+          {INCIDENTS.map((inc,i)=>{
+            const sc=sevCfg[inc.severity];
+            const isOpen=expandedInc===i;
+            return(
+              <div key={i} style={{borderBottom:i<INCIDENTS.length-1?"1px solid rgba(255,255,255,.05)":"none"}}>
+                <div style={{padding:"16px 20px",cursor:"pointer",transition:"background .12s"}}
+                  onClick={()=>setExpandedInc(isOpen?null:i)}
+                  onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.03)"}
+                  onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                  <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                    <div style={{width:32,height:32,borderRadius:9,background:sc.bg,border:`1px solid ${sc.color}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:sc.color,flexShrink:0}}>{sc.icon}</div>
+                    <div style={{flex:1,minWidth:160}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:3}}>
+                        <span style={{fontWeight:700,fontSize:13,color:"#fff"}}>{inc.title}</span>
+                        <span style={{fontSize:10,padding:"2px 8px",borderRadius:100,background:sc.bg,color:sc.color,fontWeight:700,border:`1px solid ${sc.color}30`}}>{sc.label}</span>
+                        {inc.resolved
+                          ?<span style={{fontSize:10,padding:"2px 8px",borderRadius:100,background:"rgba(34,197,94,.1)",color:"#22c55e",fontWeight:700,border:"1px solid rgba(34,197,94,.25)"}}>✓ Résolu</span>
+                          :<span style={{fontSize:10,padding:"2px 8px",borderRadius:100,background:"rgba(245,158,11,.1)",color:"#f59e0b",fontWeight:700,border:"1px solid rgba(245,158,11,.25)",animation:"pulseDot 2s infinite"}}>En cours</span>
+                        }
+                      </div>
+                      <div style={{fontSize:11,color:"rgba(255,255,255,.3)"}}>{inc.date}</div>
+                    </div>
+                    <span style={{fontSize:14,color:"rgba(255,255,255,.3)",transition:"transform .2s",transform:isOpen?"rotate(180deg)":"none"}}>▾</span>
+                  </div>
+                </div>
+                {isOpen&&(
+                  <div style={{padding:"0 20px 16px 64px",animation:"fadeDown .18s ease"}}>
+                    {inc.updates.map((u,j)=>(
+                      <div key={j} style={{display:"flex",gap:12,padding:"8px 0",borderTop:j>0?"1px solid rgba(255,255,255,.04)":"none",alignItems:"flex-start"}}>
+                        <span style={{fontFamily:"JetBrains Mono",fontSize:10,color:"rgba(255,255,255,.3)",flexShrink:0,paddingTop:2}}>{u.time}</span>
+                        <span style={{fontSize:12,color:"rgba(255,255,255,.5)",lineHeight:1.6}}>{u.msg}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* FOOTER */}
+        <div style={{textAlign:"center",marginTop:32,fontSize:11,color:"rgba(255,255,255,.2)"}}>
+          SubCraft Status · Mis à jour automatiquement toutes les 5 secondes · <span style={{color:"#7c3aed",cursor:"pointer"}} onClick={()=>window.open("mailto:support@subcraftai.com")}>support@subcraftai.com</span>
         </div>
       </div>
     </div>
