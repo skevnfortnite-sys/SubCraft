@@ -7370,10 +7370,6 @@ Sophie & toute l'équipe SubCraft`
 };
 
 /* ══════════════════════════════════════════════
-   ROOT APP
-══════════════════════════════════════════════ */
-export default 
-/* ══════════════════════════════════════════════
    PAGE: COMPTE SUSPENDU
 ══════════════════════════════════════════════ */
 const BannedPage=({user,onLogout})=>(
@@ -7398,6 +7394,9 @@ const BannedPage=({user,onLogout})=>(
   </div>
 );
 
+/* ══════════════════════════════════════════════
+   ROOT APP
+══════════════════════════════════════════════ */
 function App(){
   const [page,setPage]=useState("landing");
   const [user,setUser]=useState(null);
