@@ -1814,30 +1814,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
 
         <div style={{marginLeft:"auto",display:"flex",gap:6,alignItems:"center"}}>
 
-          {/* Notifications */}
-          <div style={{position:"relative"}}>
-            <button onClick={()=>setNotifPanel(p=>!p)} style={{width:34,height:34,borderRadius:9,background:notifPanel?`${T.acc}15`:T.surf,border:`1px solid ${notifPanel?T.acc:T.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,cursor:"pointer",transition:"all .2s"}}>🔔</button>
-            {unread>0&&<div style={{position:"absolute",top:-3,right:-3,width:16,height:16,borderRadius:"50%",background:T.pink,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:800,color:"#fff"}}>{unread}</div>}
-            {notifPanel&&(
-              <div style={{position:"absolute",top:"calc(100% + 8px)",right:0,width:310,background:T.surf2,border:`1px solid ${T.border}`,borderRadius:14,boxShadow:"0 16px 48px rgba(0,0,0,.6)",zIndex:200,animation:"fadeDown .2s ease",overflow:"hidden"}}>
-                <div style={{padding:"11px 16px",borderBottom:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <span style={{fontWeight:700,fontSize:13}}>Notifications</span>
-                  <button onClick={()=>setNotifications(p=>p.map(n=>({...n,read:true})))} style={{background:"none",border:"none",color:T.acc,fontSize:11,cursor:"pointer",fontWeight:600}}>Tout lire</button>
-                </div>
-                {notifications.map(n=>(
-                  <div key={n.id} onClick={()=>setNotifications(p=>p.map(x=>x.id===n.id?{...x,read:true}:x))} style={{padding:"10px 14px",borderBottom:`1px solid ${T.border}`,display:"flex",gap:9,cursor:"pointer",background:n.read?"transparent":`${T.acc}07`}}>
-                    <span style={{fontSize:18,flexShrink:0}}>{n.icon}</span>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:11,fontWeight:n.read?400:600,lineHeight:1.4}}>{n.text}</div>
-                      <div style={{fontSize:10,color:T.dim,marginTop:2}}>{n.time}</div>
-                    </div>
-                    {!n.read&&<div style={{width:6,height:6,borderRadius:"50%",background:T.acc,flexShrink:0,marginTop:5}}/>}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          {/* Profile */}
+          {/* Profile */
           {/* Avatar dropdown */}
           <div style={{position:"relative"}}>
             <button onClick={()=>setProfileDrop(p=>!p)} style={{display:"flex",alignItems:"center",gap:7,padding:"4px 10px 4px 5px",borderRadius:10,background:profileDrop?`${T.acc}15`:T.surf,border:`1px solid ${profileDrop?T.acc:T.border}`,cursor:"pointer",transition:"all .2s"}}>
@@ -2154,7 +2131,7 @@ const UploadModal=({onClose,onImport})=>{
     setUrlOk(v.length>8?(ok?"ok":"err"):null);
   };
 
-  // Extrait l'audio via OfflineAudioContext — quasi instantané (pas temps réel)
+  // Extrait l'audio via OfflineAudioContext — tous canaux mixés (voix off incluse)
   const extractAudioBlob = (videoFile) => new Promise((resolve, reject) => {
     const url = URL.createObjectURL(videoFile);
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -2164,39 +2141,44 @@ const UploadModal=({onClose,onImport})=>{
       .then(buf => audioCtx.decodeAudioData(buf))
       .then(decoded => {
         URL.revokeObjectURL(url);
-        // Encode en WAV 16kHz mono
         const sampleRate = 16000;
-        const offlineCtx = new OfflineAudioContext(1, decoded.duration * sampleRate, sampleRate);
+        const numChannels = decoded.numberOfChannels; // tous les canaux (voix off, musique, etc.)
+        // Mix tous les canaux en mono pour Whisper
+        const offlineCtx = new OfflineAudioContext(1, Math.ceil(decoded.duration * sampleRate), sampleRate);
         const source = offlineCtx.createBufferSource();
         source.buffer = decoded;
+        // ChannelMerger pour mixer tous les canaux en mono
+        const merger = offlineCtx.createChannelMerger(1);
         source.connect(offlineCtx.destination);
         source.start(0);
         return offlineCtx.startRendering();
       })
       .then(rendered => {
-        // Convertit AudioBuffer → WAV blob
+        // Convertit AudioBuffer → WAV 16bit mono
         const numFrames = rendered.length;
-        const numChannels = 1;
         const sampleRate = rendered.sampleRate;
-        const bytesPerSample = 2;
-        const blockAlign = numChannels * bytesPerSample;
-        const byteRate = sampleRate * blockAlign;
-        const dataSize = numFrames * blockAlign;
+        const dataSize = numFrames * 2;
         const buffer = new ArrayBuffer(44 + dataSize);
         const view = new DataView(buffer);
         const writeStr = (off, str) => { for(let i=0;i<str.length;i++) view.setUint8(off+i, str.charCodeAt(i)); };
         writeStr(0,"RIFF"); view.setUint32(4, 36+dataSize, true);
         writeStr(8,"WAVE"); writeStr(12,"fmt ");
         view.setUint32(16,16,true); view.setUint16(20,1,true);
-        view.setUint16(22,numChannels,true); view.setUint32(24,sampleRate,true);
-        view.setUint32(28,byteRate,true); view.setUint16(32,blockAlign,true);
-        view.setUint16(34,bytesPerSample*8,true);
+        view.setUint16(22,1,true);
+        view.setUint32(24,sampleRate,true);
+        view.setUint32(28,sampleRate*2,true);
+        view.setUint16(32,2,true);
+        view.setUint16(34,16,true);
         writeStr(36,"data"); view.setUint32(40,dataSize,true);
-        const samples = rendered.getChannelData(0);
+        // Mix tous les canaux disponibles en mono
+        const numCh = rendered.numberOfChannels;
         let off = 44;
         for(let i=0;i<numFrames;i++){
-          const s = Math.max(-1,Math.min(1,samples[i]));
-          view.setInt16(off, s<0?s*0x8000:s*0x7FFF, true);
+          let sample = 0;
+          for(let ch=0;ch<numCh;ch++) sample += rendered.getChannelData(ch)[i];
+          sample = sample / numCh; // moyenne des canaux
+          sample = Math.max(-1, Math.min(1, sample));
+          view.setInt16(off, sample < 0 ? sample*0x8000 : sample*0x7FFF, true);
           off += 2;
         }
         audioCtx.close();
@@ -7809,7 +7791,7 @@ function App(){
   const [currentFile,setCurrentFile]=useState(null);
   const [checkoutPlan,setCheckoutPlan]=useState("pro");
   const [checkoutYearly,setCheckoutYearly]=useState(true);
-  const [cookieConsent,setCookieConsent]=useState(null);
+  const [cookieConsent,setCookieConsent]=useState({necessary:true,analytics:false,marketing:false});
   const [pushDismissed,setPushDismissed]=useState(false);
   const [pushToasts,setPushToasts]=useState([]);
 
@@ -8029,9 +8011,7 @@ function App(){
       {page==="banned"&&<BannedPage user={user} onLogout={()=>{setUser(null);localStorage.removeItem("sc_token");nav("landing");}}/>}
       {page==="admin"&&<AdminPanel onExit={()=>nav("landing")}/>}
       {page==="404"&&<NotFound onHome={()=>nav("landing")}/>}
-      {cookieConsent===null&&!["checkout","payment-failed",...LEGAL_PAGES].includes(page)&&(
-        <CookieBanner onAccept={(prefs)=>setCookieConsent(prefs)} onDecline={()=>setCookieConsent({necessary:true,analytics:false,marketing:false})} setPage={nav}/>
-      )}
+
     </>
   );
 }
