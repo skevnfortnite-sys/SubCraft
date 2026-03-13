@@ -1814,7 +1814,6 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
 
         <div style={{marginLeft:"auto",display:"flex",gap:6,alignItems:"center"}}>
 
-          {/* Profile */
           {/* Avatar dropdown */}
           <div style={{position:"relative"}}>
             <button onClick={()=>setProfileDrop(p=>!p)} style={{display:"flex",alignItems:"center",gap:7,padding:"4px 10px 4px 5px",borderRadius:10,background:profileDrop?`${T.acc}15`:T.surf,border:`1px solid ${profileDrop?T.acc:T.border}`,cursor:"pointer",transition:"all .2s"}}>
