@@ -1314,7 +1314,7 @@ const SignupPage=({onAuth,goLogin})=>{
 
 
 /* ══ LANDING PAGE ══ */
-const LandingPage=({onCTA,setPage,goCheckout})=>{
+const LandingPage=({user,onCTA,setPage,goCheckout})=>{
   const [hovFeat,setHovFeat]=useState(null);
   const [billingY,setBillingY]=useState(true);
   const [faqOpen,setFaqOpen]=useState(null);
@@ -1365,16 +1365,31 @@ const LandingPage=({onCTA,setPage,goCheckout})=>{
         </div>
         {/* Right actions */}
         <div style={{display:"flex",gap:8,marginLeft:"auto",alignItems:"center"}}>
-          <button onClick={()=>setPage("auth")} className="hide-mobile" style={{padding:"7px 16px",borderRadius:9,background:"transparent",border:"1px solid rgba(255,255,255,.09)",color:T.muted,fontSize:12.5,cursor:"pointer",transition:"all .2s"}}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.18)";e.currentTarget.style.color=T.text;}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.09)";e.currentTarget.style.color=T.muted;}}>
-            Connexion
-          </button>
-          <button onClick={onCTA} style={{padding:"8px 20px",borderRadius:10,background:"#7c3aed",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(124,58,237,.5)",transition:"all .2s",letterSpacing:"-.01em"}}
-            onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.04)";e.currentTarget.style.boxShadow="0 8px 32px rgba(124,58,237,.7)";}}
-            onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 4px 20px rgba(124,58,237,.5)";}}>
-            Commencer gratuit →
-          </button>
+          {user ? (
+            <>
+              <button onClick={()=>setPage("dashboard")} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 14px 6px 7px",borderRadius:10,background:"rgba(124,58,237,.12)",border:"1px solid rgba(124,58,237,.3)",color:"#c4b5fd",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s"}}
+                onMouseEnter={e=>{e.currentTarget.style.background="rgba(124,58,237,.2)";e.currentTarget.style.borderColor="rgba(124,58,237,.5)";}}
+                onMouseLeave={e=>{e.currentTarget.style.background="rgba(124,58,237,.12)";e.currentTarget.style.borderColor="rgba(124,58,237,.3)";}}>
+                <div style={{width:24,height:24,borderRadius:7,background:"linear-gradient(135deg,#7c3aed,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#fff",flexShrink:0}}>
+                  {(user.name||user.email||"U").slice(0,1).toUpperCase()}
+                </div>
+                <span className="hide-mobile">Mon espace →</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button onClick={()=>setPage("auth")} className="hide-mobile" style={{padding:"7px 16px",borderRadius:9,background:"transparent",border:"1px solid rgba(255,255,255,.09)",color:T.muted,fontSize:12.5,cursor:"pointer",transition:"all .2s"}}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.18)";e.currentTarget.style.color=T.text;}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.09)";e.currentTarget.style.color=T.muted;}}>
+                Connexion
+              </button>
+              <button onClick={onCTA} style={{padding:"8px 20px",borderRadius:10,background:"#7c3aed",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(124,58,237,.5)",transition:"all .2s",letterSpacing:"-.01em"}}
+                onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.04)";e.currentTarget.style.boxShadow="0 8px 32px rgba(124,58,237,.7)";}}
+                onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 4px 20px rgba(124,58,237,.5)";}}>
+                Commencer gratuit →
+              </button>
+            </>
+          )}
         </div>
       </nav>
 
@@ -1644,8 +1659,8 @@ const LandingPage=({onCTA,setPage,goCheckout})=>{
           <span className="syne grad-text-chrome" style={{fontWeight:800,fontSize:14}}>SubCraft</span>
         </div>
         <div style={{display:"flex",gap:18,flexWrap:"wrap"}}>
-          {["CGU","Confidentialité","RGPD","Changelog","Statut"].map(p=>(
-            <button key={p} onClick={()=>setPage(p.toLowerCase().replace("é","e"))} style={{background:"none",border:"none",color:T.muted,fontSize:12,cursor:"pointer",transition:"color .15s"}} onMouseEnter={e=>e.currentTarget.style.color=T.text} onMouseLeave={e=>e.currentTarget.style.color=T.muted}>{p}</button>
+          {[["CGU","cgu"],["Confidentialité","privacy"],["RGPD","rgpd"],["Changelog","changelog"],["Statut","status"]].map(([label,route])=>(
+            <button key={route} onClick={()=>setPage(route)} style={{background:"none",border:"none",color:T.muted,fontSize:12,cursor:"pointer",transition:"color .15s"}} onMouseEnter={e=>e.currentTarget.style.color=T.text} onMouseLeave={e=>e.currentTarget.style.color=T.muted}>{label}</button>
           ))}
         </div>
         <div style={{fontSize:11,color:T.dim}}>© 2026 SubCraft · Alès, France 🇫🇷</div>
@@ -8061,16 +8076,26 @@ function App(){
     }
     // Vérifie si déjà connecté
     const savedToken = localStorage.getItem("sc_token");
-    if(savedToken && page === "landing" && !localStorage.getItem("sc_google_processing")) {
+    if(savedToken && !localStorage.getItem("sc_google_processing")) {
       try {
         const payload = JSON.parse(atob(savedToken.split(".")[1]));
         const exp = payload.exp * 1000;
         if(exp > Date.now()) {
+          // Charge le user en arrière-plan SANS rediriger automatiquement
           fetch("/api/auth?action=me", {
             headers: { "Authorization": `Bearer ${savedToken}` }
           }).then(r => r.json()).then(d => {
-            if(d.user) { setUser(d.user); setPage("dashboard"); }
-            else { localStorage.removeItem("sc_token"); }
+            if(d.user) {
+              setUser(d.user);
+              // Ne redirige vers dashboard QUE si l'URL contient ?goto=dashboard
+              const urlParams = new URLSearchParams(window.location.search);
+              if(urlParams.get("goto") === "dashboard") {
+                nav("dashboard");
+              }
+              // Sinon on reste sur la landing mais l'user est connecté en mémoire
+            } else {
+              localStorage.removeItem("sc_token");
+            }
           }).catch(()=>{ localStorage.removeItem("sc_token"); });
         } else {
           localStorage.removeItem("sc_token");
