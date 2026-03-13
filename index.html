@@ -535,33 +535,24 @@ const GoogleBtn=({onClick,label="Continuer avec Google"})=>(
 );
 
 /* ── PHONE MOCKUP ── */
-// Composant mot-par-mot — affiche les mots un à un avec animation
+// Composant mot-par-mot — UN seul mot à la fois, le précédent disparaît
 const WordByWord=({text, style, startTime, currentTime, dur})=>{
-  const words = text.trim().split(/\s+/).filter(Boolean);
+  const words = text.trim().split(' ').filter(Boolean);
   const total = words.length;
   if(total === 0) return null;
-  const elapsed = currentTime - startTime;
-  const timePerWord = Math.max(0.12, (dur * 0.85) / total);
-  const visibleCount = Math.min(total, Math.floor(elapsed / timePerWord) + 1);
-
+  const elapsed = Math.max(0, currentTime - startTime);
+  const timePerWord = Math.max(0.15, dur / total);
+  const idx = Math.min(total - 1, Math.floor(elapsed / timePerWord));
+  const word = words[idx] || words[0];
   return(
-    <div style={{display:'flex',flexWrap:'nowrap',gap:'0.25em',alignItems:'center',justifyContent:'center',maxWidth:'90%'}}>
-      {words.slice(0, visibleCount).map((w, i) => {
-        const isNew = i === visibleCount - 1;
-        return(
-          <span key={i} style={{
-            ...style,
-            display:'inline-block',
-            whiteSpace:'nowrap',
-            animation: isNew ? 'wordPop .18s cubic-bezier(.34,1.56,.64,1) both' : 'none',
-            transform: isNew ? undefined : 'none',
-            opacity: 1,
-            padding: style.background && style.background !== 'transparent' ? '2px 6px' : '0 1px',
-            lineHeight: 1.1,
-          }}>{w}</span>
-        );
-      })}
-    </div>
+    <span key={idx} style={{
+      ...style,
+      display:'inline-block',
+      whiteSpace:'nowrap',
+      animation:'wordPop .15s cubic-bezier(.34,1.56,.64,1) both',
+      padding: style.background && style.background !== 'transparent' ? '2px 8px' : '0 2px',
+      lineHeight: 1.1,
+    }}>{word}</span>
   );
 };
 
