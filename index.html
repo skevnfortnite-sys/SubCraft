@@ -1219,6 +1219,7 @@ const SignupPage=({onAuth,goLogin})=>{
         setErr(data.error || "Erreur lors de l'inscription.");
       } else {
         localStorage.setItem("sc_token", data.token);
+        localStorage.setItem(`sc_onboarded_${data.user.id}`, "1");
         onAuth({name:data.user.name, email:data.user.email, plan:data.user.plan, credits:data.user.credits, id:data.user.id, isNew:true});
       }
     } catch(e) {
@@ -7576,28 +7577,31 @@ function App(){
           fetch("/api/auth?action=me", {
             headers: { "Authorization": `Bearer ${token}` }
           }).then(r=>r.json()).then(d=>{
+            const userId = d.user?.id || payload.sub;
+            // isNew = pas encore vu l'onboarding
+            const onboardingKey = `sc_onboarded_${userId}`;
+            const isNew = !localStorage.getItem(onboardingKey);
+            if(isNew) localStorage.setItem(onboardingKey, "1");
             if(d.user) {
-              // isNew = vrai si le compte a moins de 60s (tout juste créé via Google)
-              const createdAt = d.user.created_at ? new Date(d.user.created_at).getTime() : 0;
-              const isNew = createdAt > 0 && (Date.now() - createdAt) < 60000;
               handleAuth({...d.user, isNew});
             } else {
-              // Fallback avec les infos du JWT
-              const u = {
+              handleAuth({
                 id: payload.sub,
                 email: payload.email,
                 name: payload.user_metadata?.full_name || payload.user_metadata?.name || payload.email?.split("@")[0],
-                plan: "free", credits: 3, isNew: false,
-              };
-              handleAuth(u);
+                plan: "free", credits: 3, isNew,
+              });
             }
           }).catch(()=>{
-            const u = {
+            const userId = payload.sub;
+            const onboardingKey = `sc_onboarded_${userId}`;
+            const isNew = !localStorage.getItem(onboardingKey);
+            if(isNew) localStorage.setItem(onboardingKey, "1");
+            handleAuth({
               id: payload.sub, email: payload.email,
               name: payload.user_metadata?.full_name || payload.email?.split("@")[0],
-              plan: "free", credits: 3, isNew: false,
-            };
-            handleAuth(u);
+              plan: "free", credits: 3, isNew,
+            });
           });
         } catch(e) { console.error("Erreur token Google:", e); }
       }
