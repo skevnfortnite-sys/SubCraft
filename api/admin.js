@@ -42,19 +42,37 @@ export default async function handler(req, res) {
   // ── STATS — KPIs globaux ───────────────────────────
   if (action === "stats" && req.method === "GET") {
     const usersRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/users?select=plan,created_at`,
+      `${SUPABASE_URL}/rest/v1/users?select=plan,status,created_at`,
       { headers: supabaseHeaders() }
     );
     const users = await usersRes.json();
 
     const planPrices = { free: 0, basic: 12, expert: 18, pro: 30 };
-    const mrr = Array.isArray(users) ? users.reduce((a, u) => a + (planPrices[u.plan] || 0), 0) : 0;
-    const total = Array.isArray(users) ? users.length : 0;
-    const paying = Array.isArray(users) ? users.filter(u => u.plan !== "free").length : 0;
+    const arr = Array.isArray(users) ? users : [];
+    const mrr = arr.reduce((a, u) => a + (planPrices[u.plan] || 0), 0);
+    const total = arr.length;
+    const paying = arr.filter(u => u.plan && u.plan !== "free").length;
+    const suspended = arr.filter(u => u.status === "suspended").length;
+    const free = arr.filter(u => !u.plan || u.plan === "free").length;
+    const proCount = arr.filter(u => u.plan === "pro").length;
+    const expertCount = arr.filter(u => u.plan === "expert").length;
+    const basicCount = arr.filter(u => u.plan === "basic").length;
+
+    // Nouveaux users ce mois
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const newThisMonth = arr.filter(u => u.created_at && new Date(u.created_at) >= startOfMonth).length;
 
     return res.status(200).json({
       total_users: total,
       paying_users: paying,
+      free_users: free,
+      suspended_users: suspended,
+      pro_users: proCount,
+      expert_users: expertCount,
+      basic_users: basicCount,
+      new_this_month: newThisMonth,
+      conversion_rate: total > 0 ? Math.round((paying / total) * 100) : 0,
       mrr,
       arr: mrr * 12,
     });

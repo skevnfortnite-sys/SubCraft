@@ -229,7 +229,7 @@ const T = {
   pink:"#e83970",cyan:"#22d3ee",green:"#34d399",
   yellow:"#fbbf24",orange:"#f97316",purple:"#a855f7",
   red:"#f43f5e",gold:"#ffd700",
-  text:"#f0f2ff",muted:"#4a4f72",dim:"#1e2040",
+  text:"#f0f2ff",muted:"#8b92c4",dim:"#4a5080",
   grad:"linear-gradient(135deg,#5b6cff 0%,#a855f7 55%,#ec4899 100%)",
   gradH:"linear-gradient(135deg,#7b8cff,#c084fc,#f472b6)",
   gradP:"linear-gradient(135deg,#e83970,#f97316)",
@@ -1765,6 +1765,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
   ];
 
   const [activeTab,setActiveTab]=useState("all");
+  const [profileDrop,setProfileDrop]=useState(false);
   const [chatOpen,setChatOpen]=useState(false);
   const [chatMsg,setChatMsg]=useState("");
   const [chatHistory,setChatHistory]=useState([
@@ -1774,6 +1775,11 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
   const chatEndRef=useRef(null);
 
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:"smooth"});},[chatHistory,chatOpen]);
+  useEffect(()=>{
+    const close=()=>setProfileDrop(false);
+    document.addEventListener("click",close);
+    return()=>document.removeEventListener("click",close);
+  },[]);
 
   const sendChat=async()=>{
     const txt=chatMsg.trim();
@@ -1805,21 +1811,9 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
           <div style={{width:28,height:28,borderRadius:8,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,boxShadow:`0 0 16px ${T.accGlow}`}}>✦</div>
           <span className="syne grad-text-chrome" style={{fontWeight:800,fontSize:15,letterSpacing:"-.025em"}}>SubCraft</span>
         </div>
-        {/* Nav pills — compact */}
-        <div style={{display:"flex",gap:1,marginLeft:8}} className="hide-mobile">
-          {[["Mes vidéos",null,"🎬"],["Templates","templates","🎨"],["Abonnement","subscription","💳"]].map(([label,target,ic])=>(
-            <button key={label} onClick={()=>target&&setPage(target)} style={{padding:"5px 11px",borderRadius:8,background:"transparent",border:"none",color:T.muted,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:4,transition:"all .15s"}}
-              onMouseEnter={e=>{e.currentTarget.style.background=`${T.acc}0e`;e.currentTarget.style.color=T.text;}}
-              onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color=T.muted;}}>
-              <span style={{fontSize:11}}>{ic}</span>{label}
-            </button>
-          ))}
-        </div>
+
         <div style={{marginLeft:"auto",display:"flex",gap:6,alignItems:"center"}}>
-          {/* Referral badge — hide on mobile */}
-          <button onClick={()=>setPage("referral")} className="hide-mobile" style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:100,background:`${T.green}10`,border:`1px solid ${T.green}25`,color:T.green,fontSize:11,fontWeight:700,cursor:"pointer",transition:"all .15s"}} onMouseEnter={e=>e.currentTarget.style.background=`${T.green}20`} onMouseLeave={e=>e.currentTarget.style.background=`${T.green}10`}>
-            🎁 Inviter
-          </button>
+
           {/* Notifications */}
           <div style={{position:"relative"}}>
             <button onClick={()=>setNotifPanel(p=>!p)} style={{width:34,height:34,borderRadius:9,background:notifPanel?`${T.acc}15`:T.surf,border:`1px solid ${notifPanel?T.acc:T.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,cursor:"pointer",transition:"all .2s"}}>🔔</button>
@@ -1844,13 +1838,42 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
             )}
           </div>
           {/* Profile */}
-          <button onClick={()=>setPage("profile")} style={{display:"flex",alignItems:"center",gap:7,padding:"4px 10px 4px 5px",borderRadius:10,background:T.surf,border:`1px solid ${T.border}`,cursor:"pointer",transition:"all .2s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=T.acc} onMouseLeave={e=>e.currentTarget.style.borderColor=T.border}>
-            <Avatar name={user?.name||"U"} size={26}/>
-            <span style={{fontSize:12,fontWeight:600}} className="hide-mobile">{user?.name?.split(" ")[0]||"Moi"}</span>
-            <Tag color={planColor[user?.plan]||T.muted}>{user?.plan}</Tag>
-          </button>
-          <Btn size="sm" onClick={()=>setPage("pricing")} style={{background:T.grad,fontSize:12,padding:"6px 12px"}}>⭐ Passer Pro</Btn>
-          <Btn v="ghost" size="sm" onClick={onLogout} className="hide-mobile" style={{fontSize:12}}>Déco</Btn>
+          {/* Avatar dropdown */}
+          <div style={{position:"relative"}}>
+            <button onClick={()=>setProfileDrop(p=>!p)} style={{display:"flex",alignItems:"center",gap:7,padding:"4px 10px 4px 5px",borderRadius:10,background:profileDrop?`${T.acc}15`:T.surf,border:`1px solid ${profileDrop?T.acc:T.border}`,cursor:"pointer",transition:"all .2s"}}>
+              <Avatar name={user?.name||"U"} size={26}/>
+              <span style={{fontSize:12,fontWeight:600}} className="hide-mobile">{user?.name?.split(" ")[0]||"Moi"}</span>
+              <Tag color={planColor[user?.plan]||T.muted}>{user?.plan}</Tag>
+              <span style={{fontSize:9,color:T.muted,marginLeft:2}}>▼</span>
+            </button>
+            {profileDrop&&(
+              <div style={{position:"absolute",top:"calc(100% + 8px)",right:0,width:200,background:T.surf2,border:`1px solid ${T.border}`,borderRadius:14,boxShadow:"0 16px 48px rgba(0,0,0,.6)",zIndex:200,animation:"fadeDown .15s ease",overflow:"hidden"}} onClick={()=>setProfileDrop(false)}>
+                <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.border}`}}>
+                  <div style={{fontWeight:700,fontSize:13}}>{user?.name}</div>
+                  <div style={{fontSize:11,color:T.muted,marginTop:2}}>{user?.email}</div>
+                </div>
+                {[
+                  {icon:"👤",label:"Mon profil",action:()=>setPage("profile")},
+                  {icon:"💳",label:"Abonnement",action:()=>setPage("subscription")},
+                  {icon:"🎁",label:"Parrainer un ami",action:()=>setPage("referral")},
+                  {icon:"⭐",label:"Passer Pro",action:()=>setPage("pricing"),highlight:true},
+                ].map(item=>(
+                  <button key={item.label} onClick={item.action} style={{width:"100%",padding:"10px 16px",background:"transparent",border:"none",color:item.highlight?T.acc:T.text,fontSize:13,textAlign:"left",cursor:"pointer",display:"flex",alignItems:"center",gap:10,transition:"background .12s"}}
+                    onMouseEnter={e=>e.currentTarget.style.background=T.surf3}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                    <span>{item.icon}</span>{item.label}
+                  </button>
+                ))}
+                <div style={{borderTop:`1px solid ${T.border}`,padding:"6px 8px"}}>
+                  <button onClick={onLogout} style={{width:"100%",padding:"9px 16px",background:"transparent",border:"none",color:T.pink,fontSize:13,textAlign:"left",cursor:"pointer",display:"flex",alignItems:"center",gap:10,borderRadius:8,transition:"background .12s"}}
+                    onMouseEnter={e=>e.currentTarget.style.background=`${T.pink}12`}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                    <span>🚪</span>Se déconnecter
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </nav>
 
@@ -1870,15 +1893,6 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
               </div>
             </div>
             <div style={{display:"flex",gap:7,alignItems:"center",paddingTop:4}} className="mobile-full-btn">
-              <button onClick={()=>setPage("templates")}
-                style={{padding:"8px 14px",borderRadius:9,background:"rgba(255,255,255,.05)",
-                  border:"1px solid rgba(255,255,255,.09)",color:T.muted,fontSize:12,cursor:"pointer",
-                  display:"flex",alignItems:"center",gap:5,transition:"all .15s"}}
-                className="hide-mobile"
-                onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.18)";e.currentTarget.style.color=T.text;}}
-                onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.09)";e.currentTarget.style.color=T.muted;}}>
-                🎨 Templates
-              </button>
               <button onClick={()=>setShowUpload(true)}
                 style={{display:"flex",alignItems:"center",gap:7,padding:"9px 20px",
                   borderRadius:10,background:T.grad,border:"none",color:"#fff",
@@ -1908,12 +1922,11 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
         </div>
 
         {/* ── STATS STRIP ── */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:16}} className="mobile-grid2">
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:16}} className="mobile-grid2">
           {[
-            {icon:"🎬",label:"Vidéos prêtes",value:files.filter(f=>f.status==="ready").length,color:T.acc},
-            {icon:"💎",label:"Vidéos restantes",value:totalCredits===Infinity?"∞":totalCredits-usedCredits,color:creditWarn?T.orange:T.yellow},
-            {icon:"⬆️",label:"Exports",value:files.filter(f=>f.exported).length,color:T.green},
-            {icon:"📅",label:"Plan actuel",value:user?.plan||"Free",color:planColor[user?.plan]||T.muted},
+            {icon:"🎬",label:"Vidéos traitées",value:files.filter(f=>f.status==="ready").length,color:T.acc},
+            {icon:"🎯",label:"Vidéos restantes",value:totalCredits===Infinity?"∞":Math.max(0,realCredits),color:creditWarn?T.orange:T.yellow},
+            {icon:"⬆️",label:"Exports réalisés",value:files.filter(f=>f.exported).length,color:T.green},
           ].map((s,i)=>(
             <div key={s.label} style={{padding:"12px 14px",borderRadius:12,background:T.surf,border:`1px solid rgba(255,255,255,.06)`,position:"relative",overflow:"hidden",transition:"all .2s"}}
               onMouseEnter={e=>{e.currentTarget.style.borderColor=s.color+"44";}}
@@ -1931,7 +1944,7 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
           <div style={{padding:"14px 20px",borderRadius:16,background:creditWarn?`linear-gradient(135deg,${T.orange}12,${T.yellow}06)`:`linear-gradient(135deg,${T.acc}10,${T.purple}06)`,border:`1px solid ${creditWarn?T.orange:T.acc}30`,marginBottom:16,display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
             <span style={{fontSize:26}}>{creditWarn?"⚠️":"🚀"}</span>
             <div style={{flex:1,minWidth:160}}>
-              <div style={{fontWeight:700,fontSize:13,marginBottom:2}}>{creditWarn?"Crédits presque épuisés":"Plan gratuit — 3 vidéos max"}</div>
+              <div style={{fontWeight:700,fontSize:13,marginBottom:2}}>{creditWarn?"Vidéos presque épuisées":"Plan gratuit — 3 vidéos/mois"}</div>
               <div style={{height:5,background:"rgba(255,255,255,.08)",borderRadius:3,marginTop:6,overflow:"hidden"}}>
                 <div style={{height:"100%",width:`${Math.min(creditPct,100)}%`,background:creditWarn?`linear-gradient(90deg,${T.yellow},${T.orange})`:T.grad,borderRadius:3}}/>
               </div>
@@ -5417,10 +5430,13 @@ const AdminPanel=({onExit})=>{
   const [coupon,setCoupon]=useState({code:"",discount:20,uses:0});
   const [confirmDeleteUser,setConfirmDeleteUser]=useState(null);
 
-  // Charge les vrais utilisateurs depuis Supabase
+  // Charge les vrais utilisateurs + stats depuis Supabase
+  const [statsLastUpdate, setStatsLastUpdate] = useState(null);
+  const [realStats, setRealStats] = useState({mrr:0,arr:0,total:0,paying:0});
   useEffect(()=>{
-    const loadUsers = async () => {
+    const loadAll = async () => {
       try {
+        // Charge users
         const res = await fetch("/api/admin?action=users");
         const data = await res.json();
         if(data.users) {
@@ -5431,19 +5447,32 @@ const AdminPanel=({onExit})=>{
             plan: u.plan ? (u.plan.charAt(0).toUpperCase() + u.plan.slice(1)) : "Free",
             credits: u.credits ?? 3,
             joined: u.created_at ? new Date(u.created_at).toLocaleDateString("fr-FR") : "—",
-            status: "active",
+            status: u.status || "active",
             videos: 0,
+            country: "🌍",
             avatar: (u.name||u.email||"U").slice(0,2).toUpperCase(),
+            lastSeen: u.created_at ? new Date(u.created_at).toLocaleDateString("fr-FR") : "—",
           })));
         }
+        // Charge stats réelles
+        const sres = await fetch("/api/admin?action=stats");
+        const sdata = await sres.json();
+        if(sdata.mrr !== undefined) {
+          setRealStats({
+            mrr: sdata.mrr,
+            arr: sdata.arr,
+            total: sdata.total_users,
+            paying: sdata.paying_users,
+          });
+        }
+        setStatsLastUpdate(new Date());
       } catch(e) {
-        console.error("Erreur chargement users:", e);
-        setUsers([]);
+        console.error("Erreur chargement admin:", e);
       } finally {
         setLoadingUsers(false);
       }
     };
-    loadUsers();
+    loadAll();
   },[]);
 
   const [analyticsRange,setAnalyticsRange]=useState(30);
@@ -5456,7 +5485,7 @@ const AdminPanel=({onExit})=>{
     return(u.name.toLowerCase().includes(q)||u.email.toLowerCase().includes(q))&&(filterPlan==="all"||u.plan===filterPlan);
   });
 
-  const totalMRR=users.reduce((a,u)=>a+({Free:0,Basic:10,Expert:13,Pro:21}[u.plan]||0),0);
+  const totalMRR = realStats.mrr || users.reduce((a,u)=>a+({Free:0,Basic:12,Expert:18,Pro:30}[u.plan]||0),0);
 
   // Generate sparkline data for charts
   const genData=(base,noise,len)=>Array.from({length:len},(_,i)=>Math.max(0,Math.round(base+Math.sin(i*.4)*noise*.5+Math.random()*noise+(i/len)*base*.3)));
@@ -5814,20 +5843,28 @@ const AdminPanel=({onExit})=>{
                 <h1 className="syne" style={{fontWeight:800,fontSize:22,letterSpacing:"-.03em"}}>Dashboard SubCraft</h1>
                 <div style={{display:"flex",gap:6,alignItems:"center",fontSize:11,color:T.muted}}>
                   <span style={{width:6,height:6,borderRadius:"50%",background:T.green,animation:"pulseDotGreen 2s infinite"}}/>
-                  Mis à jour il y a 2 min
+                  {statsLastUpdate ? `Mis à jour à ${statsLastUpdate.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}` : 'Chargement...'}
                 </div>
               </div>
             </div>
             {/* KPI cards */}
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(185px,1fr))",gap:10,marginBottom:24}} className="mobile-grid1">
-              {[
-                {icon:"👥",label:"Utilisateurs",value:users.length,color:T.acc,trend:"+3",sub:"ce mois"},
-                {icon:"💰",label:"MRR",value:`€${totalMRR}`,color:T.green,trend:"+12%",sub:"revenus mensuels"},
-                {icon:"⭐",label:"Plan Pro",value:users.filter(u=>u.plan==="Pro").length,color:T.purple,trend:"+2",sub:`${Math.round(users.filter(u=>u.plan==="Pro").length/users.length*100)}% des users`},
-                {icon:"🎬",label:"Vidéos",value:users.reduce((a,u)=>a+u.videos,0),color:T.cyan,trend:"+18%",sub:"traitées total"},
-                {icon:"🔴",label:"Suspendus",value:users.filter(u=>u.status==="suspended").length,color:T.pink,trend:"⚠",sub:"à traiter"},
-                {icon:"🆕",label:"Trials",value:users.filter(u=>u.status==="trial").length,color:T.yellow,trend:"→",sub:"conversion possible"},
-              ].map((s,i)=>(
+              {(()=>{
+                const total = realStats.total || users.length;
+                const paying = realStats.paying || users.filter(u=>u.plan!=="Free").length;
+                const proCount = users.filter(u=>u.plan==="Pro").length;
+                const suspended = users.filter(u=>u.status==="suspended").length;
+                const free = users.filter(u=>u.plan==="Free").length;
+                const convRate = total>0?Math.round((paying/total)*100):0;
+                return [
+                  {icon:"👥",label:"Utilisateurs total",value:total,color:T.acc,trend:`${paying} payants`,sub:`${convRate}% conversion`},
+                  {icon:"💰",label:"MRR",value:`€${totalMRR}`,color:T.green,trend:`ARR €${totalMRR*12}`,sub:"revenus mensuels"},
+                  {icon:"⭐",label:"Plan Pro",value:proCount,color:T.purple,trend:`${total>0?Math.round(proCount/total*100):0}%`,sub:"des utilisateurs"},
+                  {icon:"🆓",label:"Plan Free",value:free,color:T.muted,trend:`${total>0?Math.round(free/total*100):0}%`,sub:"à convertir"},
+                  {icon:"🔴",label:"Suspendus",value:suspended,color:T.pink,trend:suspended>0?"⚠️ Vérifier":"✅ OK",sub:"comptes bloqués"},
+                  {icon:"📈",label:"Taux payant",value:`${convRate}%`,color:T.cyan,trend:`${paying}/${total}`,sub:"users convertis"},
+                ];
+              })().map((s,i)=>(
                 <div key={s.label} style={{padding:"16px 14px",borderRadius:14,background:`linear-gradient(145deg,${T.surf},${T.surf2})`,border:"1px solid rgba(255,255,255,.06)",position:"relative",overflow:"hidden",transition:"all .22s",cursor:"default",animation:`fadeUp .3s ease ${i*.04}s both`}}
                   onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.borderColor=s.color+"40";e.currentTarget.style.boxShadow=`0 10px 30px ${s.color}18`;}}
                   onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.borderColor="rgba(255,255,255,.06)";e.currentTarget.style.boxShadow="none";}}>
