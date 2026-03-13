@@ -2154,33 +2154,79 @@ const UploadModal=({onClose,onImport})=>{
     setUrlOk(v.length>8?(ok?"ok":"err"):null);
   };
 
+  // Extrait l'audio d'une vidéo côté navigateur (évite la limite 4.5MB Vercel)
+  const extractAudioBlob = (videoFile) => new Promise((resolve, reject) => {
+    const videoEl = document.createElement("video");
+    const url = URL.createObjectURL(videoFile);
+    videoEl.src = url;
+    videoEl.muted = true;
+    videoEl.addEventListener("loadedmetadata", () => {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const dest = audioCtx.createMediaStreamDestination();
+      const source = audioCtx.createMediaElementSource(videoEl);
+      source.connect(dest);
+      source.connect(audioCtx.destination);
+      const recorder = new MediaRecorder(dest.stream, { mimeType: "audio/webm" });
+      const chunks = [];
+      recorder.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
+      recorder.onstop = () => {
+        URL.revokeObjectURL(url);
+        const blob = new Blob(chunks, { type: "audio/webm" });
+        resolve(blob);
+      };
+      recorder.onerror = reject;
+      recorder.start(1000);
+      videoEl.play();
+      videoEl.onended = () => { recorder.stop(); audioCtx.close(); };
+      // Sécurité: max 30 min
+      setTimeout(() => { if(recorder.state === "recording") { recorder.stop(); audioCtx.close(); } }, 30*60*1000);
+    });
+    videoEl.onerror = reject;
+  });
+
   const doImport=async()=>{
     if(!file&&tab==="file"){notify("Sélectionne une vidéo d'abord !","warning");return;}
     if(tab==="url"&&urlOk!=="ok"){notify("Colle un lien valide !","warning");return;}
     if(!lang){notify("Sélectionne la langue de ta vidéo !","warning");return;}
     setUploading(true);
-    setProgress(10);
+    setProgress(5);
 
     try {
       let whisperData = null;
 
       if(tab==="file" && file) {
-        // Vérif taille max 25MB
-        const MAX_MB = 300;
-        if(file.size > MAX_MB*1024*1024){
-          notify(`Fichier trop lourd ! Max ${MAX_MB} MB.`,"error");
+        const isVideo = file.type.startsWith("video/");
+        let audioBlob = file;
+
+        if(isVideo) {
+          // Extrait l'audio dans le navigateur
+          setProgress(15);
+          try {
+            audioBlob = await extractAudioBlob(file);
+          } catch(e) {
+            // Fallback: envoie direct si extraction échoue
+            console.warn("[audio extract]", e);
+            audioBlob = file;
+          }
+        }
+
+        setProgress(35);
+        const fileSizeMB = (audioBlob.size / 1024 / 1024).toFixed(1);
+        if(audioBlob.size > 24*1024*1024) {
+          notify(`Audio trop lourd (${fileSizeMB} MB). Essaie une vidéo plus courte.`, "error");
           setUploading(false); setProgress(0); return;
         }
-        setProgress(20);
+
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file", audioBlob, isVideo ? "audio.webm" : file.name);
         formData.append("language", lang||"fr");
 
+        setProgress(45);
         const res = await fetch("/api/whisper", {
           method: "POST",
           body: formData,
         });
-        setProgress(70);
+        setProgress(80);
         if(!res.ok) {
           const err = await res.json().catch(()=>({}));
           throw new Error(err.error || `Erreur Whisper (${res.status})`);
@@ -2188,9 +2234,7 @@ const UploadModal=({onClose,onImport})=>{
         whisperData = await res.json();
       }
 
-      setProgress(90);
-
-      // Convertit les segments Whisper en sous-titres SubCraft
+      setProgress(92);
       let subs = null;
       if(whisperData?.segments?.length > 0) {
         subs = whisperData.segments.map((seg, i) => ({
@@ -2231,7 +2275,7 @@ const UploadModal=({onClose,onImport})=>{
           </div>
           <div style={{fontFamily:"JetBrains Mono",fontSize:13,color:T.acc,fontWeight:600}}>{Math.round(progress)}%</div>
           <div style={{marginTop:18,fontSize:12,color:T.muted}}>
-            {progress<25?"Envoi du fichier...":progress<75?"Transcription Whisper AI en cours...":progress<92?"Formatage des sous-titres...":"Presque terminé !"}
+            {progress<15?"Lecture de la vidéo...":progress<35?"Extraction audio (navigateur)...":progress<45?"Préparation...":progress<80?"Transcription Whisper AI...":progress<95?"Formatage des sous-titres...":"Presque terminé !"}
           </div>
         </div>
       ):(
