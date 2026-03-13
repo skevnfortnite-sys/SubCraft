@@ -7565,32 +7565,28 @@ function App(){
   // Intercepte le token Google OAuth dans l'URL hash
   useEffect(()=>{
     const hash = window.location.hash;
-    console.log("[Google OAuth] hash:", hash?.slice(0,50));
     if(hash && hash.includes("access_token=")) {
       const params = new URLSearchParams(hash.replace("#",""));
       const token = params.get("access_token");
-      console.log("[Google OAuth] token trouvé:", !!token);
       if(token) {
         try {
           const payload = JSON.parse(atob(token.split(".")[1]));
-          console.log("[Google OAuth] payload:", payload.sub, payload.email);
           localStorage.setItem("sc_token", token);
+          localStorage.setItem("sc_google_processing", "1");
           window.history.replaceState(null, "", window.location.pathname);
-          // Appelle /api/auth?action=me pour récupérer le vrai profil Supabase
           fetch("/api/auth?action=me", {
             headers: { "Authorization": `Bearer ${token}` }
           }).then(r=>r.json()).then(d=>{
             const userId = d.user?.id || payload.sub;
-            // isNew = pas encore vu l'onboarding
             const onboardingKey = `sc_onboarded_${userId}`;
             const isNew = !localStorage.getItem(onboardingKey);
             if(isNew) localStorage.setItem(onboardingKey, "1");
+            localStorage.removeItem("sc_google_processing");
             if(d.user) {
               handleAuth({...d.user, isNew});
             } else {
               handleAuth({
-                id: payload.sub,
-                email: payload.email,
+                id: payload.sub, email: payload.email,
                 name: payload.user_metadata?.full_name || payload.user_metadata?.name || payload.email?.split("@")[0],
                 plan: "free", credits: 3, isNew,
               });
@@ -7600,6 +7596,7 @@ function App(){
             const onboardingKey = `sc_onboarded_${userId}`;
             const isNew = !localStorage.getItem(onboardingKey);
             if(isNew) localStorage.setItem(onboardingKey, "1");
+            localStorage.removeItem("sc_google_processing");
             handleAuth({
               id: payload.sub, email: payload.email,
               name: payload.user_metadata?.full_name || payload.email?.split("@")[0],
@@ -7608,10 +7605,11 @@ function App(){
           });
         } catch(e) { console.error("Erreur token Google:", e); }
       }
+      return; // ← STOP — ne pas exécuter le check savedToken
     }
-    // Vérifie si déjà connecté — mais pas si on vient de traiter un token Google
+    // Vérifie si déjà connecté
     const savedToken = localStorage.getItem("sc_token");
-    if(savedToken && page === "landing" && !hash?.includes("access_token=")) {
+    if(savedToken && page === "landing" && !localStorage.getItem("sc_google_processing")) {
       try {
         const payload = JSON.parse(atob(savedToken.split(".")[1]));
         const exp = payload.exp * 1000;
