@@ -1109,676 +1109,562 @@ const Phone3D=({config=PHONE_CONFIG,size="normal"})=>{
 };
 
 
+const AuthCard=({children,title,subtitle})=>(
+  <div style={{minHeight:"100vh",background:"#08080f",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px",position:"relative",overflow:"hidden"}}>
+    {/* Background glow */}
+    <div style={{position:"fixed",top:"30%",left:"50%",transform:"translateX(-50%)",width:500,height:400,background:"radial-gradient(circle,rgba(99,102,241,.14) 0%,transparent 60%)",pointerEvents:"none",filter:"blur(50px)"}}/>
+    <div style={{width:"100%",maxWidth:420,position:"relative",zIndex:1}}>
+      {/* Logo */}
+      <div style={{textAlign:"center",marginBottom:32}}>
+        <div style={{width:48,height:48,borderRadius:14,background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,margin:"0 auto 14px",boxShadow:"0 0 40px rgba(99,102,241,.5)"}}>✦</div>
+        <div style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:22,color:"#fff",letterSpacing:"-.03em",marginBottom:4}}>{title}</div>
+        <div style={{fontSize:14,color:"rgba(255,255,255,.35)"}}>{subtitle}</div>
+      </div>
+      {/* Card */}
+      <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.09)",borderRadius:22,padding:"28px 28px 24px",boxShadow:"0 24px 80px rgba(0,0,0,.6)"}}>
+        {children}
+      </div>
+    </div>
+  </div>
+);
+
 const LoginPage=({onAuth,onAdmin,goSignup})=>{
   const [email,setEmail]=useState("");
   const [pw,setPw]=useState("");
   const [loading,setLoading]=useState(false);
   const [err,setErr]=useState("");
   const [attempts,setAttempts]=useState(0);
-  const LOCKOUT=5;
-  const isLocked=attempts>=LOCKOUT;
+  const isLocked=attempts>=5;
+
   const handle=async()=>{
-    if(isLocked){setErr(`Trop de tentatives. Réessaie dans 15 min.`);return;}
+    if(isLocked){setErr("Trop de tentatives. Réessaie dans 15 min.");return;}
     setErr("");
     if(!email||!pw){setErr("Remplis tous les champs.");return;}
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){setErr("Email invalide.");return;}
     setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/auth?action=login`, {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({email, password: pw})
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setAttempts(a=>a+1);
-        setErr(data.error || `Identifiants incorrects. ${LOCKOUT-(attempts+1)} essai(s) restant(s).`);
-      } else {
-        localStorage.setItem("sc_token", data.token);
-        // Si c'est l'email admin → panel admin
-        if(data.user.email === "kevin.nedzvedsky@gmail.com") {
-          onAdmin();
-          return;
-        }
-        onAuth({name:data.user.name, email:data.user.email, plan:data.user.plan, credits:data.user.credits, id:data.user.id, isNew:false});
+    try{
+      const res=await fetch(`${API_BASE}/api/auth?action=login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password:pw})});
+      const data=await res.json();
+      if(!res.ok){setAttempts(a=>a+1);setErr(data.error||"Identifiants incorrects.");}
+      else{
+        localStorage.setItem("sc_token",data.token);
+        if(data.user.email==="kevin.nedzvedsky@gmail.com"){onAdmin();return;}
+        onAuth({name:data.user.name,email:data.user.email,plan:data.user.plan,credits:data.user.credits,id:data.user.id,isNew:false});
       }
-    } catch(e) {
-      setErr("Erreur réseau. Réessaie.");
-    } finally {
-      setLoading(false);
-    }
+    }catch{setErr("Erreur réseau. Réessaie.");}
+    finally{setLoading(false);}
   };
+
   return(
-    <div style={{minHeight:"100vh",display:"flex",background:T.bg,position:"relative",overflow:"hidden"}} className="mobile-col page">
-      <AuroraBg subtle/>
-      <Cursor/>
-      {/* LEFT PANEL */}
-      <div className="hide-mobile" style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:60,position:"relative",zIndex:1}}>
-        <div style={{textAlign:"center",maxWidth:400}}>
-          <div style={{width:72,height:72,borderRadius:22,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,margin:"0 auto 28px",boxShadow:`0 0 60px ${T.accGlow}`,animation:"glow 3s infinite"}}>✦</div>
-          <div className="syne" style={{fontWeight:800,fontSize:38,marginBottom:12,letterSpacing:"-.04em"}} >
-            <span className="grad-text-chrome">SubCraft</span>
-          </div>
-          <div style={{color:T.muted,fontSize:15,lineHeight:1.75,marginBottom:36}}>Content de te revoir !<br/>Tes projets t'attendent.</div>
-          <Phone3D/>
-          <div style={{marginTop:24,padding:"10px 16px",borderRadius:12,background:"rgba(91,108,255,.06)",border:"1px solid rgba(91,108,255,.15)",fontSize:11,color:T.muted}}>
-            
-          </div>
-        </div>
+    <AuthCard title="Bienvenue" subtitle="Connecte-toi à ton espace SubCraft">
+      {/* Google OAuth — CTA principal */}
+      <GoogleBtn/>
+      {/* Séparateur */}
+      <div style={{display:"flex",alignItems:"center",gap:12,margin:"18px 0"}}>
+        <div style={{flex:1,height:1,background:"rgba(255,255,255,.08)"}}/>
+        <span style={{fontSize:11,color:"rgba(255,255,255,.22)",fontWeight:600,letterSpacing:".06em"}}>OU</span>
+        <div style={{flex:1,height:1,background:"rgba(255,255,255,.08)"}}/>
       </div>
-      {/* RIGHT — FORM */}
-      <div style={{width:"100%",maxWidth:480,display:"flex",alignItems:"center",justifyContent:"center",padding:40,position:"relative",zIndex:1,borderLeft:"1px solid rgba(255,255,255,.04)"}} className="mobile-p">
-        <div style={{width:"100%",maxWidth:380}}>
-          <div className="fu syne" style={{fontWeight:800,fontSize:30,marginBottom:6,letterSpacing:"-.04em"}}>Bon retour 👋</div>
-          <div className="fu" style={{color:T.muted,fontSize:14,marginBottom:28,animationDelay:".04s"}}>Connecte-toi pour accéder à tes projets.</div>
-          <div className="fu" style={{animationDelay:".06s"}}>
-            <GoogleBtn onClick={signInWithGoogle}/>
-          </div>
-          <Divider label="ou avec email"/>
-          <div className="fu" style={{display:"flex",flexDirection:"column",gap:12,marginBottom:16,animationDelay:".1s"}}>
-            <Input label="Email" value={email} onChange={setEmail} placeholder="ton@email.com" type="email" icon="📧" required/>
-            <Input label="Mot de passe" value={pw} onChange={setPw} placeholder="••••••••" type="password" icon="🔒" required/>
-          </div>
-          {err&&<div className="fu" style={{padding:"9px 14px",borderRadius:10,background:"rgba(232,57,112,.08)",border:"1px solid rgba(232,57,112,.2)",color:T.pink,fontSize:13,marginBottom:12}}>{err}</div>}
-          <div className="fu" style={{animationDelay:".14s"}}>
-            <Btn full onClick={handle} loading={loading} style={{marginBottom:12,height:48,background:T.grad,boxShadow:`0 8px 32px ${T.accGlow}`,fontSize:15,borderRadius:14}} className="shimmer-btn">Se connecter →</Btn>
-          </div>
-          <div style={{textAlign:"center",marginBottom:14}}>
-            <button onClick={()=>notify("Email de récupération envoyé ! 📬","success")} style={{background:"none",border:"none",color:T.muted,fontSize:12,cursor:"pointer",transition:"color .15s"}} onMouseEnter={e=>e.currentTarget.style.color=T.text} onMouseLeave={e=>e.currentTarget.style.color=T.muted}>Mot de passe oublié ?</button>
-          </div>
-          <div style={{textAlign:"center",fontSize:13,color:T.muted,padding:"14px",borderRadius:12,background:T.surf,border:"1px solid rgba(255,255,255,.06)"}}>
-            Pas encore de compte ?{" "}
-            <button onClick={goSignup} style={{background:"none",border:"none",color:T.acc,cursor:"pointer",fontWeight:700,fontSize:13,transition:"color .15s"}} onMouseEnter={e=>e.currentTarget.style.color=T.accH} onMouseLeave={e=>e.currentTarget.style.color=T.acc}>Créer un compte gratuit →</button>
-          </div>
-        </div>
+      {/* Email/password */}
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email" type="email"
+          style={{width:"100%",padding:"12px 14px",borderRadius:11,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",color:"#fff",fontSize:14,outline:"none",transition:"border .2s",fontFamily:"inherit"}}
+          onFocus={e=>e.target.style.borderColor="rgba(99,102,241,.5)"}
+          onBlur={e=>e.target.style.borderColor="rgba(255,255,255,.1)"}
+          onKeyDown={e=>e.key==="Enter"&&handle()}/>
+        <input value={pw} onChange={e=>setPw(e.target.value)} placeholder="Mot de passe" type="password"
+          style={{width:"100%",padding:"12px 14px",borderRadius:11,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",color:"#fff",fontSize:14,outline:"none",transition:"border .2s",fontFamily:"inherit"}}
+          onFocus={e=>e.target.style.borderColor="rgba(99,102,241,.5)"}
+          onBlur={e=>e.target.style.borderColor="rgba(255,255,255,.1)"}
+          onKeyDown={e=>e.key==="Enter"&&handle()}/>
+        {err&&<div style={{fontSize:12,color:"#f43f5e",padding:"8px 12px",borderRadius:8,background:"rgba(244,63,94,.1)",border:"1px solid rgba(244,63,94,.2)"}}>{err}</div>}
+        <button onClick={handle} disabled={loading||isLocked}
+          style={{width:"100%",padding:"13px",borderRadius:11,background:loading?"rgba(99,102,241,.5)":"#6366f1",border:"none",color:"#fff",fontSize:14,fontWeight:700,cursor:loading?"not-allowed":"pointer",transition:"all .2s",boxShadow:"0 4px 20px rgba(99,102,241,.4)"}}>
+          {loading?"Connexion...":"Se connecter"}
+        </button>
       </div>
-    </div>
+      {/* Footer */}
+      <div style={{marginTop:18,textAlign:"center",fontSize:13,color:"rgba(255,255,255,.3)"}}>
+        Pas encore de compte ?{" "}
+        <button onClick={goSignup} style={{background:"none",border:"none",color:"#818cf8",cursor:"pointer",fontWeight:700,fontSize:13}}>Créer un compte →</button>
+      </div>
+    </AuthCard>
   );
 };
-
 
 const SignupPage=({onAuth,goLogin})=>{
   const [name,setName]=useState("");
   const [email,setEmail]=useState("");
   const [pw,setPw]=useState("");
-  const [pw2,setPw2]=useState("");
   const [loading,setLoading]=useState(false);
   const [err,setErr]=useState("");
-  const [agree,setAgree]=useState(false);
-  const [step,setStep]=useState(1);
-  const pwLen=pw.length;
-  const strength=pwLen<4?0:pwLen<8?1:/[A-Z]/.test(pw)&&/[0-9]/.test(pw)?3:2;
-  const sColors=["",T.pink,T.yellow,T.green];
-  const sLabels=["","Faible","Moyen","Fort 💪"];
-  const next=()=>{
-    if(!name||!email){setErr("Remplis ton nom et email.");return;}
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){setErr("Adresse email invalide.");return;}
-    if(name.trim().length<2){setErr("Nom trop court (2 caractères min).");return;}
-    setErr("");setStep(2);
-  };
+
   const handle=async()=>{
-    if(!pw||pw.length<8){setErr("Mot de passe trop court (8 min).");return;}
-    if(pw!==pw2){setErr("Les mots de passe ne correspondent pas.");return;}
-    if(!agree){setErr("Accepte les CGU pour continuer.");return;}
+    setErr("");
+    if(!name||!email||!pw){setErr("Remplis tous les champs.");return;}
+    if(pw.length<6){setErr("Mot de passe trop court (6 caractères min).");return;}
     setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/auth?action=signup`, {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({email, password: pw, name})
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setErr(data.error || "Erreur lors de l'inscription.");
-      } else {
-        localStorage.setItem("sc_token", data.token);
-        localStorage.setItem(`sc_onboarded_${data.user.id}`, "1");
-        localStorage.removeItem("sc_ref"); // consommé
-        onAuth({name:data.user.name, email:data.user.email, plan:data.user.plan, credits:data.user.credits, id:data.user.id, isNew:true});
+    try{
+      const refId=localStorage.getItem("sc_ref")||null;
+      const res=await fetch(`${API_BASE}/api/auth?action=signup`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,email,password:pw,referredBy:refId})});
+      const data=await res.json();
+      if(!res.ok){setErr(data.error||"Erreur lors de l'inscription.");}
+      else{
+        localStorage.setItem("sc_token",data.token);
+        if(refId)localStorage.removeItem("sc_ref");
+        onAuth({name:data.user.name,email:data.user.email,plan:data.user.plan,credits:data.user.credits,id:data.user.id,isNew:true});
       }
-    } catch(e) {
-      setErr("Erreur réseau. Réessaie.");
-    } finally {
-      setLoading(false);
-    }
+    }catch{setErr("Erreur réseau. Réessaie.");}
+    finally{setLoading(false);}
   };
+
   return(
-    <div style={{minHeight:"100vh",display:"flex",background:T.bg,position:"relative",overflow:"hidden"}} className="mobile-col page">
-      <AuroraBg subtle/>
-      <Cursor/>
-      {/* LEFT */}
-      <div className="hide-mobile" style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:60,position:"relative",zIndex:1}}>
-        <div style={{textAlign:"center",maxWidth:400}}>
-          <div style={{width:72,height:72,borderRadius:22,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,margin:"0 auto 28px",boxShadow:`0 0 60px ${T.accGlow}`,animation:"glow 3s infinite"}}>✦</div>
-          <div className="syne" style={{fontWeight:800,fontSize:36,marginBottom:12,letterSpacing:"-.04em"}}><span className="grad-text-chrome">SubCraft</span></div>
-          <div style={{color:T.muted,fontSize:15,lineHeight:1.75,marginBottom:36}}>Rejoins 10 000+ créateurs<br/>qui font des sous-titres viraux.</div>
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            {["⚡ Transcription en moins de 10 secondes","🎨 24 styles professionnels clés en main","🌍 Traduction automatique en 12 langues","🤖 Emojis IA pour booster l'engagement","🎁 1 mois gratuit en invitant un ami"].map((f,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 16px",borderRadius:12,background:T.surf,border:"1px solid rgba(255,255,255,.06)",textAlign:"left",fontSize:13,animation:`fadeUp .4s ${i*.06}s both`}}>{f}</div>
-            ))}
-          </div>
-        </div>
+    <AuthCard title="Créer un compte" subtitle="3 vidéos gratuites · Aucune carte bancaire">
+      {/* Google OAuth — CTA principal */}
+      <GoogleBtn/>
+      <div style={{display:"flex",alignItems:"center",gap:12,margin:"18px 0"}}>
+        <div style={{flex:1,height:1,background:"rgba(255,255,255,.08)"}}/>
+        <span style={{fontSize:11,color:"rgba(255,255,255,.22)",fontWeight:600,letterSpacing:".06em"}}>OU</span>
+        <div style={{flex:1,height:1,background:"rgba(255,255,255,.08)"}}/>
       </div>
-      {/* RIGHT — FORM */}
-      <div style={{width:"100%",maxWidth:480,display:"flex",alignItems:"center",justifyContent:"center",padding:40,position:"relative",zIndex:1,borderLeft:"1px solid rgba(255,255,255,.04)"}} className="mobile-p">
-        <div style={{width:"100%",maxWidth:380}}>
-          <div className="fu syne" style={{fontWeight:800,fontSize:30,marginBottom:6,letterSpacing:"-.04em"}}>Crée ton compte 🚀</div>
-          <div className="fu" style={{color:T.muted,fontSize:14,marginBottom:20,animationDelay:".04s"}}>Gratuit · Sans carte bancaire · 3 vidéos offertes</div>
-          <div style={{display:"flex",gap:4,marginBottom:20,alignItems:"center"}}>
-            {[1,2].map(s=><div key={s} style={{flex:1,height:2,borderRadius:2,background:step>=s?T.acc:"rgba(255,255,255,.08)",transition:"background .35s"}}/>)}
-            <span style={{fontSize:10,color:T.muted,marginLeft:8,flexShrink:0}}>Étape {step}/2</span>
-          </div>
-          <GoogleBtn onClick={signInWithGoogle}/>
-          <Divider label="ou avec email"/>
-          {step===1&&(
-            <div style={{display:"flex",flexDirection:"column",gap:12}}>
-              <Input label="Nom complet" value={name} onChange={setName} placeholder="Marie Dupont" icon="👤" required/>
-              <Input label="Email" value={email} onChange={setEmail} placeholder="ton@email.com" type="email" icon="📧" required/>
-              {err&&<div style={{padding:"9px 14px",borderRadius:10,background:"rgba(232,57,112,.08)",border:"1px solid rgba(232,57,112,.2)",color:T.pink,fontSize:13}}>{err}</div>}
-              <Btn full onClick={next} style={{height:48,borderRadius:14,background:T.grad,boxShadow:`0 8px 32px ${T.accGlow}`}} className="shimmer-btn">Continuer →</Btn>
-            </div>
-          )}
-          {step===2&&(
-            <div style={{display:"flex",flexDirection:"column",gap:12}}>
-              <div style={{padding:"8px 12px",borderRadius:10,background:"rgba(91,108,255,.07)",border:"1px solid rgba(91,108,255,.18)",fontSize:12,display:"flex",gap:8,alignItems:"center"}}>
-                <span>📧</span><span style={{fontWeight:600}}>{email}</span>
-                <button onClick={()=>{setStep(1);setErr("");}} style={{background:"none",border:"none",color:T.acc,cursor:"pointer",fontSize:11,marginLeft:"auto"}}>Modifier</button>
-              </div>
-              <Input label="Mot de passe" value={pw} onChange={setPw} placeholder="Minimum 8 caractères" type="password" icon="🔒" required/>
-              {pwLen>0&&(
-                <div>
-                  <div style={{display:"flex",gap:3,marginBottom:4}}>
-                    {[1,2,3].map(s=><div key={s} style={{flex:1,height:2,borderRadius:2,background:strength>=s?sColors[strength]:"rgba(255,255,255,.08)",transition:"all .3s"}}/>)}
-                  </div>
-                  <div style={{fontSize:10,color:sColors[strength],fontWeight:600}}>{sLabels[strength]}</div>
-                </div>
-              )}
-              <Input label="Confirmer" value={pw2} onChange={setPw2} placeholder="••••••••" type="password" icon="🔑" required/>
-              <div style={{display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer"}} onClick={()=>setAgree(a=>!a)}>
-                <div style={{width:18,height:18,borderRadius:5,border:`2px solid ${agree?T.acc:"rgba(255,255,255,.15)"}`,background:agree?T.acc:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1,transition:"all .2s"}}>
-                  {agree&&<span style={{color:"#fff",fontSize:10,fontWeight:900}}>✓</span>}
-                </div>
-                <span style={{fontSize:12,color:T.muted,lineHeight:1.5}}>J'accepte les <span style={{color:T.acc}}>CGU</span> et la <span style={{color:T.acc}}>Politique de confidentialité</span></span>
-              </div>
-              {err&&<div style={{padding:"9px 14px",borderRadius:10,background:"rgba(232,57,112,.08)",border:"1px solid rgba(232,57,112,.2)",color:T.pink,fontSize:13}}>{err}</div>}
-              <Btn full onClick={handle} loading={loading} style={{height:48,borderRadius:14,background:T.grad,boxShadow:`0 8px 32px ${T.accGlow}`}} className="shimmer-btn">Créer mon compte gratuit 🚀</Btn>
-            </div>
-          )}
-          <div style={{textAlign:"center",fontSize:13,color:T.muted,padding:"14px",borderRadius:12,background:T.surf,border:"1px solid rgba(255,255,255,.06)",marginTop:12}}>
-            Déjà inscrit ?{" "}
-            <button onClick={goLogin} style={{background:"none",border:"none",color:T.acc,cursor:"pointer",fontWeight:700,fontSize:13}}>Se connecter →</button>
-          </div>
-        </div>
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        <input value={name} onChange={e=>setName(e.target.value)} placeholder="Ton prénom"
+          style={{width:"100%",padding:"12px 14px",borderRadius:11,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",color:"#fff",fontSize:14,outline:"none",transition:"border .2s",fontFamily:"inherit"}}
+          onFocus={e=>e.target.style.borderColor="rgba(99,102,241,.5)"}
+          onBlur={e=>e.target.style.borderColor="rgba(255,255,255,.1)"}/>
+        <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email" type="email"
+          style={{width:"100%",padding:"12px 14px",borderRadius:11,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",color:"#fff",fontSize:14,outline:"none",transition:"border .2s",fontFamily:"inherit"}}
+          onFocus={e=>e.target.style.borderColor="rgba(99,102,241,.5)"}
+          onBlur={e=>e.target.style.borderColor="rgba(255,255,255,.1)"}/>
+        <input value={pw} onChange={e=>setPw(e.target.value)} placeholder="Mot de passe (6 caractères min)" type="password"
+          style={{width:"100%",padding:"12px 14px",borderRadius:11,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",color:"#fff",fontSize:14,outline:"none",transition:"border .2s",fontFamily:"inherit"}}
+          onFocus={e=>e.target.style.borderColor="rgba(99,102,241,.5)"}
+          onBlur={e=>e.target.style.borderColor="rgba(255,255,255,.1)"}
+          onKeyDown={e=>e.key==="Enter"&&handle()}/>
+        {err&&<div style={{fontSize:12,color:"#f43f5e",padding:"8px 12px",borderRadius:8,background:"rgba(244,63,94,.1)",border:"1px solid rgba(244,63,94,.2)"}}>{err}</div>}
+        <button onClick={handle} disabled={loading}
+          style={{width:"100%",padding:"13px",borderRadius:11,background:loading?"rgba(99,102,241,.5)":"#6366f1",border:"none",color:"#fff",fontSize:14,fontWeight:700,cursor:loading?"not-allowed":"pointer",transition:"all .2s",boxShadow:"0 4px 20px rgba(99,102,241,.4)"}}>
+          {loading?"Création...":"Créer mon compte gratuit"}
+        </button>
       </div>
-    </div>
+      {/* Gratuit badge */}
+      <div style={{marginTop:14,padding:"10px 14px",borderRadius:10,background:"rgba(34,197,94,.07)",border:"1px solid rgba(34,197,94,.15)",display:"flex",alignItems:"center",gap:8}}>
+        <span style={{fontSize:14}}>🎁</span>
+        <span style={{fontSize:12,color:"rgba(255,255,255,.45)"}}>3 vidéos offertes · Sans CB · RGPD conforme</span>
+      </div>
+      <div style={{marginTop:12,textAlign:"center",fontSize:13,color:"rgba(255,255,255,.3)"}}>
+        Déjà inscrit ?{" "}
+        <button onClick={goLogin} style={{background:"none",border:"none",color:"#818cf8",cursor:"pointer",fontWeight:700,fontSize:13}}>Se connecter →</button>
+      </div>
+    </AuthCard>
   );
 };
 
 
+
+
 /* ══ LANDING PAGE ══ */
 const LandingPage=({user,onCTA,setPage,goCheckout})=>{
-  const [beforeAfter,setBeforeAfter]=useState(50);
-  const [dragging,setDragging]=useState(false);
-  const [hovFeat,setHovFeat]=useState(null);
   const [activeStyle,setActiveStyle]=useState(0);
   const [faqOpen,setFaqOpen]=useState(null);
   const [billingY,setBillingY]=useState(true);
-  const baRef=useRef(null);
+  const [dragging,setDragging]=useState(false);
+  const [sliderPct,setSliderPct]=useState(45);
+  const sliderRef=useRef(null);
 
-  // Drag before/after slider
-  const handleBAMove=(clientX)=>{
-    if(!baRef.current)return;
-    const rect=baRef.current.getBoundingClientRect();
-    const pct=Math.max(5,Math.min(95,((clientX-rect.left)/rect.width)*100));
-    setBeforeAfter(pct);
+  const handleSlide=(clientX)=>{
+    if(!sliderRef.current)return;
+    const r=sliderRef.current.getBoundingClientRect();
+    setSliderPct(Math.max(4,Math.min(96,((clientX-r.left)/r.width)*100)));
   };
-
   useEffect(()=>{
     if(!dragging)return;
-    const onMove=(e)=>handleBAMove(e.touches?e.touches[0].clientX:e.clientX);
-    const onUp=()=>setDragging(false);
-    window.addEventListener("mousemove",onMove);
-    window.addEventListener("mouseup",onUp);
-    window.addEventListener("touchmove",onMove,{passive:false});
-    window.addEventListener("touchend",onUp);
-    return()=>{window.removeEventListener("mousemove",onMove);window.removeEventListener("mouseup",onUp);window.removeEventListener("touchmove",onMove);window.removeEventListener("touchend",onUp);};
+    const mv=(e)=>handleSlide(e.touches?e.touches[0].clientX:e.clientX);
+    const up=()=>setDragging(false);
+    window.addEventListener("mousemove",mv);window.addEventListener("mouseup",up);
+    window.addEventListener("touchmove",mv,{passive:false});window.addEventListener("touchend",up);
+    return()=>{window.removeEventListener("mousemove",mv);window.removeEventListener("mouseup",up);window.removeEventListener("touchmove",mv);window.removeEventListener("touchend",up);};
   },[dragging]);
 
-  const STYLES_DEMO=[
-    {id:"captions-white",label:"Captions",color:"#fff",font:"Montserrat",weight:900,shadow:"-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000",transform:"uppercase"},
-    {id:"mrbeast",label:"MrBeast",color:"#FFE600",font:"Anton",weight:900,shadow:"3px 3px 0 #000,-3px -3px 0 #000",transform:"uppercase"},
-    {id:"highlight-yellow",label:"Highlight",color:"#000",bg:"#FFE600",font:"Montserrat",weight:900,transform:"uppercase"},
-    {id:"tiktok-clean",label:"TikTok",color:"#fff",bg:"rgba(0,0,0,.8)",font:"Montserrat",weight:800,transform:"none"},
-    {id:"neon-blue-pulse",label:"Neon",color:"#6366f1",font:"Barlow Condensed",weight:900,shadow:"0 0 12px #6366f1,0 0 30px #6366f160",transform:"uppercase"},
-    {id:"double-outline",label:"Outline",color:"#fff",font:"Anton",weight:900,shadow:"3px 3px 0 #f43f5e,-3px -3px 0 #f43f5e",transform:"uppercase"},
+  const STYLES=[
+    {label:"MrBeast",color:"#FFE600",font:"Anton",weight:900,shadow:"-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000,3px 3px 0 #000",transform:"uppercase",sample:"T'AS VU ÇA"},
+    {label:"Captions",color:"#fff",font:"Montserrat",weight:900,shadow:"-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000",transform:"uppercase",sample:"T'AS VU ÇA"},
+    {label:"Highlight",color:"#000",bg:"#FFE600",font:"Montserrat",weight:900,transform:"uppercase",sample:"T'AS VU ÇA"},
+    {label:"TikTok",color:"#fff",bg:"rgba(0,0,0,.75)",font:"Montserrat",weight:800,sample:"T'as vu ça"},
+    {label:"Neon",color:"#818cf8",font:"Barlow Condensed",weight:900,shadow:"0 0 14px #818cf8,0 0 40px #818cf860",transform:"uppercase",sample:"T'AS VU ÇA"},
+    {label:"Rose",color:"#f43f5e",font:"Anton",weight:900,shadow:"-2px -2px 0 #000,2px 2px 0 #000",transform:"uppercase",sample:"T'AS VU ÇA"},
   ];
 
   const PLANS=[
-    {id:"basic",name:"Starter",price:12,priceY:10,color:"#6366f1",credits:"30 vidéos/mois",features:["Transcription Whisper AI","28 styles de sous-titres","Traduction 12 langues","Export SRT","Support email"]},
-    {id:"expert",name:"Creator",price:18,priceY:13,color:"#a855f7",credits:"100 vidéos/mois",popular:true,features:["Tout Starter inclus","Emojis IA automatiques","Export vidéo MP4 HD","Suppression auto 24h","Support prioritaire"]},
-    {id:"pro",name:"Studio",price:30,priceY:21,color:"#22c55e",credits:"Illimité",features:["Tout Creator inclus","Vidéos illimitées","API Access","White-label (bientôt)","Manager dédié"]},
+    {id:"free",name:"Gratuit",price:0,priceY:0,color:"rgba(255,255,255,.4)",credits:"3 vidéos/mois",features:["3 vidéos/mois","Transcription Whisper AI","28 styles de sous-titres","Export SRT"],cta:"Commencer — Gratuit",free:true},
+    {id:"basic",name:"Starter",price:12,priceY:10,color:"#6366f1",credits:"30 vidéos/mois",features:["30 vidéos/mois","Tout Gratuit inclus","Traduction 12 langues","Export vidéo MP4 HD","Support email"]},
+    {id:"expert",name:"Creator",price:18,priceY:13,color:"#a855f7",credits:"100 vidéos/mois",popular:true,features:["100 vidéos/mois","Tout Starter inclus","Emojis IA automatiques","Suppression auto 24h","Support prioritaire"]},
+    {id:"pro",name:"Studio",price:30,priceY:21,color:"#22c55e",credits:"Illimité",features:["Vidéos illimitées","Tout Creator inclus","API Access","Manager dédié"]},
   ];
 
   const FAQS=[
-    {q:"Quelle est la précision de la transcription ?",a:"Whisper AI d'OpenAI offre 99%+ de précision sur les langues populaires. La transcription prend moins de 30 secondes pour une vidéo de 60 secondes."},
-    {q:"Quels formats de vidéo sont acceptés ?",a:"MP4, MOV, AVI, WebM, MKV — jusqu'à 300 MB. Tu peux aussi coller un lien YouTube Shorts ou TikTok directement."},
-    {q:"Les vidéos sont-elles stockées ?",a:"Non. Toutes les vidéos uploadées sont automatiquement supprimées après 24h (conformité RGPD). Seuls tes sous-titres sont conservés."},
-    {q:"Puis-je changer de plan ou annuler ?",a:"Oui, à tout moment depuis ton espace client. L'accès reste actif jusqu'à la fin de la période payée. Aucun engagement."},
-    {q:"L'export MP4 avec sous-titres incrustés est-il disponible ?",a:"Il arrive en Q2 2026. En attendant, tu peux exporter en SRT et l'importer dans CapCut, Premiere ou DaVinci."},
+    {q:"C'est vraiment gratuit ?",a:"Oui — 3 vidéos par mois, aucune carte bancaire requise. Tu peux tester SubCraft sans engagement et upgrader quand tu veux."},
+    {q:"Ça marche pour les YouTube Shorts ?",a:"Oui ! SubCraft est spécialement optimisé pour les formats courts : YouTube Shorts, TikTok, Instagram Reels. Format 9:16 natif."},
+    {q:"Quelle est la précision de la transcription ?",a:"Whisper AI d'OpenAI offre 99%+ de précision sur le français et les langues populaires. Moins de 30 secondes pour un Short de 60s."},
+    {q:"Mes vidéos sont-elles stockées ?",a:"Non. Toutes les vidéos sont automatiquement supprimées après 24h. Seuls tes sous-titres sont conservés. Conforme RGPD."},
+    {q:"Puis-je annuler à tout moment ?",a:"Oui, sans engagement. Depuis ton espace client en 1 clic. L'accès reste actif jusqu'à la fin de la période payée."},
   ];
 
-  return(
-    <div style={{background:"#000",minHeight:"100vh",color:"#fff",overflowX:"hidden"}}>
+  // Style courant
+  const S=STYLES[activeStyle];
 
-      {/* ═══════ NAV ═══════ */}
-      <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:100,height:56,padding:"0 max(24px,4vw)",display:"flex",alignItems:"center",gap:12,background:"rgba(0,0,0,.85)",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",borderBottom:"1px solid rgba(255,255,255,.06)"}}>
+  return(
+    <div style={{background:"#08080f",minHeight:"100vh",color:"#fff",overflowX:"hidden"}}>
+
+      {/* ─── NAV ─── */}
+      <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:100,height:56,padding:"0 max(20px,4vw)",display:"flex",alignItems:"center",gap:10,background:"rgba(8,8,15,.92)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,.07)"}}>
         <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-          <div style={{width:28,height:28,borderRadius:8,background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,boxShadow:"0 0 20px rgba(99,102,241,.5)"}}>✦</div>
+          <div style={{width:28,height:28,borderRadius:8,background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:900,boxShadow:"0 0 16px rgba(99,102,241,.6)"}}>✦</div>
           <span style={{fontWeight:800,fontSize:15,letterSpacing:"-.03em",fontFamily:"Syne,sans-serif",color:"#fff"}}>SubCraft</span>
         </div>
-        <div style={{flex:1,display:"flex",justifyContent:"center",gap:4}} className="hide-mobile">
+        <div style={{flex:1,display:"flex",justifyContent:"center",gap:2}} className="hide-mobile">
           {[["Fonctionnalités","feats"],["Styles","styles"],["Tarifs","pricing"],["FAQ","faq"]].map(([l,id])=>(
-            <button key={l} onClick={()=>document.getElementById(id)?.scrollIntoView({behavior:"smooth"})}
-              style={{padding:"6px 14px",borderRadius:8,background:"transparent",border:"none",color:"rgba(255,255,255,.45)",fontSize:13,fontWeight:500,cursor:"pointer",transition:"color .15s"}}
-              onMouseEnter={e=>e.currentTarget.style.color="#fff"}
-              onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.45)"}>
-              {l}
-            </button>
+            <button key={l} onClick={()=>document.getElementById(id)?.scrollIntoView({behavior:"smooth"})} style={{padding:"6px 13px",borderRadius:8,background:"transparent",border:"none",color:"rgba(255,255,255,.4)",fontSize:12.5,fontWeight:500,cursor:"pointer",transition:"color .15s"}} onMouseEnter={e=>e.currentTarget.style.color="#fff"} onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.4)"}>{l}</button>
           ))}
         </div>
         <div style={{display:"flex",gap:8,marginLeft:"auto",alignItems:"center"}}>
           {user?(
-            <button onClick={()=>setPage("dashboard")}
-              style={{display:"flex",alignItems:"center",gap:8,padding:"6px 14px 6px 7px",borderRadius:10,background:"rgba(99,102,241,.12)",border:"1px solid rgba(99,102,241,.3)",color:"#a5b4fc",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s"}}
-              onMouseEnter={e=>{e.currentTarget.style.background="rgba(99,102,241,.22)";}}
-              onMouseLeave={e=>{e.currentTarget.style.background="rgba(99,102,241,.12)";}}>
-              <div style={{width:26,height:26,borderRadius:8,background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"#fff",flexShrink:0}}>
-                {(user.name||user.email||"?").slice(0,1).toUpperCase()}
-              </div>
+            <button onClick={()=>setPage("dashboard")} style={{display:"flex",alignItems:"center",gap:7,padding:"5px 14px 5px 6px",borderRadius:10,background:"rgba(99,102,241,.12)",border:"1px solid rgba(99,102,241,.28)",color:"#a5b4fc",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(99,102,241,.22)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(99,102,241,.12)"}>
+              <div style={{width:26,height:26,borderRadius:8,background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#fff"}}>{(user.name||user.email||"?").slice(0,1).toUpperCase()}</div>
               <span className="hide-mobile">Dashboard →</span>
             </button>
           ):(
             <>
-              <button onClick={()=>setPage("auth")} className="hide-mobile"
-                style={{padding:"7px 16px",borderRadius:9,background:"transparent",border:"1px solid rgba(255,255,255,.1)",color:"rgba(255,255,255,.5)",fontSize:13,cursor:"pointer",transition:"all .2s",fontWeight:500}}
-                onMouseEnter={e=>{e.currentTarget.style.color="#fff";e.currentTarget.style.borderColor="rgba(255,255,255,.25)";}}
-                onMouseLeave={e=>{e.currentTarget.style.color="rgba(255,255,255,.5)";e.currentTarget.style.borderColor="rgba(255,255,255,.1)";}}>
-                Connexion
-              </button>
-              <button onClick={onCTA}
-                style={{padding:"8px 20px",borderRadius:10,background:"#6366f1",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .2s",letterSpacing:"-.01em",boxShadow:"0 4px 20px rgba(99,102,241,.5)"}}
-                onMouseEnter={e=>{e.currentTarget.style.background="#4f46e5";e.currentTarget.style.transform="translateY(-1px)";}}
-                onMouseLeave={e=>{e.currentTarget.style.background="#6366f1";e.currentTarget.style.transform="none";}}>
-                Essai gratuit →
-              </button>
+              <button onClick={()=>setPage("auth")} className="hide-mobile" style={{padding:"7px 16px",borderRadius:9,background:"transparent",border:"1px solid rgba(255,255,255,.1)",color:"rgba(255,255,255,.5)",fontSize:13,cursor:"pointer",transition:"all .2s",fontWeight:500}} onMouseEnter={e=>{e.currentTarget.style.color="#fff";e.currentTarget.style.borderColor="rgba(255,255,255,.22)";}} onMouseLeave={e=>{e.currentTarget.style.color="rgba(255,255,255,.5)";e.currentTarget.style.borderColor="rgba(255,255,255,.1)";}}>Connexion</button>
+              <button onClick={onCTA} style={{padding:"7px 18px",borderRadius:10,background:"#6366f1",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .2s",letterSpacing:"-.01em",boxShadow:"0 4px 20px rgba(99,102,241,.45)"}} onMouseEnter={e=>{e.currentTarget.style.background="#4f46e5";e.currentTarget.style.transform="translateY(-1px)";}} onMouseLeave={e=>{e.currentTarget.style.background="#6366f1";e.currentTarget.style.transform="none";}}>Essai gratuit →</button>
             </>
           )}
         </div>
       </nav>
 
-      {/* ═══════ HERO ═══════ */}
-      <section style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"80px max(20px,4vw) 60px",textAlign:"center",position:"relative",overflow:"hidden"}}>
-        {/* Background glow */}
-        <div style={{position:"absolute",top:"20%",left:"50%",transform:"translateX(-50%)",width:"600px",height:"600px",background:"radial-gradient(circle,rgba(99,102,241,.18) 0%,transparent 65%)",pointerEvents:"none",filter:"blur(40px)"}}/>
-        <div style={{position:"absolute",top:"30%",left:"20%",width:"300px",height:"300px",background:"radial-gradient(circle,rgba(168,85,247,.1) 0%,transparent 70%)",pointerEvents:"none",filter:"blur(60px)"}}/>
-        <div style={{position:"absolute",top:"40%",right:"15%",width:"250px",height:"250px",background:"radial-gradient(circle,rgba(244,63,94,.08) 0%,transparent 70%)",pointerEvents:"none",filter:"blur(60px)"}}/>
+      {/* ─── HERO ─── */}
+      <section style={{paddingTop:120,paddingBottom:80,padding:"120px max(20px,5vw) 80px",maxWidth:1100,margin:"0 auto",display:"grid",gridTemplateColumns:"1fr 1fr",gap:60,alignItems:"center"}} className="mobile-col">
 
-        <div style={{position:"relative",zIndex:1,maxWidth:900,margin:"0 auto"}}>
-          {/* Badge */}
-          <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 14px",borderRadius:100,background:"rgba(99,102,241,.1)",border:"1px solid rgba(99,102,241,.25)",marginBottom:32,animation:"fadeUp .6s ease both"}}>
-            <span style={{width:5,height:5,borderRadius:"50%",background:"#6366f1",animation:"pulseDot 2s infinite"}}/>
-            <span style={{fontSize:11,color:"#a5b4fc",letterSpacing:".1em",fontWeight:600}}>WHISPER AI · BÊTA OUVERTE</span>
+        {/* LEFT — texte */}
+        <div>
+          <div style={{display:"inline-flex",alignItems:"center",gap:7,padding:"4px 12px",borderRadius:100,background:"rgba(99,102,241,.1)",border:"1px solid rgba(99,102,241,.22)",marginBottom:24,animation:"fadeUp .5s ease both"}}>
+            <span style={{width:5,height:5,borderRadius:"50%",background:"#818cf8",animation:"pulseDot 2s infinite"}}/>
+            <span style={{fontSize:11,color:"#a5b4fc",letterSpacing:".1em",fontWeight:700}}>SPÉCIAL YOUTUBE SHORTS · TIKTOK · REELS</span>
           </div>
 
-          {/* Title */}
-          <h1 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(44px,7vw,100px)",lineHeight:.88,letterSpacing:"-.05em",marginBottom:32,animation:"fadeUp .6s .08s ease both"}}>
-            <span style={{display:"block",color:"#fff"}}>Sous-titres</span>
-            <span style={{display:"block",background:"linear-gradient(90deg,#818cf8,#a78bfa,#c084fc,#e879f9)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundSize:"200% auto",animation:"gradShift 4s linear infinite"}}>qui captivent.</span>
+          <h1 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(36px,4.5vw,64px)",lineHeight:.9,letterSpacing:"-.05em",marginBottom:20,animation:"fadeUp .5s .06s ease both"}}>
+            <span style={{display:"block",color:"#fff"}}>Tes Shorts</span>
+            <span style={{display:"block",color:"#fff"}}>méritent des</span>
+            <span style={{display:"block",background:"linear-gradient(90deg,#818cf8 0%,#c084fc 50%,#f472b6 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>sous-titres pro.</span>
           </h1>
 
-          {/* Description */}
-          <p style={{fontSize:"clamp(16px,2vw,20px)",color:"rgba(255,255,255,.45)",maxWidth:520,margin:"0 auto 40px",lineHeight:1.7,fontWeight:400,animation:"fadeUp .6s .16s ease both"}}>
-            Upload ta vidéo. L'IA transcrit en <strong style={{color:"#fff",fontWeight:600}}>10 secondes</strong>. Choisis parmi <strong style={{color:"#fff",fontWeight:600}}>28 styles viraux</strong>. Exporte en HD.
+          <p style={{fontSize:16,color:"rgba(255,255,255,.5)",maxWidth:440,lineHeight:1.75,marginBottom:32,animation:"fadeUp .5s .12s ease both"}}>
+            Upload ton Short — l'IA transcrit en <strong style={{color:"#fff"}}>10 secondes</strong>. Choisis parmi <strong style={{color:"#fff"}}>28 styles viraux</strong>. Exporte.
           </p>
 
-          {/* CTAs */}
-          <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap",marginBottom:64,animation:"fadeUp .6s .22s ease both"}}>
-            <button onClick={onCTA}
-              style={{display:"inline-flex",alignItems:"center",gap:10,padding:"14px 32px",borderRadius:14,background:"#6366f1",border:"none",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 8px 40px rgba(99,102,241,.5),0 1px 0 rgba(255,255,255,.1) inset",transition:"all .25s",letterSpacing:"-.01em"}}
-              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 16px 60px rgba(99,102,241,.65),0 1px 0 rgba(255,255,255,.1) inset";}}
-              onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 8px 40px rgba(99,102,241,.5),0 1px 0 rgba(255,255,255,.1) inset";}}>
-              ✦ &nbsp;Commencer gratuitement
-            </button>
-            <button onClick={()=>document.getElementById("demo")?.scrollIntoView({behavior:"smooth"})}
-              style={{display:"inline-flex",alignItems:"center",gap:8,padding:"14px 28px",borderRadius:14,background:"transparent",border:"1px solid rgba(255,255,255,.12)",color:"rgba(255,255,255,.7)",fontSize:15,cursor:"pointer",transition:"all .25s",fontWeight:500}}
-              onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.3)";e.currentTarget.style.color="#fff";}}
-              onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.12)";e.currentTarget.style.color="rgba(255,255,255,.7)";}}>
-              ▶ Voir la démo
+          <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:28,animation:"fadeUp .5s .18s ease both"}}>
+            <button onClick={onCTA} style={{display:"inline-flex",alignItems:"center",gap:9,padding:"13px 28px",borderRadius:12,background:"#6366f1",border:"none",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 8px 32px rgba(99,102,241,.5)",transition:"all .25s"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 12px 48px rgba(99,102,241,.65)";}} onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 8px 32px rgba(99,102,241,.5)";}}>
+              ✦ &nbsp;Commencer — c'est gratuit
             </button>
           </div>
 
-          {/* Stats row */}
-          <div style={{display:"flex",gap:0,justifyContent:"center",borderTop:"1px solid rgba(255,255,255,.06)",borderBottom:"1px solid rgba(255,255,255,.06)",padding:"20px 0",animation:"fadeUp .6s .3s ease both",flexWrap:"wrap"}}>
-            {[["10k+","Créateurs","#818cf8"],["99%","Précision","#34d399"],["<10s","Génération","#f59e0b"],["28","Styles","#f43f5e"]].map(([v,l,c],i)=>(
-              <div key={l} style={{padding:"0 32px",textAlign:"center",borderRight:i<3?"1px solid rgba(255,255,255,.06)":"none",flex:"1 1 80px"}}>
-                <div style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:28,color:c,letterSpacing:"-.04em",lineHeight:1}}>{v}</div>
-                <div style={{fontSize:11,color:"rgba(255,255,255,.3)",marginTop:4,letterSpacing:".05em",textTransform:"uppercase",fontWeight:600}}>{l}</div>
-              </div>
-            ))}
+          {/* Gratuit pill */}
+          <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"8px 14px",borderRadius:12,background:"rgba(34,197,94,.08)",border:"1px solid rgba(34,197,94,.2)",animation:"fadeUp .5s .22s ease both"}}>
+            <span style={{fontSize:16}}>🎁</span>
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:"#22c55e"}}>3 vidéos gratuites · Aucune CB</div>
+              <div style={{fontSize:10,color:"rgba(255,255,255,.3)"}}>Sans engagement · Annulation à tout moment</div>
+            </div>
           </div>
         </div>
-      </section>
 
-      {/* ═══════ DEMO AVANT/APRÈS ═══════ */}
-      <section id="demo" style={{padding:"80px max(20px,4vw)",maxWidth:1100,margin:"0 auto"}}>
-        <div style={{textAlign:"center",marginBottom:48}}>
-          <p style={{fontSize:11,color:"#6366f1",fontWeight:700,letterSpacing:".12em",textTransform:"uppercase",marginBottom:12}}>Avant / Après</p>
-          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,4vw,52px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95}}>
-            Vois la différence<br/><span style={{color:"rgba(255,255,255,.3)"}}>par toi-même</span>
-          </h2>
-        </div>
+        {/* RIGHT — Short YouTube avant/après */}
+        <div style={{display:"flex",justifyContent:"center",animation:"fadeUp .5s .1s ease both"}}>
+          {/* Phone frame */}
+          <div style={{position:"relative",width:260,flexShrink:0}}>
+            {/* Phone shell */}
+            <div style={{width:260,height:490,borderRadius:40,background:"#0f0f14",border:"2.5px solid rgba(255,255,255,.12)",boxShadow:"0 40px 80px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.04),inset 0 1px 0 rgba(255,255,255,.08)",overflow:"hidden",position:"relative"}}>
+              {/* Notch */}
+              <div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:80,height:22,background:"#0f0f14",borderRadius:"0 0 14px 14px",zIndex:20,borderBottom:"1.5px solid rgba(255,255,255,.07)"}}/>
 
-        {/* Avant/après slider */}
-        <div ref={baRef} style={{position:"relative",borderRadius:24,overflow:"hidden",border:"1px solid rgba(255,255,255,.08)",cursor:"ew-resize",userSelect:"none",boxShadow:"0 40px 100px rgba(0,0,0,.8)",aspectRatio:"16/9",maxHeight:480,background:"#0a0a0f"}}
-          onMouseDown={e=>{setDragging(true);handleBAMove(e.clientX);}}
-          onTouchStart={e=>{setDragging(true);handleBAMove(e.touches[0].clientX);}}>
+              {/* Avant/Après slider DANS le phone */}
+              <div ref={sliderRef} style={{position:"absolute",inset:0,cursor:"ew-resize",userSelect:"none"}}
+                onMouseDown={e=>{setDragging(true);handleSlide(e.clientX);}}
+                onTouchStart={e=>{setDragging(true);handleSlide(e.touches[0].clientX);}}>
 
-          {/* APRÈS — fond plein */}
-          <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,#0d0d18 0%,#050510 100%)",display:"flex",alignItems:"flex-end",justifyContent:"center",paddingBottom:"12%"}}>
-            <div style={{textAlign:"center"}}>
-              {/* Label APRÈS */}
-              <div style={{position:"absolute",top:16,right:16,fontSize:10,fontWeight:700,letterSpacing:".1em",color:"#22c55e",background:"rgba(34,197,94,.1)",border:"1px solid rgba(34,197,94,.25)",padding:"4px 10px",borderRadius:100}}>AVEC SUBCRAFT</div>
-              {/* Sous-titre stylisé */}
-              <div style={{fontFamily:"Montserrat,sans-serif",fontWeight:900,fontSize:"clamp(18px,3.5vw,40px)",color:"#fff",textTransform:"uppercase",textShadow:"-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000",animation:"subtitlePop .3s ease both"}}>
-                Tes sous-titres
-              </div>
-              <div style={{fontFamily:"Montserrat,sans-serif",fontWeight:900,fontSize:"clamp(24px,5vw,60px)",color:"#6366f1",textTransform:"uppercase",textShadow:"-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000",lineHeight:.9}}>
-                EXPLOSENT
-              </div>
-              {/* Social icons */}
-              <div style={{display:"flex",gap:16,justifyContent:"center",marginTop:16,opacity:.7}}>
-                {[["❤️","12.4k"],["💬","892"],["↗","3.1k"]].map(([ic,n])=>(
-                  <div key={n} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-                    <span style={{fontSize:20}}>{ic}</span>
-                    <span style={{fontSize:10,color:"#fff",fontWeight:700}}>{n}</span>
+                {/* APRÈS — fond complet */}
+                <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,#1a0a30 0%,#0a0520 50%,#050210 100%)"}}>
+                  {/* Avatar / créateur */}
+                  <div style={{position:"absolute",top:"14%",left:"50%",transform:"translateX(-50%)",width:70,height:70,borderRadius:"50%",background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,boxShadow:"0 0 40px rgba(99,102,241,.4)"}}>😎</div>
+                  {/* Label */}
+                  <div style={{position:"absolute",top:30,left:10,fontSize:8,fontWeight:700,letterSpacing:".08em",color:"#22c55e",background:"rgba(34,197,94,.12)",border:"1px solid rgba(34,197,94,.3)",padding:"3px 8px",borderRadius:100}}>AVEC SUBCRAFT</div>
+                  {/* Sous-titre stylisé - centré en bas */}
+                  <div style={{position:"absolute",bottom:"22%",left:0,right:0,textAlign:"center",padding:"0 12px"}}>
+                    <span key={activeStyle} style={{fontFamily:S.font+",sans-serif",fontWeight:S.weight,fontSize:22,color:S.color||"#fff",textShadow:S.shadow||"none",textTransform:S.transform||"none",background:S.bg||"transparent",padding:S.bg?"3px 10px":"0",borderRadius:S.bg?"6px":"0",display:"inline-block",animation:"subtitlePop .25s ease both"}}>
+                      {S.sample}
+                    </span>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* AVANT — clip sur la gauche */}
-          <div style={{position:"absolute",inset:0,clipPath:`inset(0 ${100-beforeAfter}% 0 0)`,background:"#111",display:"flex",alignItems:"flex-end",justifyContent:"center",paddingBottom:"12%"}}>
-            <div style={{position:"absolute",top:16,left:16,fontSize:10,fontWeight:700,letterSpacing:".1em",color:"rgba(255,255,255,.4)",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",padding:"4px 10px",borderRadius:100}}>SANS SOUS-TITRES</div>
-            <div style={{textAlign:"center",opacity:.15}}>
-              <div style={{fontFamily:"Arial",fontSize:"clamp(10px,1.5vw,18px)",color:"#fff"}}>Tes sous-titres explosent</div>
-            </div>
-          </div>
-
-          {/* Slider divider */}
-          <div style={{position:"absolute",top:0,bottom:0,left:`${beforeAfter}%`,transform:"translateX(-50%)",width:2,background:"#fff",zIndex:10,pointerEvents:"none"}}>
-            {/* Handle */}
-            <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:40,height:40,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 24px rgba(0,0,0,.8)",cursor:"ew-resize"}}>
-              <span style={{fontSize:14,color:"#000",fontWeight:900,letterSpacing:"-2px"}}>◀▶</span>
-            </div>
-          </div>
-        </div>
-        <div style={{textAlign:"center",marginTop:14,fontSize:12,color:"rgba(255,255,255,.2)",fontWeight:500}}>← Glisse pour voir la différence →</div>
-      </section>
-
-      {/* ═══════ STYLES SHOWCASE ═══════ */}
-      <section id="styles" style={{padding:"80px max(20px,4vw)",background:"rgba(255,255,255,.015)",borderTop:"1px solid rgba(255,255,255,.05)",borderBottom:"1px solid rgba(255,255,255,.05)"}}>
-        <div style={{maxWidth:1100,margin:"0 auto"}}>
-          <div style={{textAlign:"center",marginBottom:48}}>
-            <p style={{fontSize:11,color:"#a855f7",fontWeight:700,letterSpacing:".12em",textTransform:"uppercase",marginBottom:12}}>28 Styles viraux</p>
-            <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,4vw,52px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95}}>
-              Choisis ton style.<br/><span style={{color:"rgba(255,255,255,.25)"}}>Change tout.</span>
-            </h2>
-          </div>
-
-          {/* Style selector */}
-          <div style={{display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap",marginBottom:36}}>
-            {STYLES_DEMO.map((s,i)=>(
-              <button key={s.id} onClick={()=>setActiveStyle(i)}
-                style={{padding:"6px 16px",borderRadius:100,background:activeStyle===i?"rgba(99,102,241,.2)":"rgba(255,255,255,.04)",border:activeStyle===i?"1px solid rgba(99,102,241,.5)":"1px solid rgba(255,255,255,.07)",color:activeStyle===i?"#a5b4fc":"rgba(255,255,255,.4)",fontSize:12,fontWeight:600,cursor:"pointer",transition:"all .2s"}}>
-                {s.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Demo screen */}
-          <div style={{borderRadius:20,overflow:"hidden",border:"1px solid rgba(255,255,255,.07)",background:"linear-gradient(180deg,#0d0d1a 0%,#060610 100%)",aspectRatio:"16/7",maxHeight:300,display:"flex",alignItems:"center",justifyContent:"center",position:"relative",boxShadow:"0 40px 80px rgba(0,0,0,.8)"}}>
-            <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,transparent 40%,rgba(0,0,0,.8) 100%)"}}/>
-            {/* Fake video content */}
-            <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",opacity:.06}}>
-              <div style={{fontSize:120}}>🎬</div>
-            </div>
-            {/* Subtitle */}
-            <div style={{position:"absolute",bottom:"15%",left:"50%",transform:"translateX(-50%)",textAlign:"center",padding:"0 20px",width:"100%"}}>
-              {(()=>{
-                const s=STYLES_DEMO[activeStyle];
-                return(
-                  <span key={activeStyle} style={{fontFamily:s.font+",sans-serif",fontWeight:s.weight,fontSize:"clamp(20px,3.5vw,48px)",color:s.color||"#fff",textShadow:s.shadow||"none",textTransform:s.transform||"none",background:s.bg||"transparent",padding:s.bg?"4px 16px":"0",borderRadius:s.bg?"8px":"0",display:"inline-block",animation:"subtitlePop .3s cubic-bezier(.34,1.56,.64,1) both"}}>
-                    SOUS-TITRES EN DIRECT
-                  </span>
-                );
-              })()}
-            </div>
-            {/* Social buttons overlay */}
-            <div style={{position:"absolute",right:16,top:"50%",transform:"translateY(-50%)",display:"flex",flexDirection:"column",gap:12,opacity:.6}}>
-              {[["❤️","12k"],["💬","489"],["↗","1.2k"]].map(([ic,n])=>(
-                <div key={n} style={{textAlign:"center"}}>
-                  <div style={{fontSize:22}}>{ic}</div>
-                  <div style={{fontSize:9,color:"#fff",fontWeight:700}}>{n}</div>
+                  {/* TikTok ui */}
+                  <div style={{position:"absolute",right:8,top:"35%",display:"flex",flexDirection:"column",gap:14,alignItems:"center"}}>
+                    {[["❤️","12k"],["💬","489"],["↗","1.2k"]].map(([ic,n])=>(
+                      <div key={n} style={{textAlign:"center"}}>
+                        <div style={{fontSize:20}}>{ic}</div>
+                        <div style={{fontSize:8,color:"rgba(255,255,255,.7)",fontWeight:700}}>{n}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Progress bar */}
+                  <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"8px 10px 12px",background:"linear-gradient(transparent,rgba(0,0,0,.8))"}}>
+                    <div style={{height:2,background:"rgba(255,255,255,.15)",borderRadius:2,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:"42%",background:"#6366f1",borderRadius:2}}/>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* ═══════ FEATURES GRID ═══════ */}
-      <section id="feats" style={{padding:"100px max(20px,4vw)",maxWidth:1100,margin:"0 auto"}}>
-        <div style={{textAlign:"center",marginBottom:64}}>
-          <p style={{fontSize:11,color:"#22c55e",fontWeight:700,letterSpacing:".12em",textTransform:"uppercase",marginBottom:12}}>Fonctionnalités</p>
-          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,4vw,56px)",letterSpacing:"-.05em",color:"#fff",lineHeight:.9}}>
-            Tout ce dont tu as besoin.<br/><span style={{color:"rgba(255,255,255,.2)"}}>Rien de superflu.</span>
-          </h2>
-        </div>
+                {/* AVANT — clip */}
+                <div style={{position:"absolute",inset:0,clipPath:`inset(0 ${100-sliderPct}% 0 0)`,background:"#111"}}>
+                  <div style={{position:"absolute",inset:0,background:"#111",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:6,opacity:.5}}>
+                    <div style={{fontSize:28}}>🎬</div>
+                    <div style={{fontSize:10,color:"rgba(255,255,255,.3)"}}>Sans sous-titres</div>
+                  </div>
+                  <div style={{position:"absolute",top:30,left:10,fontSize:8,fontWeight:700,color:"rgba(255,255,255,.35)",background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",padding:"3px 8px",borderRadius:100}}>SANS</div>
+                </div>
 
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:1,border:"1px solid rgba(255,255,255,.06)",borderRadius:20,overflow:"hidden"}}>
-          {[
-            {icon:"⚡",title:"Transcription en 10 sec",desc:"Whisper AI transcrit n'importe quelle vidéo avec 99% de précision. 30 langues supportées.",color:"#6366f1"},
-            {icon:"🎨",title:"28 styles viraux",desc:"MrBeast, Captions, TikTok, Neon, Highlight... Inspirés des créateurs les plus viraux.",color:"#a855f7"},
-            {icon:"🌍",title:"Traduction auto",desc:"Traduis tes sous-titres en 12 langues en un clic. L'IA préserve le ton et le contexte.",color:"#22c55e"},
-            {icon:"🤖",title:"Emojis IA",desc:"Claude AI insère les emojis parfaits aux bons moments pour maximiser l'engagement.",color:"#f59e0b"},
-            {icon:"📱",title:"100% Mobile-Ready",desc:"Formats 9:16 natifs pour TikTok, Reels et Shorts. Interface pensée pour les créateurs.",color:"#f43f5e"},
-            {icon:"🔒",title:"RGPD & Privacy",desc:"Vidéos supprimées automatiquement après 24h. Aucune donnée vendue ou partagée.",color:"#22d3ee"},
-          ].map((f,i)=>(
-            <div key={i}
-              style={{padding:"32px 28px",background:hovFeat===i?"rgba(255,255,255,.04)":"rgba(255,255,255,.01)",borderRight:i%2===0?"1px solid rgba(255,255,255,.06)":"none",borderBottom:"1px solid rgba(255,255,255,.06)",transition:"background .2s",cursor:"default",position:"relative",overflow:"hidden"}}
-              onMouseEnter={()=>setHovFeat(i)} onMouseLeave={()=>setHovFeat(null)}>
-              {hovFeat===i&&<div style={{position:"absolute",top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${f.color}80,transparent)`}}/>}
-              <div style={{width:44,height:44,borderRadius:12,background:`${f.color}15`,border:`1px solid ${f.color}25`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,marginBottom:18,transition:"transform .2s",transform:hovFeat===i?"scale(1.1)":"scale(1)"}}>{f.icon}</div>
-              <div style={{fontWeight:700,fontSize:16,marginBottom:8,color:"#fff",letterSpacing:"-.02em"}}>{f.title}</div>
-              <div style={{fontSize:14,color:"rgba(255,255,255,.38)",lineHeight:1.7}}>{f.desc}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ═══════ HOW IT WORKS ═══════ */}
-      <section style={{padding:"80px max(20px,4vw)",background:"rgba(99,102,241,.04)",borderTop:"1px solid rgba(99,102,241,.1)",borderBottom:"1px solid rgba(99,102,241,.1)"}}>
-        <div style={{maxWidth:900,margin:"0 auto"}}>
-          <div style={{textAlign:"center",marginBottom:56}}>
-            <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,4vw,52px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95}}>
-              De zéro à viral<br/><span style={{background:"linear-gradient(90deg,#818cf8,#c084fc)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>en 3 étapes.</span>
-            </h2>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:2}} className="mobile-grid1">
-            {[
-              {n:"01",icon:"📁",title:"Upload",desc:"Glisse ton MP4 ou colle un lien YouTube / TikTok. Jusqu'à 300 MB, tous formats.",color:"#6366f1"},
-              {n:"02",icon:"⚡",title:"L'IA transcrit",desc:"Whisper génère tes sous-titres en 10 secondes. Tu choisis le style parmi 28 templates.",color:"#a855f7"},
-              {n:"03",icon:"✦",title:"Exporte",desc:"Ton MP4 HD avec sous-titres incrustés prêt à publier. En SRT aussi si tu préfères.",color:"#22c55e"},
-            ].map((step,i)=>(
-              <div key={i} style={{padding:"36px 28px",background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",position:"relative",overflow:"hidden"}}>
-                <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${step.color},transparent)`}}/>
-                <span style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:72,color:"rgba(255,255,255,.04)",lineHeight:1,display:"block",marginBottom:16}}>{step.n}</span>
-                <div style={{fontSize:28,marginBottom:14,filter:`drop-shadow(0 0 10px ${step.color}80)`}}>{step.icon}</div>
-                <div style={{fontWeight:700,fontSize:18,color:"#fff",marginBottom:8,letterSpacing:"-.02em"}}>{step.title}</div>
-                <div style={{fontSize:14,color:"rgba(255,255,255,.38)",lineHeight:1.7}}>{step.desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════ TESTIMONIALS ═══════ */}
-      <section style={{padding:"100px max(20px,4vw)",maxWidth:1100,margin:"0 auto"}}>
-        <div style={{textAlign:"center",marginBottom:56}}>
-          <div style={{display:"inline-flex",gap:2,marginBottom:16}}>
-            {"★★★★★".split("").map((s,i)=><span key={i} style={{color:"#f59e0b",fontSize:20}}>{s}</span>)}
-          </div>
-          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,4vw,52px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95}}>
-            Ils ont déjà<br/><span style={{color:"rgba(255,255,255,.25)"}}>sauté le pas.</span>
-          </h2>
-          <p style={{fontSize:14,color:"rgba(255,255,255,.25)",marginTop:12}}>4.9/5 · 2 400+ créateurs</p>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16}} className="mobile-grid1">
-          {[
-            {name:"Sophie M.",role:"TikToker · 890k",text:"J'ai multiplié mes vues par 3 en 2 semaines. Les styles sont juste parfaits."},
-            {name:"Lucas D.",role:"YouTubeur · 210k",text:"La transcription en 10 secondes c'est dingue. J'économise 2h par vidéo."},
-            {name:"Emma W.",role:"Créatrice Reels · 450k",text:"L'interface est magnifique. Mes Reels ont explosé depuis que j'utilise SubCraft."},
-          ].map((r,i)=>(
-            <div key={i} style={{padding:"28px",borderRadius:20,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.07)",transition:"all .3s"}}
-              onMouseEnter={e=>{e.currentTarget.style.background="rgba(99,102,241,.07)";e.currentTarget.style.borderColor="rgba(99,102,241,.25)";e.currentTarget.style.transform="translateY(-4px)";}}
-              onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.03)";e.currentTarget.style.borderColor="rgba(255,255,255,.07)";e.currentTarget.style.transform="none";}}>
-              <div style={{display:"flex",gap:2,marginBottom:16}}>
-                {"★★★★★".split("").map((s,j)=><span key={j} style={{color:"#f59e0b",fontSize:14}}>{s}</span>)}
-              </div>
-              <p style={{fontSize:14,color:"rgba(255,255,255,.55)",lineHeight:1.8,marginBottom:20}}>"{r.text}"</p>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <div style={{width:36,height:36,borderRadius:"50%",background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#fff"}}>{r.name.slice(0,1)}</div>
-                <div>
-                  <div style={{fontWeight:600,fontSize:13,color:"#fff"}}>{r.name}</div>
-                  <div style={{fontSize:11,color:"rgba(255,255,255,.3)"}}>{r.role}</div>
+                {/* Divider */}
+                <div style={{position:"absolute",top:0,bottom:0,left:`${sliderPct}%`,transform:"translateX(-50%)",width:2,background:"rgba(255,255,255,.9)",zIndex:10,pointerEvents:"none"}}>
+                  <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:32,height:32,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 16px rgba(0,0,0,.8)",cursor:"ew-resize"}}>
+                    <span style={{fontSize:11,color:"#000",fontWeight:900,letterSpacing:"-2px"}}>◀▶</span>
+                  </div>
                 </div>
               </div>
             </div>
-          ))}
+
+            {/* Home bar */}
+            <div style={{width:80,height:3,background:"rgba(255,255,255,.3)",borderRadius:2,margin:"10px auto 0"}}/>
+
+            {/* Hint */}
+            <div style={{textAlign:"center",marginTop:10,fontSize:10,color:"rgba(255,255,255,.2)"}}>← Glisse pour voir →</div>
+
+            {/* Floating badge */}
+            <div style={{position:"absolute",top:20,right:-30,padding:"8px 12px",borderRadius:12,background:"rgba(8,8,15,.95)",border:"1px solid rgba(99,102,241,.25)",boxShadow:"0 8px 32px rgba(0,0,0,.6)",animation:"float 4s ease infinite",whiteSpace:"nowrap"}}>
+              <div style={{fontSize:11,fontWeight:800,color:"#22c55e"}}>⚡ 10 sec</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,.3)"}}>Transcription</div>
+            </div>
+            <div style={{position:"absolute",bottom:60,left:-36,padding:"8px 12px",borderRadius:12,background:"rgba(8,8,15,.95)",border:"1px solid rgba(168,85,247,.25)",boxShadow:"0 8px 32px rgba(0,0,0,.6)",animation:"float 5s ease infinite .8s",whiteSpace:"nowrap"}}>
+              <div style={{fontSize:11,fontWeight:800,color:"#a855f7"}}>28 styles</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,.3)"}}>Templates viraux</div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ═══════ PRICING ═══════ */}
-      <section id="pricing" style={{padding:"100px max(20px,4vw)",background:"rgba(255,255,255,.015)",borderTop:"1px solid rgba(255,255,255,.05)"}}>
+      {/* ─── STATS ─── */}
+      <div style={{borderTop:"1px solid rgba(255,255,255,.06)",borderBottom:"1px solid rgba(255,255,255,.06)",padding:"20px max(20px,4vw)",display:"flex",justifyContent:"center",gap:0,background:"rgba(255,255,255,.02)"}}>
+        {[["10k+","Créateurs","#818cf8"],["99%","Précision","#22c55e"],["<10s","Génération","#f59e0b"],["28","Styles","#f43f5e"]].map(([v,l,c],i)=>(
+          <div key={l} style={{padding:"0 clamp(20px,4vw,48px)",textAlign:"center",borderRight:i<3?"1px solid rgba(255,255,255,.06)":"none",flex:"1 1 70px"}}>
+            <div style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(22px,3vw,32px)",color:c,letterSpacing:"-.04em",lineHeight:1}}>{v}</div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,.3)",marginTop:4,letterSpacing:".05em",textTransform:"uppercase",fontWeight:600}}>{l}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ─── STYLES SELECTOR ─── */}
+      <section id="styles" style={{padding:"80px max(20px,4vw)",maxWidth:900,margin:"0 auto"}}>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(26px,3.5vw,46px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95,marginBottom:10}}>Choisis ton style.</h2>
+          <p style={{fontSize:14,color:"rgba(255,255,255,.35)"}}>Clique pour voir le rendu en temps réel</p>
+        </div>
+        <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap",marginBottom:24}}>
+          {STYLES.map((s,i)=>(
+            <button key={s.label} onClick={()=>setActiveStyle(i)}
+              style={{padding:"7px 18px",borderRadius:100,background:activeStyle===i?"rgba(99,102,241,.18)":"rgba(255,255,255,.05)",border:activeStyle===i?"1px solid rgba(99,102,241,.45)":"1px solid rgba(255,255,255,.08)",color:activeStyle===i?"#a5b4fc":"rgba(255,255,255,.45)",fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .15s"}}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+        {/* Aperçu style — format Short */}
+        <div style={{borderRadius:16,overflow:"hidden",border:"1px solid rgba(255,255,255,.08)",background:"linear-gradient(180deg,#0f0f1a 0%,#07070f 100%)",height:160,display:"flex",alignItems:"center",justifyContent:"center",position:"relative",boxShadow:"0 20px 60px rgba(0,0,0,.7)"}}>
+          <div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px)",backgroundSize:"40px 40px"}}/>
+          <span key={activeStyle} style={{fontFamily:S.font+",sans-serif",fontWeight:S.weight,fontSize:"clamp(28px,5vw,56px)",color:S.color||"#fff",textShadow:S.shadow||"none",textTransform:S.transform||"none",background:S.bg||"transparent",padding:S.bg?"5px 18px":"0",borderRadius:S.bg?"8px":"0",display:"inline-block",animation:"subtitlePop .25s cubic-bezier(.34,1.56,.64,1) both",position:"relative",zIndex:1}}>
+            {S.sample}
+          </span>
+        </div>
+      </section>
+
+      {/* ─── FEATURES ─── */}
+      <section id="feats" style={{padding:"80px max(20px,4vw)",background:"rgba(255,255,255,.02)",borderTop:"1px solid rgba(255,255,255,.05)",borderBottom:"1px solid rgba(255,255,255,.05)"}}>
         <div style={{maxWidth:1000,margin:"0 auto"}}>
           <div style={{textAlign:"center",marginBottom:48}}>
-            <p style={{fontSize:11,color:"#6366f1",fontWeight:700,letterSpacing:".12em",textTransform:"uppercase",marginBottom:12}}>Tarifs</p>
-            <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,4vw,56px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.9,marginBottom:20}}>
-              Simple.<br/><span style={{color:"rgba(255,255,255,.2)"}}>Transparent.</span>
+            <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(26px,3.5vw,48px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95}}>
+              Tout ce qu'il faut.<br/><span style={{color:"rgba(255,255,255,.22)"}}>Rien de superflu.</span>
             </h2>
-            {/* Toggle mensuel/annuel */}
-            <div style={{display:"inline-flex",alignItems:"center",gap:12,padding:"6px",borderRadius:12,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}}>
-              <button onClick={()=>setBillingY(false)} style={{padding:"7px 18px",borderRadius:9,background:!billingY?"#fff":"transparent",color:!billingY?"#000":"rgba(255,255,255,.4)",fontSize:13,fontWeight:700,border:"none",cursor:"pointer",transition:"all .2s"}}>Mensuel</button>
-              <button onClick={()=>setBillingY(true)} style={{padding:"7px 18px",borderRadius:9,background:billingY?"#fff":"transparent",color:billingY?"#000":"rgba(255,255,255,.4)",fontSize:13,fontWeight:700,border:"none",cursor:"pointer",transition:"all .2s",display:"flex",alignItems:"center",gap:6}}>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}} className="mobile-grid1">
+            {[
+              {icon:"⚡",title:"Transcription en 10 sec",desc:"Whisper AI · 99% de précision · 30 langues · Moins de 30s pour un Short de 60s.",color:"#6366f1"},
+              {icon:"🎨",title:"28 styles viraux",desc:"MrBeast, Captions, Highlight, TikTok, Neon... Inspirés des créateurs les plus viraux.",color:"#a855f7"},
+              {icon:"🌍",title:"Traduction auto",desc:"12 langues en 1 clic. L'IA préserve le ton et le contexte de ta vidéo.",color:"#22c55e"},
+              {icon:"🤖",title:"Emojis IA",desc:"Claude AI place les bons emojis aux bons moments pour maximiser l'engagement.",color:"#f59e0b"},
+              {icon:"📱",title:"Format Short natif",desc:"9:16 optimisé pour YouTube Shorts, TikTok et Reels. Taille de texte parfaite.",color:"#f43f5e"},
+              {icon:"🔒",title:"RGPD & Privacy",desc:"Vidéos supprimées automatiquement après 24h. Aucune donnée partagée.",color:"#22d3ee"},
+            ].map((f,i)=>(
+              <div key={i} style={{padding:"24px",borderRadius:16,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.07)",transition:"all .2s"}}
+                onMouseEnter={e=>{e.currentTarget.style.background=`rgba(${f.color=="#6366f1"?"99,102,241":f.color=="#a855f7"?"168,85,247":f.color=="#22c55e"?"34,197,94":f.color=="#f59e0b"?"245,158,11":f.color=="#f43f5e"?"244,63,94":"34,211,238"},.06)`;e.currentTarget.style.borderColor=f.color+"30";e.currentTarget.style.transform="translateY(-3px)";}}
+                onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.03)";e.currentTarget.style.borderColor="rgba(255,255,255,.07)";e.currentTarget.style.transform="none";}}>
+                <div style={{width:40,height:40,borderRadius:10,background:f.color+"18",border:`1px solid ${f.color}28`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:14}}>{f.icon}</div>
+                <div style={{fontWeight:700,fontSize:15,color:"#fff",marginBottom:6,letterSpacing:"-.02em"}}>{f.title}</div>
+                <div style={{fontSize:13,color:"rgba(255,255,255,.38)",lineHeight:1.65}}>{f.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── HOW IT WORKS ─── */}
+      <section style={{padding:"80px max(20px,4vw)",maxWidth:900,margin:"0 auto"}}>
+        <div style={{textAlign:"center",marginBottom:48}}>
+          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(26px,3.5vw,48px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95}}>
+            De zéro à viral<br/><span style={{background:"linear-gradient(90deg,#818cf8,#c084fc)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>en 3 étapes.</span>
+          </h2>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}} className="mobile-grid1">
+          {[
+            {n:"01",icon:"📁",title:"Upload ton Short",desc:"MP4, MOV ou lien YouTube Shorts / TikTok. Jusqu'à 300 MB.",color:"#6366f1"},
+            {n:"02",icon:"⚡",title:"L'IA transcrit",desc:"Whisper génère tes sous-titres en 10 secondes. Tu choisis le style.",color:"#a855f7"},
+            {n:"03",icon:"✦",title:"Exporte",desc:"MP4 avec sous-titres incrustés prêt à publier. Ou SRT.",color:"#22c55e"},
+          ].map((step,i)=>(
+            <div key={i} style={{padding:"28px 24px",borderRadius:16,background:"rgba(255,255,255,.025)",border:"1px solid rgba(255,255,255,.07)",position:"relative",overflow:"hidden"}}>
+              <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${step.color},transparent)`}}/>
+              <span style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:56,color:"rgba(255,255,255,.04)",lineHeight:1,display:"block",marginBottom:12}}>{step.n}</span>
+              <div style={{fontSize:26,marginBottom:12}}>{step.icon}</div>
+              <div style={{fontWeight:700,fontSize:16,color:"#fff",marginBottom:6,letterSpacing:"-.02em"}}>{step.title}</div>
+              <div style={{fontSize:13,color:"rgba(255,255,255,.38)",lineHeight:1.65}}>{step.desc}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── PRICING ─── */}
+      <section id="pricing" style={{padding:"80px max(20px,4vw)",background:"rgba(255,255,255,.02)",borderTop:"1px solid rgba(255,255,255,.05)"}}>
+        <div style={{maxWidth:1060,margin:"0 auto"}}>
+          <div style={{textAlign:"center",marginBottom:40}}>
+            <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(26px,3.5vw,48px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95,marginBottom:16}}>
+              Commence gratuitement.<br/><span style={{color:"rgba(255,255,255,.2)"}}>Scale quand tu veux.</span>
+            </h2>
+            <div style={{display:"inline-flex",alignItems:"center",gap:10,padding:"5px",borderRadius:12,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}}>
+              <button onClick={()=>setBillingY(false)} style={{padding:"7px 18px",borderRadius:9,background:!billingY?"rgba(255,255,255,.12)":"transparent",color:!billingY?"#fff":"rgba(255,255,255,.4)",fontSize:13,fontWeight:700,border:"none",cursor:"pointer",transition:"all .2s"}}>Mensuel</button>
+              <button onClick={()=>setBillingY(true)} style={{padding:"7px 18px",borderRadius:9,background:billingY?"rgba(255,255,255,.12)":"transparent",color:billingY?"#fff":"rgba(255,255,255,.4)",fontSize:13,fontWeight:700,border:"none",cursor:"pointer",transition:"all .2s",display:"flex",alignItems:"center",gap:6}}>
                 Annuel
-                <span style={{fontSize:10,padding:"2px 7px",borderRadius:100,background:billingY?"#22c55e":"rgba(34,197,94,.2)",color:billingY?"#fff":"#22c55e",fontWeight:800}}>-30%</span>
+                <span style={{fontSize:10,padding:"2px 7px",borderRadius:100,background:"rgba(34,197,94,.15)",color:"#22c55e",fontWeight:800}}>-30%</span>
               </button>
             </div>
           </div>
 
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}} className="mobile-grid1">
-            {PLANS.map((plan,i)=>(
-              <div key={plan.id} style={{borderRadius:24,padding:"32px 28px",background:plan.popular?"rgba(99,102,241,.1)":"rgba(255,255,255,.03)",border:plan.popular?"1.5px solid rgba(99,102,241,.4)":"1px solid rgba(255,255,255,.07)",position:"relative",transition:"transform .3s"}}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}} className="mobile-grid1">
+            {PLANS.map((plan)=>(
+              <div key={plan.id} style={{borderRadius:20,padding:"24px 20px",background:plan.popular?"rgba(99,102,241,.1)":"rgba(255,255,255,.03)",border:plan.popular?"1.5px solid rgba(99,102,241,.35)":"1px solid rgba(255,255,255,.07)",position:"relative",transition:"transform .25s"}}
                 onMouseEnter={e=>e.currentTarget.style.transform="translateY(-4px)"}
                 onMouseLeave={e=>e.currentTarget.style.transform="none"}>
-                {plan.popular&&<div style={{position:"absolute",top:-12,left:"50%",transform:"translateX(-50%)",fontSize:10,padding:"4px 14px",borderRadius:100,background:"#6366f1",color:"#fff",fontWeight:800,letterSpacing:".05em",whiteSpace:"nowrap"}}>★ LE PLUS POPULAIRE</div>}
-                <div style={{marginBottom:20}}>
-                  <div style={{fontSize:12,color:"rgba(255,255,255,.4)",fontWeight:600,marginBottom:6,letterSpacing:".04em"}}>{plan.name.toUpperCase()}</div>
-                  <div style={{display:"flex",alignItems:"baseline",gap:4,marginBottom:4}}>
-                    <span style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:44,color:"#fff",letterSpacing:"-.04em",lineHeight:1}}>€{billingY?plan.priceY:plan.price}</span>
-                    <span style={{fontSize:13,color:"rgba(255,255,255,.3)"}}>/mois</span>
+                {plan.popular&&<div style={{position:"absolute",top:-11,left:"50%",transform:"translateX(-50%)",fontSize:9,padding:"3px 12px",borderRadius:100,background:"#6366f1",color:"#fff",fontWeight:800,letterSpacing:".06em",whiteSpace:"nowrap"}}>PLUS POPULAIRE</div>}
+                <div style={{marginBottom:18}}>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,.35)",fontWeight:700,marginBottom:6,letterSpacing:".05em"}}>{plan.name.toUpperCase()}</div>
+                  <div style={{display:"flex",alignItems:"baseline",gap:3,marginBottom:3}}>
+                    {plan.free
+                      ?<span style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:34,color:"#fff",letterSpacing:"-.04em"}}>Gratuit</span>
+                      :<><span style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:36,color:"#fff",letterSpacing:"-.04em",lineHeight:1}}>€{billingY?plan.priceY:plan.price}</span><span style={{fontSize:12,color:"rgba(255,255,255,.3)"}}>/mois</span></>
+                    }
                   </div>
-                  <div style={{fontSize:12,color:plan.color,fontWeight:600}}>{plan.credits}</div>
+                  <div style={{fontSize:11,color:plan.color,fontWeight:600}}>{plan.credits}</div>
                 </div>
-                <button onClick={()=>goCheckout(plan.id,billingY)}
-                  style={{width:"100%",padding:"13px",borderRadius:12,background:plan.popular?"#6366f1":"rgba(255,255,255,.07)",border:plan.popular?"none":"1px solid rgba(255,255,255,.1)",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",transition:"all .2s",marginBottom:24,letterSpacing:"-.01em",boxShadow:plan.popular?"0 8px 32px rgba(99,102,241,.4)":"none"}}
-                  onMouseEnter={e=>{e.currentTarget.style.background=plan.popular?"#4f46e5":"rgba(255,255,255,.12)";}}
-                  onMouseLeave={e=>{e.currentTarget.style.background=plan.popular?"#6366f1":"rgba(255,255,255,.07)";}}>
-                  Commencer avec {plan.name}
+                <button onClick={()=>plan.free?onCTA():goCheckout(plan.id,billingY)}
+                  style={{width:"100%",padding:"11px",borderRadius:10,background:plan.popular?"#6366f1":plan.free?"rgba(255,255,255,.06)":"rgba(255,255,255,.06)",border:plan.popular?"none":plan.free?"1px solid rgba(255,255,255,.12)":"1px solid rgba(255,255,255,.1)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .2s",marginBottom:18,boxShadow:plan.popular?"0 6px 24px rgba(99,102,241,.4)":"none"}}
+                  onMouseEnter={e=>e.currentTarget.style.background=plan.popular?"#4f46e5":"rgba(255,255,255,.1)"}
+                  onMouseLeave={e=>e.currentTarget.style.background=plan.popular?"#6366f1":plan.free?"rgba(255,255,255,.06)":"rgba(255,255,255,.06)"}>
+                  {plan.cta||"Choisir ce plan"}
                 </button>
-                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
                   {plan.features.map(f=>(
-                    <div key={f} style={{display:"flex",alignItems:"center",gap:8,fontSize:13}}>
-                      <span style={{width:16,height:16,borderRadius:"50%",background:`${plan.color}20`,border:`1px solid ${plan.color}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:plan.color,flexShrink:0,fontWeight:900}}>✓</span>
-                      <span style={{color:"rgba(255,255,255,.6)"}}>{f}</span>
+                    <div key={f} style={{display:"flex",alignItems:"center",gap:7,fontSize:12}}>
+                      <span style={{color:plan.color,flexShrink:0,fontWeight:900,fontSize:10}}>✓</span>
+                      <span style={{color:"rgba(255,255,255,.5)"}}>{f}</span>
                     </div>
                   ))}
                 </div>
               </div>
             ))}
           </div>
-          <p style={{textAlign:"center",marginTop:20,fontSize:12,color:"rgba(255,255,255,.2)"}}>Annulation à tout moment · Aucun engagement · RGPD conforme</p>
         </div>
       </section>
 
-      {/* ═══════ FAQ ═══════ */}
-      <section id="faq" style={{padding:"100px max(20px,4vw)",maxWidth:760,margin:"0 auto"}}>
-        <div style={{textAlign:"center",marginBottom:56}}>
-          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,4vw,52px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95}}>
-            Questions<br/><span style={{color:"rgba(255,255,255,.2)"}}>fréquentes.</span>
-          </h2>
+      {/* ─── TEMOIGNAGES ─── */}
+      <section style={{padding:"80px max(20px,4vw)",maxWidth:960,margin:"0 auto"}}>
+        <div style={{textAlign:"center",marginBottom:40}}>
+          <div style={{display:"inline-flex",gap:1,marginBottom:10}}>{"★★★★★".split("").map((s,i)=><span key={i} style={{color:"#f59e0b",fontSize:18}}>{s}</span>)}</div>
+          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(24px,3.5vw,44px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95}}>Ils ont déjà <span style={{color:"rgba(255,255,255,.25)"}}>sauté le pas.</span></h2>
+          <p style={{fontSize:13,color:"rgba(255,255,255,.25)",marginTop:8}}>4.9/5 · 2 400+ créateurs</p>
         </div>
-        <div style={{display:"flex",flexDirection:"column",gap:2}}>
-          {FAQS.map((faq,i)=>(
-            <div key={i} style={{borderBottom:"1px solid rgba(255,255,255,.06)",overflow:"hidden"}}>
-              <button onClick={()=>setFaqOpen(faqOpen===i?null:i)}
-                style={{width:"100%",padding:"20px 0",background:"transparent",border:"none",color:"#fff",fontSize:16,fontWeight:600,textAlign:"left",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,letterSpacing:"-.01em"}}
-                onMouseEnter={e=>e.currentTarget.style.color="rgba(255,255,255,.7)"}
-                onMouseLeave={e=>e.currentTarget.style.color="#fff"}>
-                <span>{faq.q}</span>
-                <span style={{fontSize:18,color:"rgba(255,255,255,.3)",transition:"transform .2s",transform:faqOpen===i?"rotate(45deg)":"none",flexShrink:0}}>+</span>
-              </button>
-              {faqOpen===i&&(
-                <div style={{paddingBottom:20,fontSize:15,color:"rgba(255,255,255,.45)",lineHeight:1.75,animation:"fadeDown .2s ease"}}>
-                  {faq.a}
-                </div>
-              )}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}} className="mobile-grid1">
+          {[
+            {name:"Sophie M.",role:"TikToker · 890k",text:"J'ai multiplié mes vues par 3 en 2 semaines. Les styles sont exactement comme les grands créateurs."},
+            {name:"Lucas D.",role:"YouTubeur Shorts · 210k",text:"Avant je passais 2h par Short à sous-titrer. Maintenant c'est 10 secondes. Jeu changé."},
+            {name:"Emma W.",role:"Créatrice Reels · 450k",text:"SubCraft c'est l'outil que j'attendais. Design magnifique, styles au top, ça marche vraiment."},
+          ].map((r,i)=>(
+            <div key={i} style={{padding:"24px",borderRadius:16,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.07)",transition:"all .25s"}}
+              onMouseEnter={e=>{e.currentTarget.style.background="rgba(99,102,241,.06)";e.currentTarget.style.borderColor="rgba(99,102,241,.2)";e.currentTarget.style.transform="translateY(-3px)";}}
+              onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.03)";e.currentTarget.style.borderColor="rgba(255,255,255,.07)";e.currentTarget.style.transform="none";}}>
+              <div style={{display:"flex",gap:1,marginBottom:14}}>{"★★★★★".split("").map((s,j)=><span key={j} style={{color:"#f59e0b",fontSize:12}}>{s}</span>)}</div>
+              <p style={{fontSize:14,color:"rgba(255,255,255,.5)",lineHeight:1.75,marginBottom:18}}>"{r.text}"</p>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{width:34,height:34,borderRadius:"50%",background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#fff"}}>{r.name.slice(0,1)}</div>
+                <div><div style={{fontWeight:600,fontSize:13,color:"#fff"}}>{r.name}</div><div style={{fontSize:11,color:"rgba(255,255,255,.28)"}}>{r.role}</div></div>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ═══════ CTA FINAL ═══════ */}
-      <section style={{padding:"100px max(20px,4vw)",textAlign:"center",position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:"600px",height:"400px",background:"radial-gradient(circle,rgba(99,102,241,.2) 0%,transparent 65%)",pointerEvents:"none",filter:"blur(60px)"}}/>
-        <div style={{position:"relative",zIndex:1,maxWidth:700,margin:"0 auto"}}>
-          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(32px,5vw,72px)",letterSpacing:"-.05em",color:"#fff",lineHeight:.9,marginBottom:24}}>
-            Prêt à faire<br/><span style={{background:"linear-gradient(90deg,#818cf8,#c084fc)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>exploser tes vues ?</span>
-          </h2>
-          <p style={{fontSize:17,color:"rgba(255,255,255,.4)",marginBottom:36,lineHeight:1.65}}>3 vidéos gratuites. Aucune carte bancaire. En ligne en 30 secondes.</p>
-          <button onClick={onCTA}
-            style={{display:"inline-flex",alignItems:"center",gap:10,padding:"16px 40px",borderRadius:16,background:"#6366f1",border:"none",color:"#fff",fontSize:16,fontWeight:700,cursor:"pointer",boxShadow:"0 12px 60px rgba(99,102,241,.6)",transition:"all .3s",letterSpacing:"-.01em"}}
-            onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.boxShadow="0 20px 80px rgba(99,102,241,.75)";}}
-            onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 12px 60px rgba(99,102,241,.6)";}}>
-            ✦ &nbsp;Commencer gratuitement
-          </button>
-          <div style={{marginTop:16,fontSize:12,color:"rgba(255,255,255,.2)"}}>✓ RGPD conforme &nbsp;·&nbsp; ✓ Sans engagement &nbsp;·&nbsp; ✓ Vidéos supprimées en 24h</div>
+      {/* ─── FAQ ─── */}
+      <section id="faq" style={{padding:"80px max(20px,4vw)",maxWidth:700,margin:"0 auto"}}>
+        <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(24px,3.5vw,44px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95,marginBottom:40,textAlign:"center"}}>Questions <span style={{color:"rgba(255,255,255,.22)"}}>fréquentes.</span></h2>
+        <div style={{display:"flex",flexDirection:"column",gap:1}}>
+          {FAQS.map((faq,i)=>(
+            <div key={i} style={{borderBottom:"1px solid rgba(255,255,255,.06)"}}>
+              <button onClick={()=>setFaqOpen(faqOpen===i?null:i)} style={{width:"100%",padding:"18px 0",background:"transparent",border:"none",color:"#fff",fontSize:15,fontWeight:600,textAlign:"left",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,letterSpacing:"-.01em"}}>
+                <span>{faq.q}</span>
+                <span style={{color:"rgba(255,255,255,.28)",fontSize:18,transition:"transform .2s",transform:faqOpen===i?"rotate(45deg)":"none",flexShrink:0}}>+</span>
+              </button>
+              {faqOpen===i&&<div style={{paddingBottom:18,fontSize:14,color:"rgba(255,255,255,.45)",lineHeight:1.75,animation:"fadeDown .18s ease"}}>{faq.a}</div>}
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* ═══════ FOOTER ═══════ */}
-      <footer style={{padding:"32px max(20px,4vw)",borderTop:"1px solid rgba(255,255,255,.06)",display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
-        <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <div style={{width:24,height:24,borderRadius:7,background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11}}>✦</div>
-          <span style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:13,color:"rgba(255,255,255,.5)"}}>SubCraft</span>
+      {/* ─── CTA FINAL ─── */}
+      <section style={{padding:"80px max(20px,4vw)",textAlign:"center",borderTop:"1px solid rgba(255,255,255,.05)",position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:500,height:300,background:"radial-gradient(circle,rgba(99,102,241,.18) 0%,transparent 65%)",pointerEvents:"none",filter:"blur(50px)"}}/>
+        <div style={{position:"relative",zIndex:1,maxWidth:600,margin:"0 auto"}}>
+          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(30px,5vw,64px)",letterSpacing:"-.05em",color:"#fff",lineHeight:.9,marginBottom:20}}>
+            Prêt à faire<br/><span style={{background:"linear-gradient(90deg,#818cf8,#c084fc)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>exploser tes Shorts ?</span>
+          </h2>
+          <p style={{fontSize:16,color:"rgba(255,255,255,.38)",marginBottom:32}}>3 vidéos gratuites. Aucune carte bancaire. Prêt en 30 secondes.</p>
+          <button onClick={onCTA} style={{display:"inline-flex",alignItems:"center",gap:10,padding:"15px 36px",borderRadius:14,background:"#6366f1",border:"none",color:"#fff",fontSize:16,fontWeight:700,cursor:"pointer",boxShadow:"0 10px 50px rgba(99,102,241,.55)",transition:"all .25s"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 16px 70px rgba(99,102,241,.7)";}} onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 10px 50px rgba(99,102,241,.55)";}}>
+            ✦ &nbsp;Commencer gratuitement
+          </button>
+          <div style={{marginTop:14,fontSize:12,color:"rgba(255,255,255,.18)"}}>✓ Gratuit · ✓ Sans CB · ✓ RGPD · ✓ Annulation libre</div>
         </div>
-        <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+      </section>
+
+      {/* ─── FOOTER ─── */}
+      <footer style={{padding:"28px max(20px,4vw)",borderTop:"1px solid rgba(255,255,255,.06)",display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+        <div style={{display:"flex",alignItems:"center",gap:7}}>
+          <div style={{width:22,height:22,borderRadius:6,background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10}}>✦</div>
+          <span style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:13,color:"rgba(255,255,255,.4)"}}>SubCraft</span>
+        </div>
+        <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
           {[["CGU","cgu"],["Confidentialité","privacy"],["RGPD","rgpd"],["Changelog","changelog"],["Statut","status"]].map(([label,route])=>(
-            <button key={route} onClick={()=>setPage(route)} style={{background:"none",border:"none",color:"rgba(255,255,255,.25)",fontSize:12,cursor:"pointer",transition:"color .15s",padding:0}} onMouseEnter={e=>e.currentTarget.style.color="rgba(255,255,255,.6)"} onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.25)"}>{label}</button>
+            <button key={route} onClick={()=>setPage(route)} style={{background:"none",border:"none",color:"rgba(255,255,255,.22)",fontSize:12,cursor:"pointer",transition:"color .15s",padding:0}} onMouseEnter={e=>e.currentTarget.style.color="rgba(255,255,255,.5)"} onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.22)"}>{label}</button>
           ))}
         </div>
-        <div style={{marginLeft:"auto",fontSize:11,color:"rgba(255,255,255,.2)"}}>© 2026 SubCraft · KEVININDUSTRIE SAS · Paris, France 🇫🇷</div>
+        <div style={{marginLeft:"auto",fontSize:11,color:"rgba(255,255,255,.18)"}}>© 2026 SubCraft · KEVININDUSTRIE SAS · Paris 🇫🇷</div>
       </footer>
 
     </div>
