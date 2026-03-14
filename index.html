@@ -1117,14 +1117,11 @@ const LoginPage=({onAuth,onAdmin,goSignup})=>{
   const [attempts,setAttempts]=useState(0);
   const LOCKOUT=5;
   const isLocked=attempts>=LOCKOUT;
-  // Admin check: compare against hashed-equivalent (in prod → bcrypt on server)
-  const _adm=btoa("admin@subcraftai.com:admin123"); // ← remplacer par vérif serveur en prod
   const handle=async()=>{
     if(isLocked){setErr(`Trop de tentatives. Réessaie dans 15 min.`);return;}
     setErr("");
     if(!email||!pw){setErr("Remplis tous les champs.");return;}
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){setErr("Email invalide.");return;}
-    if(btoa(email+":"+pw)===_adm){onAdmin();return;}
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/auth?action=login`, {
@@ -1138,6 +1135,11 @@ const LoginPage=({onAuth,onAdmin,goSignup})=>{
         setErr(data.error || `Identifiants incorrects. ${LOCKOUT-(attempts+1)} essai(s) restant(s).`);
       } else {
         localStorage.setItem("sc_token", data.token);
+        // Si c'est l'email admin → panel admin
+        if(data.user.email === "kevin.nedzvedsky@gmail.com") {
+          onAdmin();
+          return;
+        }
         onAuth({name:data.user.name, email:data.user.email, plan:data.user.plan, credits:data.user.credits, id:data.user.id, isNew:false});
       }
     } catch(e) {
@@ -5556,7 +5558,38 @@ const AdminLandingEditor=()=>{
   );
 }
 
+const ADMIN_EMAIL = "kevin.nedzvedsky@gmail.com";
+
 const AdminPanel=({onExit})=>{
+  // Sécurité : vérifie le token
+  const token = localStorage.getItem("sc_token");
+  const [adminOk, setAdminOk] = useState(false);
+  const [checking, setChecking] = useState(true);
+  
+  useEffect(()=>{
+    if(!token){ setChecking(false); return; }
+    fetch("/api/auth?action=me", {headers:{"Authorization":`Bearer ${token}`}})
+      .then(r=>r.json()).then(d=>{
+        if(d.user?.email === ADMIN_EMAIL) setAdminOk(true);
+        setChecking(false);
+      }).catch(()=>setChecking(false));
+  },[]);
+
+  if(checking) return(
+    <div style={{minHeight:"100vh",background:"#030305",display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{color:"#7c3aed",fontSize:14}}>Vérification...</div>
+    </div>
+  );
+  
+  if(!adminOk) return(
+    <div style={{minHeight:"100vh",background:"#030305",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}>
+      <div style={{fontSize:48}}>🔒</div>
+      <div className="syne" style={{fontWeight:800,fontSize:22,color:"#fff"}}>Accès refusé</div>
+      <div style={{color:"rgba(255,255,255,.4)",fontSize:14}}>Ce panneau est réservé à l'administrateur.</div>
+      <button onClick={onExit} style={{padding:"10px 24px",borderRadius:10,background:"#7c3aed",border:"none",color:"#fff",cursor:"pointer",fontWeight:600,marginTop:8}}>Retour à l'accueil</button>
+    </div>
+  );
+
   const [users,setUsers]=useState([]);
   const [loadingUsers,setLoadingUsers]=useState(true);
   const [view,setView]=useState("dashboard");
@@ -8051,6 +8084,17 @@ function App(){
             const isNew = !localStorage.getItem(onboardingKey);
             if(isNew) localStorage.setItem(onboardingKey, "1");
             localStorage.removeItem("sc_google_processing");
+            const userData = d.user || {
+              id: payload.sub, email: payload.email,
+              name: payload.user_metadata?.full_name || payload.user_metadata?.name || payload.email?.split("@")[0],
+              plan: "free", credits: 3,
+            };
+            // Email admin → panel admin direct
+            if((userData.email || payload.email) === "kevin.nedzvedsky@gmail.com") {
+              localStorage.setItem("sc_token", token);
+              nav("admin");
+              return;
+            }
             if(d.user) {
               handleAuth({...d.user, isNew});
             } else {
