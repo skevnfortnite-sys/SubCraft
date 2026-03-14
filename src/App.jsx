@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, useReducer, u
 
 const GS = () => (
   <style>{`
-    @import url('https:
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Grotesk:wght@400;500;600;700&family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
     body{background:#030305;color:#ffffff;font-family:'DM Sans',system-ui,sans-serif;min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
@@ -17,7 +17,7 @@ const GS = () => (
     a{color:inherit;text-decoration:none}
     .syne{font-family:'Syne',sans-serif!important}
     .mono{font-family:'JetBrains Mono',monospace!important}
-    body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http:
+    body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:.025}
     @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
     @keyframes wordPop{from{opacity:0;transform:scale(.7) translateY(6px)}to{opacity:1;transform:scale(1) translateY(0)}}
     @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -1003,7 +1003,7 @@ const Phone3D=({config=PHONE_CONFIG,size="normal"})=>{
       {/* ── VIDEO LAYER: fills 100% of screen ── */}
       {vidPlaying?(
         <iframe
-          src={`https:
+          src={`https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&playsinline=1`}
           style={{position:"absolute",inset:0,width:"100%",height:"100%",border:"none",zIndex:1}}
           allow="autoplay; encrypted-media; fullscreen"
         />
@@ -1302,7 +1302,7 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
     <div style={{background:"#05040c",minHeight:"100vh",color:"#f8fafc",overflowX:"hidden",fontFamily:"'DM Sans',system-ui,sans-serif"}}>
 
       {/* ── BRUIT GLOBAL ── */}
-      <div style={{position:"fixed",inset:0,zIndex:0,pointerEvents:"none",opacity:.018,backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http:
+      <div style={{position:"fixed",inset:0,zIndex:0,pointerEvents:"none",opacity:.018,backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")"}}></div>
 
       {/* ── NAV ── */}
       <nav style={{
@@ -2501,7 +2501,7 @@ const UploadModal=({onClose,onImport})=>{
                 </div>
               </div>
               <div style={{position:"relative",marginBottom:8}}>
-                <input value={urlVal} onChange={e=>{setUrlVal(e.target.value);checkUrl(e.target.value);}} placeholder="https:
+                <input value={urlVal} onChange={e=>{setUrlVal(e.target.value);checkUrl(e.target.value);}} placeholder="https://www.youtube.com/shorts/..." style={{width:"100%",background:"rgba(255,255,255,.05)",border:`1px solid rgba(255,255,255,.1)`,borderRadius:10,padding:"10px 40px 10px 14px",color:"#fff",fontSize:14}}/>
                 {urlOk==="ok"&&<span style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",color:T.green,fontWeight:900,fontSize:16}}>✓</span>}
               </div>
               {urlOk==="err"&&<div style={{fontSize:12,color:T.pink,marginBottom:6}}>⚠ Lien non reconnu. Colle un lien YouTube Shorts, TikTok ou Instagram Reel.</div>}
@@ -3185,7 +3185,7 @@ const EditorPage=({onBack,file})=>{
                   <div>
                     <label style={{fontSize:12,color:T.muted,display:"block",marginBottom:7,fontWeight:600}}>URL de la vidéo</label>
                     <div style={{position:"relative"}}>
-                      <input value={footageUrl} onChange={e=>setFootageUrl(e.target.value)} placeholder={footageType==="youtube"?"https:
+                      <input value={footageUrl} onChange={e=>setFootageUrl(e.target.value)} placeholder={footageType==="youtube"?"https://www.youtube.com/shorts/...":"https://www.tiktok.com/@user/video/..."} style={{width:"100%",background:"rgba(255,255,255,.05)",border:`1px solid rgba(255,255,255,.1)`,borderRadius:9,padding:"9px 13px",color:"#fff",fontSize:13}}/>
                     </div>
                     {footageUrl&&(
                       <div style={{marginTop:10,padding:"8px 12px",borderRadius:9,background:`${T.green}10`,border:`1px solid ${T.green}25`,fontSize:11,color:T.green}}>✓ URL prête — le fond sera chargé lors de l'export</div>
@@ -4447,7 +4447,7 @@ const AdminApiKeys=()=>{
         {n:1,title:"Créer un compte Stripe",desc:"Va sur stripe.com/fr et crée ton compte. Gratuit, tu paies uniquement sur les transactions.",action:"Ouvrir Stripe",url:"https://dashboard.stripe.com/register"},
         {n:2,title:"Activer ton compte",desc:"Complète les infos de ton entreprise (SIRET, RIB) pour activer les paiements en live."},
         {n:3,title:"Récupérer les clés",desc:"Developers → API Keys. Tu vois la Publishable key et la Secret key. Utilise les clés LIVE (pas test) en production."},
-        {n:4,title:"Configurer le webhook",desc:"Developers → Webhooks → Add endpoint. URL: https:
+        {n:4,title:"Configurer le webhook",desc:"Developers → Webhooks → Add endpoint. URL: https://votre-domaine.com/api/stripe/webhook — sélectionne tous les events payment_intent et checkout.session."},
         {n:5,title:"Copier les clés",desc:"Copie la Secret key (sk_live_...) et le webhook signing secret (whsec_...) ci-dessous."},
       ],
       fields:[
