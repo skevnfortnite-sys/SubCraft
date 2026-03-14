@@ -1317,376 +1317,474 @@ const SignupPage=({onAuth,goLogin})=>{
 
 /* ══ LANDING PAGE ══ */
 const LandingPage=({user,onCTA,setPage,goCheckout})=>{
+  const [beforeAfter,setBeforeAfter]=useState(50);
+  const [dragging,setDragging]=useState(false);
   const [hovFeat,setHovFeat]=useState(null);
-  const [billingY,setBillingY]=useState(true);
+  const [activeStyle,setActiveStyle]=useState(0);
   const [faqOpen,setFaqOpen]=useState(null);
-  const [exitPopup,setExitPopup]=useState(false);
-  const [exitDone,setExitDone]=useState(false);
-  const [mouse,setMouse]=useState({x:0,y:0});
-  const heroRef=useRef(null);
+  const [billingY,setBillingY]=useState(true);
+  const baRef=useRef(null);
+
+  // Drag before/after slider
+  const handleBAMove=(clientX)=>{
+    if(!baRef.current)return;
+    const rect=baRef.current.getBoundingClientRect();
+    const pct=Math.max(5,Math.min(95,((clientX-rect.left)/rect.width)*100));
+    setBeforeAfter(pct);
+  };
 
   useEffect(()=>{
-    const onLeave=(e)=>{if(!exitDone&&e.clientY<=6)setExitPopup(true);};
-    setTimeout(()=>document.addEventListener("mouseleave",onLeave),3000);
-    return()=>document.removeEventListener("mouseleave",onLeave);
-  },[exitDone]);
+    if(!dragging)return;
+    const onMove=(e)=>handleBAMove(e.touches?e.touches[0].clientX:e.clientX);
+    const onUp=()=>setDragging(false);
+    window.addEventListener("mousemove",onMove);
+    window.addEventListener("mouseup",onUp);
+    window.addEventListener("touchmove",onMove,{passive:false});
+    window.addEventListener("touchend",onUp);
+    return()=>{window.removeEventListener("mousemove",onMove);window.removeEventListener("mouseup",onUp);window.removeEventListener("touchmove",onMove);window.removeEventListener("touchend",onUp);};
+  },[dragging]);
 
-  useEffect(()=>{
-    const mv=(e)=>{if(!heroRef.current)return;const r=heroRef.current.getBoundingClientRect();setMouse({x:(e.clientX-r.left)/r.width-.5,y:(e.clientY-r.top)/r.height-.5});};
-    window.addEventListener("mousemove",mv);return()=>window.removeEventListener("mousemove",mv);
-  },[]);
+  const STYLES_DEMO=[
+    {id:"captions-white",label:"Captions",color:"#fff",font:"Montserrat",weight:900,shadow:"-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000",transform:"uppercase"},
+    {id:"mrbeast",label:"MrBeast",color:"#FFE600",font:"Anton",weight:900,shadow:"3px 3px 0 #000,-3px -3px 0 #000",transform:"uppercase"},
+    {id:"highlight-yellow",label:"Highlight",color:"#000",bg:"#FFE600",font:"Montserrat",weight:900,transform:"uppercase"},
+    {id:"tiktok-clean",label:"TikTok",color:"#fff",bg:"rgba(0,0,0,.8)",font:"Montserrat",weight:800,transform:"none"},
+    {id:"neon-blue-pulse",label:"Neon",color:"#6366f1",font:"Barlow Condensed",weight:900,shadow:"0 0 12px #6366f1,0 0 30px #6366f160",transform:"uppercase"},
+    {id:"double-outline",label:"Outline",color:"#fff",font:"Anton",weight:900,shadow:"3px 3px 0 #f43f5e,-3px -3px 0 #f43f5e",transform:"uppercase"},
+  ];
 
-  const feats=[
-    {icon:"⚡",title:"Transcription Whisper AI",desc:"Sous-titres en moins de 10 secondes — précision 99%.",color:T.yellow},
-    {icon:"📱",title:"Optimisé Shorts & Reels",desc:"Formats verticaux 9:16 parfaits pour TikTok, Reels et Shorts.",color:T.pink},
-    {icon:"🎨",title:"24 Styles Visuels Pro",desc:"MrBeast, Squeezie, Neon, Horror — un style pour chaque vibe.",color:T.cyan},
-    {icon:"🌍",title:"12 Langues Supportées",desc:"Traduction automatique de tes sous-titres en un clic.",color:T.green},
-    {icon:"🤖",title:"Emojis IA Automatiques",desc:"Claude AI insère les emojis parfaits pour booster l'engagement.",color:T.acc},
-    {icon:"✨",title:"30+ Effets d'Animation",desc:"Wave, Shake, Typewriter, Zoom — des effets qui retiennent l'attention.",color:T.purple},
+  const PLANS=[
+    {id:"basic",name:"Starter",price:12,priceY:10,color:"#6366f1",credits:"30 vidéos/mois",features:["Transcription Whisper AI","28 styles de sous-titres","Traduction 12 langues","Export SRT","Support email"]},
+    {id:"expert",name:"Creator",price:18,priceY:13,color:"#a855f7",credits:"100 vidéos/mois",popular:true,features:["Tout Starter inclus","Emojis IA automatiques","Export vidéo MP4 HD","Suppression auto 24h","Support prioritaire"]},
+    {id:"pro",name:"Studio",price:30,priceY:21,color:"#22c55e",credits:"Illimité",features:["Tout Creator inclus","Vidéos illimitées","API Access","White-label (bientôt)","Manager dédié"]},
+  ];
+
+  const FAQS=[
+    {q:"Quelle est la précision de la transcription ?",a:"Whisper AI d'OpenAI offre 99%+ de précision sur les langues populaires. La transcription prend moins de 30 secondes pour une vidéo de 60 secondes."},
+    {q:"Quels formats de vidéo sont acceptés ?",a:"MP4, MOV, AVI, WebM, MKV — jusqu'à 300 MB. Tu peux aussi coller un lien YouTube Shorts ou TikTok directement."},
+    {q:"Les vidéos sont-elles stockées ?",a:"Non. Toutes les vidéos uploadées sont automatiquement supprimées après 24h (conformité RGPD). Seuls tes sous-titres sont conservés."},
+    {q:"Puis-je changer de plan ou annuler ?",a:"Oui, à tout moment depuis ton espace client. L'accès reste actif jusqu'à la fin de la période payée. Aucun engagement."},
+    {q:"L'export MP4 avec sous-titres incrustés est-il disponible ?",a:"Il arrive en Q2 2026. En attendant, tu peux exporter en SRT et l'importer dans CapCut, Premiere ou DaVinci."},
   ];
 
   return(
-    <div style={{background:T.bg,minHeight:"100vh",position:"relative",overflow:"hidden"}}>
-      <AuroraBg/>
-      <Cursor/>
+    <div style={{background:"#000",minHeight:"100vh",color:"#fff",overflowX:"hidden"}}>
 
-      {/* NAV — clean glass pill */}
-      <nav style={{position:"sticky",top:0,zIndex:100,height:60,padding:"0 32px",display:"flex",alignItems:"center",gap:10,backdropFilter:"blur(48px)",WebkitBackdropFilter:"blur(48px)",background:"rgba(3,3,5,.82)",borderBottom:"1px solid rgba(255,255,255,.06)",boxShadow:"0 1px 0 rgba(255,255,255,.04)"}} className="mobile-p">
-        {/* Logo */}
+      {/* ═══════ NAV ═══════ */}
+      <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:100,height:56,padding:"0 max(24px,4vw)",display:"flex",alignItems:"center",gap:12,background:"rgba(0,0,0,.85)",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",borderBottom:"1px solid rgba(255,255,255,.06)"}}>
         <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-          <div style={{width:30,height:30,borderRadius:9,background:"linear-gradient(135deg,#7c3aed,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,boxShadow:"0 0 24px rgba(124,58,237,.6),0 1px 0 rgba(255,255,255,.12) inset"}}>✦</div>
-          <span className="syne" style={{fontWeight:800,fontSize:16,letterSpacing:"-.03em",color:"#fff"}}>SubCraft</span>
+          <div style={{width:28,height:28,borderRadius:8,background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,boxShadow:"0 0 20px rgba(99,102,241,.5)"}}>✦</div>
+          <span style={{fontWeight:800,fontSize:15,letterSpacing:"-.03em",fontFamily:"Syne,sans-serif",color:"#fff"}}>SubCraft</span>
         </div>
-        {/* Center links */}
-        <div style={{flex:1,display:"flex",justifyContent:"center",gap:0}} className="hide-mobile">
-          {[["Fonctionnalités","fonctionnalités"],["Comment ça marche","comment"],["Exemples","exemples"],["Tarifs","tarifs"]].map(([l,id])=>(
-            <button key={l} onClick={()=>document.getElementById(id)?.scrollIntoView({behavior:"smooth"})} style={{padding:"7px 14px",borderRadius:8,background:"transparent",border:"none",color:T.muted,fontSize:12.5,fontWeight:500,cursor:"pointer",transition:"color .15s",whiteSpace:"nowrap"}}
-              onMouseEnter={e=>e.currentTarget.style.color=T.text}
-              onMouseLeave={e=>e.currentTarget.style.color=T.muted}>{l}</button>
+        <div style={{flex:1,display:"flex",justifyContent:"center",gap:4}} className="hide-mobile">
+          {[["Fonctionnalités","feats"],["Styles","styles"],["Tarifs","pricing"],["FAQ","faq"]].map(([l,id])=>(
+            <button key={l} onClick={()=>document.getElementById(id)?.scrollIntoView({behavior:"smooth"})}
+              style={{padding:"6px 14px",borderRadius:8,background:"transparent",border:"none",color:"rgba(255,255,255,.45)",fontSize:13,fontWeight:500,cursor:"pointer",transition:"color .15s"}}
+              onMouseEnter={e=>e.currentTarget.style.color="#fff"}
+              onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.45)"}>
+              {l}
+            </button>
           ))}
         </div>
-        {/* Right actions */}
         <div style={{display:"flex",gap:8,marginLeft:"auto",alignItems:"center"}}>
-          {user ? (
+          {user?(
+            <button onClick={()=>setPage("dashboard")}
+              style={{display:"flex",alignItems:"center",gap:8,padding:"6px 14px 6px 7px",borderRadius:10,background:"rgba(99,102,241,.12)",border:"1px solid rgba(99,102,241,.3)",color:"#a5b4fc",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s"}}
+              onMouseEnter={e=>{e.currentTarget.style.background="rgba(99,102,241,.22)";}}
+              onMouseLeave={e=>{e.currentTarget.style.background="rgba(99,102,241,.12)";}}>
+              <div style={{width:26,height:26,borderRadius:8,background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"#fff",flexShrink:0}}>
+                {(user.name||user.email||"?").slice(0,1).toUpperCase()}
+              </div>
+              <span className="hide-mobile">Dashboard →</span>
+            </button>
+          ):(
             <>
-              <button onClick={()=>setPage("dashboard")} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 14px 6px 7px",borderRadius:10,background:"rgba(124,58,237,.12)",border:"1px solid rgba(124,58,237,.3)",color:"#c4b5fd",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s"}}
-                onMouseEnter={e=>{e.currentTarget.style.background="rgba(124,58,237,.2)";e.currentTarget.style.borderColor="rgba(124,58,237,.5)";}}
-                onMouseLeave={e=>{e.currentTarget.style.background="rgba(124,58,237,.12)";e.currentTarget.style.borderColor="rgba(124,58,237,.3)";}}>
-                <div style={{width:24,height:24,borderRadius:7,background:"linear-gradient(135deg,#7c3aed,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#fff",flexShrink:0}}>
-                  {(user.name||user.email||"U").slice(0,1).toUpperCase()}
-                </div>
-                <span className="hide-mobile">Mon espace →</span>
-              </button>
-            </>
-          ) : (
-            <>
-              <button onClick={()=>setPage("auth")} className="hide-mobile" style={{padding:"7px 16px",borderRadius:9,background:"transparent",border:"1px solid rgba(255,255,255,.09)",color:T.muted,fontSize:12.5,cursor:"pointer",transition:"all .2s"}}
-                onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.18)";e.currentTarget.style.color=T.text;}}
-                onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.09)";e.currentTarget.style.color=T.muted;}}>
+              <button onClick={()=>setPage("auth")} className="hide-mobile"
+                style={{padding:"7px 16px",borderRadius:9,background:"transparent",border:"1px solid rgba(255,255,255,.1)",color:"rgba(255,255,255,.5)",fontSize:13,cursor:"pointer",transition:"all .2s",fontWeight:500}}
+                onMouseEnter={e=>{e.currentTarget.style.color="#fff";e.currentTarget.style.borderColor="rgba(255,255,255,.25)";}}
+                onMouseLeave={e=>{e.currentTarget.style.color="rgba(255,255,255,.5)";e.currentTarget.style.borderColor="rgba(255,255,255,.1)";}}>
                 Connexion
               </button>
-              <button onClick={onCTA} style={{padding:"8px 20px",borderRadius:10,background:"#7c3aed",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(124,58,237,.5)",transition:"all .2s",letterSpacing:"-.01em"}}
-                onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.04)";e.currentTarget.style.boxShadow="0 8px 32px rgba(124,58,237,.7)";}}
-                onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 4px 20px rgba(124,58,237,.5)";}}>
-                Commencer gratuit →
+              <button onClick={onCTA}
+                style={{padding:"8px 20px",borderRadius:10,background:"#6366f1",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .2s",letterSpacing:"-.01em",boxShadow:"0 4px 20px rgba(99,102,241,.5)"}}
+                onMouseEnter={e=>{e.currentTarget.style.background="#4f46e5";e.currentTarget.style.transform="translateY(-1px)";}}
+                onMouseLeave={e=>{e.currentTarget.style.background="#6366f1";e.currentTarget.style.transform="none";}}>
+                Essai gratuit →
               </button>
             </>
           )}
         </div>
       </nav>
 
-      {/* HERO */}
-      <div ref={heroRef} id="fonctionnalités" style={{position:"relative",zIndex:1,display:"flex",alignItems:"center",padding:"60px 72px 48px",maxWidth:1400,margin:"0 auto",gap:60,minHeight:"85vh"}} className="mobile-col mobile-p">
-        {/* LEFT: Text */}
-        <div style={{flex:1,minWidth:0}}>
+      {/* ═══════ HERO ═══════ */}
+      <section style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"80px max(20px,4vw) 60px",textAlign:"center",position:"relative",overflow:"hidden"}}>
+        {/* Background glow */}
+        <div style={{position:"absolute",top:"20%",left:"50%",transform:"translateX(-50%)",width:"600px",height:"600px",background:"radial-gradient(circle,rgba(99,102,241,.18) 0%,transparent 65%)",pointerEvents:"none",filter:"blur(40px)"}}/>
+        <div style={{position:"absolute",top:"30%",left:"20%",width:"300px",height:"300px",background:"radial-gradient(circle,rgba(168,85,247,.1) 0%,transparent 70%)",pointerEvents:"none",filter:"blur(60px)"}}/>
+        <div style={{position:"absolute",top:"40%",right:"15%",width:"250px",height:"250px",background:"radial-gradient(circle,rgba(244,63,94,.08) 0%,transparent 70%)",pointerEvents:"none",filter:"blur(60px)"}}/>
+
+        <div style={{position:"relative",zIndex:1,maxWidth:900,margin:"0 auto"}}>
           {/* Badge */}
-          <div className="fu" style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 14px",borderRadius:100,background:"rgba(124,58,237,.1)",border:"1px solid rgba(124,58,237,.25)",marginBottom:32}}>
-            <span style={{width:5,height:5,borderRadius:"50%",background:"#a855f7",animation:"pulseDot 2s infinite"}}/>
-            <span style={{fontSize:11,color:"#c084fc",letterSpacing:".08em",fontWeight:600}}>WHISPER AI · BÊTA OUVERTE</span>
+          <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 14px",borderRadius:100,background:"rgba(99,102,241,.1)",border:"1px solid rgba(99,102,241,.25)",marginBottom:32,animation:"fadeUp .6s ease both"}}>
+            <span style={{width:5,height:5,borderRadius:"50%",background:"#6366f1",animation:"pulseDot 2s infinite"}}/>
+            <span style={{fontSize:11,color:"#a5b4fc",letterSpacing:".1em",fontWeight:600}}>WHISPER AI · BÊTA OUVERTE</span>
           </div>
+
           {/* Title */}
-          <h1 className="fu syne" style={{fontWeight:800,fontSize:"clamp(36px,5vw,76px)",lineHeight:.9,letterSpacing:"-.06em",marginBottom:28,animationDelay:".06s"}}>
-            <span style={{display:"block",color:"#ffffff",textShadow:"0 0 80px rgba(124,58,237,.4)"}}>Sous-titres</span>
-            <span style={{display:"block",background:"linear-gradient(135deg,#c084fc 0%,#a855f7 40%,#7c3aed 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",filter:"drop-shadow(0 0 30px rgba(168,85,247,.5))"}}>qui explosent</span>
-            <span style={{display:"block",color:"#ffffff"}}>tes vues</span>
+          <h1 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(44px,7vw,100px)",lineHeight:.88,letterSpacing:"-.05em",marginBottom:32,animation:"fadeUp .6s .08s ease both"}}>
+            <span style={{display:"block",color:"#fff"}}>Sous-titres</span>
+            <span style={{display:"block",background:"linear-gradient(90deg,#818cf8,#a78bfa,#c084fc,#e879f9)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundSize:"200% auto",animation:"gradShift 4s linear infinite"}}>qui captivent.</span>
           </h1>
+
           {/* Description */}
-          <p className="fu" style={{fontSize:17,color:"rgba(255,255,255,.55)",maxWidth:460,lineHeight:1.8,marginBottom:44,animationDelay:".12s",fontWeight:400}}>
-            Upload ta vidéo, l'IA génère les sous-titres en <strong style={{color:"#fff",fontWeight:600}}>10 secondes</strong>. Choisis parmi <strong style={{color:"#fff",fontWeight:600}}>24 styles viraux</strong> et exporte en HD.
+          <p style={{fontSize:"clamp(16px,2vw,20px)",color:"rgba(255,255,255,.45)",maxWidth:520,margin:"0 auto 40px",lineHeight:1.7,fontWeight:400,animation:"fadeUp .6s .16s ease both"}}>
+            Upload ta vidéo. L'IA transcrit en <strong style={{color:"#fff",fontWeight:600}}>10 secondes</strong>. Choisis parmi <strong style={{color:"#fff",fontWeight:600}}>28 styles viraux</strong>. Exporte en HD.
           </p>
+
           {/* CTAs */}
-          <div className="fu" style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:52,animationDelay:".17s"}}>
-            <button onClick={onCTA} style={{display:"flex",alignItems:"center",gap:10,padding:"16px 36px",borderRadius:14,background:"#7c3aed",border:"none",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 0 0 1px rgba(168,85,247,.3),0 8px 48px rgba(124,58,237,.6),0 20px 80px rgba(124,58,237,.2)",transition:"all .25s cubic-bezier(.22,1,.36,1)",letterSpacing:"-.01em",position:"relative",overflow:"hidden"}}
-              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.background="#8b3cf7";e.currentTarget.style.boxShadow="0 0 0 1px rgba(168,85,247,.4),0 12px 60px rgba(124,58,237,.7),0 24px 100px rgba(124,58,237,.3)";}}
-              onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.background="#7c3aed";e.currentTarget.style.boxShadow="0 0 0 1px rgba(168,85,247,.3),0 8px 48px rgba(124,58,237,.6),0 20px 80px rgba(124,58,237,.2)";}}>
+          <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap",marginBottom:64,animation:"fadeUp .6s .22s ease both"}}>
+            <button onClick={onCTA}
+              style={{display:"inline-flex",alignItems:"center",gap:10,padding:"14px 32px",borderRadius:14,background:"#6366f1",border:"none",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 8px 40px rgba(99,102,241,.5),0 1px 0 rgba(255,255,255,.1) inset",transition:"all .25s",letterSpacing:"-.01em"}}
+              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 16px 60px rgba(99,102,241,.65),0 1px 0 rgba(255,255,255,.1) inset";}}
+              onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 8px 40px rgba(99,102,241,.5),0 1px 0 rgba(255,255,255,.1) inset";}}>
               ✦ &nbsp;Commencer gratuitement
             </button>
-            <button onClick={()=>document.getElementById("exemples")?.scrollIntoView({behavior:"smooth"})} style={{display:"flex",alignItems:"center",gap:8,padding:"15px 26px",borderRadius:16,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.1)",color:T.text,fontSize:15,cursor:"pointer",transition:"all .3s",backdropFilter:"blur(16px)"}}
-              onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,255,255,.06)";e.currentTarget.style.borderColor="rgba(255,255,255,.2)";}}
-              onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.03)";e.currentTarget.style.borderColor="rgba(255,255,255,.1)";}}>
-              ▶ Voir les exemples
+            <button onClick={()=>document.getElementById("demo")?.scrollIntoView({behavior:"smooth"})}
+              style={{display:"inline-flex",alignItems:"center",gap:8,padding:"14px 28px",borderRadius:14,background:"transparent",border:"1px solid rgba(255,255,255,.12)",color:"rgba(255,255,255,.7)",fontSize:15,cursor:"pointer",transition:"all .25s",fontWeight:500}}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.3)";e.currentTarget.style.color="#fff";}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,.12)";e.currentTarget.style.color="rgba(255,255,255,.7)";}}>
+              ▶ Voir la démo
             </button>
           </div>
-          {/* Stats */}
-          <div className="fu" style={{display:"flex",gap:24,animationDelay:".22s",flexWrap:"wrap"}}>
-            {[["10k+","Créateurs","#a855f7"],["99%","Précision IA","#22c55e"],["<10s","Génération","#22d3ee"],["24","Styles","#f43f5e"]].map(([v,l,c],i)=>(
-              <div key={l} style={{textAlign:"left"}}>
-                <div className="syne" style={{fontWeight:800,fontSize:26,color:c,lineHeight:1,letterSpacing:"-.03em"}}>{v}</div>
-                <div style={{fontSize:11,color:"rgba(255,255,255,.35)",marginTop:3,fontWeight:500}}>{l}</div>
+
+          {/* Stats row */}
+          <div style={{display:"flex",gap:0,justifyContent:"center",borderTop:"1px solid rgba(255,255,255,.06)",borderBottom:"1px solid rgba(255,255,255,.06)",padding:"20px 0",animation:"fadeUp .6s .3s ease both",flexWrap:"wrap"}}>
+            {[["10k+","Créateurs","#818cf8"],["99%","Précision","#34d399"],["<10s","Génération","#f59e0b"],["28","Styles","#f43f5e"]].map(([v,l,c],i)=>(
+              <div key={l} style={{padding:"0 32px",textAlign:"center",borderRight:i<3?"1px solid rgba(255,255,255,.06)":"none",flex:"1 1 80px"}}>
+                <div style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:28,color:c,letterSpacing:"-.04em",lineHeight:1}}>{v}</div>
+                <div style={{fontSize:11,color:"rgba(255,255,255,.3)",marginTop:4,letterSpacing:".05em",textTransform:"uppercase",fontWeight:600}}>{l}</div>
               </div>
             ))}
           </div>
         </div>
+      </section>
 
-        {/* RIGHT: 3D Phone — full-screen video, large */}
-        <div className="fu hide-mobile" style={{flexShrink:0,animationDelay:".06s",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",width:520,minHeight:600}}>
-          {/* Deep glow halo */}
-          <div style={{position:"absolute",inset:-80,background:`radial-gradient(${T.acc}20 0%,${T.purple}08 45%,transparent 70%)`,filter:"blur(50px)",pointerEvents:"none",animation:"glowPulse 4s ease infinite"}}/>
-          {/* Floating stat bubbles — more prominent, clearly outside phone */}
-          <div style={{position:"absolute",top:"4%",left:"-34%",padding:"10px 16px",borderRadius:16,background:"rgba(8,10,28,.97)",border:"1px solid rgba(91,108,255,.3)",backdropFilter:"blur(20px)",boxShadow:"0 12px 40px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.05)",animation:"float 5s ease infinite",whiteSpace:"nowrap",zIndex:10}}>
-            <div style={{fontSize:9,color:T.muted,marginBottom:3,letterSpacing:".05em",textTransform:"uppercase"}}>Générés aujourd'hui</div>
-            <div className="syne" style={{fontWeight:800,fontSize:22,color:T.green,lineHeight:1}}>+2,841</div>
-            <div style={{fontSize:9,color:T.muted,marginTop:3}}>sous-titres créés 🎬</div>
-          </div>
-          <div style={{position:"absolute",bottom:"18%",left:"-36%",padding:"10px 14px",borderRadius:16,background:"rgba(8,10,28,.97)",border:"1px solid rgba(232,57,112,.25)",backdropFilter:"blur(20px)",boxShadow:"0 12px 40px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.05)",animation:"float 6.5s ease infinite",animationDelay:".8s",whiteSpace:"nowrap",zIndex:10}}>
-            <div style={{display:"flex",alignItems:"center",gap:9}}>
-              <div style={{width:32,height:32,borderRadius:9,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>🔥</div>
-              <div>
-                <div style={{fontSize:12,fontWeight:700,color:T.text}}>MrBeast Style</div>
-                <div style={{fontSize:9,color:T.green,fontWeight:700}}>⭐ Style #1 populaire</div>
+      {/* ═══════ DEMO AVANT/APRÈS ═══════ */}
+      <section id="demo" style={{padding:"80px max(20px,4vw)",maxWidth:1100,margin:"0 auto"}}>
+        <div style={{textAlign:"center",marginBottom:48}}>
+          <p style={{fontSize:11,color:"#6366f1",fontWeight:700,letterSpacing:".12em",textTransform:"uppercase",marginBottom:12}}>Avant / Après</p>
+          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,4vw,52px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95}}>
+            Vois la différence<br/><span style={{color:"rgba(255,255,255,.3)"}}>par toi-même</span>
+          </h2>
+        </div>
+
+        {/* Avant/après slider */}
+        <div ref={baRef} style={{position:"relative",borderRadius:24,overflow:"hidden",border:"1px solid rgba(255,255,255,.08)",cursor:"ew-resize",userSelect:"none",boxShadow:"0 40px 100px rgba(0,0,0,.8)",aspectRatio:"16/9",maxHeight:480,background:"#0a0a0f"}}
+          onMouseDown={e=>{setDragging(true);handleBAMove(e.clientX);}}
+          onTouchStart={e=>{setDragging(true);handleBAMove(e.touches[0].clientX);}}>
+
+          {/* APRÈS — fond plein */}
+          <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,#0d0d18 0%,#050510 100%)",display:"flex",alignItems:"flex-end",justifyContent:"center",paddingBottom:"12%"}}>
+            <div style={{textAlign:"center"}}>
+              {/* Label APRÈS */}
+              <div style={{position:"absolute",top:16,right:16,fontSize:10,fontWeight:700,letterSpacing:".1em",color:"#22c55e",background:"rgba(34,197,94,.1)",border:"1px solid rgba(34,197,94,.25)",padding:"4px 10px",borderRadius:100}}>AVEC SUBCRAFT</div>
+              {/* Sous-titre stylisé */}
+              <div style={{fontFamily:"Montserrat,sans-serif",fontWeight:900,fontSize:"clamp(18px,3.5vw,40px)",color:"#fff",textTransform:"uppercase",textShadow:"-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000",animation:"subtitlePop .3s ease both"}}>
+                Tes sous-titres
+              </div>
+              <div style={{fontFamily:"Montserrat,sans-serif",fontWeight:900,fontSize:"clamp(24px,5vw,60px)",color:"#6366f1",textTransform:"uppercase",textShadow:"-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000",lineHeight:.9}}>
+                EXPLOSENT
+              </div>
+              {/* Social icons */}
+              <div style={{display:"flex",gap:16,justifyContent:"center",marginTop:16,opacity:.7}}>
+                {[["❤️","12.4k"],["💬","892"],["↗","3.1k"]].map(([ic,n])=>(
+                  <div key={n} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                    <span style={{fontSize:20}}>{ic}</span>
+                    <span style={{fontSize:10,color:"#fff",fontWeight:700}}>{n}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
-          <div style={{position:"absolute",top:"26%",right:"-32%",padding:"10px 16px",borderRadius:16,background:"rgba(8,10,28,.97)",border:"1px solid rgba(91,108,255,.3)",backdropFilter:"blur(20px)",boxShadow:"0 12px 40px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.05)",animation:"float 7s ease infinite",animationDelay:"1.2s",whiteSpace:"nowrap",zIndex:10}}>
-            <div style={{fontSize:9,color:T.muted,marginBottom:4,textTransform:"uppercase",letterSpacing:".05em"}}>Précision IA</div>
-            <div className="syne" style={{fontWeight:800,fontSize:22,color:T.acc,lineHeight:1}}>99.2%</div>
-            <div style={{height:4,borderRadius:2,background:"rgba(255,255,255,.07)",marginTop:6,overflow:"hidden",width:90}}>
-              <div style={{height:"100%",width:"99%",background:`linear-gradient(90deg,${T.acc},${T.purple})`,borderRadius:2}}/>
+
+          {/* AVANT — clip sur la gauche */}
+          <div style={{position:"absolute",inset:0,clipPath:`inset(0 ${100-beforeAfter}% 0 0)`,background:"#111",display:"flex",alignItems:"flex-end",justifyContent:"center",paddingBottom:"12%"}}>
+            <div style={{position:"absolute",top:16,left:16,fontSize:10,fontWeight:700,letterSpacing:".1em",color:"rgba(255,255,255,.4)",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",padding:"4px 10px",borderRadius:100}}>SANS SOUS-TITRES</div>
+            <div style={{textAlign:"center",opacity:.15}}>
+              <div style={{fontFamily:"Arial",fontSize:"clamp(10px,1.5vw,18px)",color:"#fff"}}>Tes sous-titres explosent</div>
             </div>
           </div>
-          <div style={{position:"absolute",bottom:"6%",right:"-28%",padding:"9px 14px",borderRadius:14,background:"rgba(8,10,28,.97)",border:`1px solid ${T.green}35`,backdropFilter:"blur(20px)",boxShadow:"0 8px 32px rgba(0,0,0,.4)",animation:"float 4.5s ease infinite",animationDelay:"2s",whiteSpace:"nowrap",zIndex:10}}>
-            <div style={{display:"flex",alignItems:"center",gap:7}}>
-              <span style={{width:7,height:7,borderRadius:"50%",background:T.green,animation:"pulseDotGreen 2s infinite",flexShrink:0}}/>
-              <span style={{fontSize:12,fontWeight:700,color:T.green}}>+12k créateurs actifs</span>
+
+          {/* Slider divider */}
+          <div style={{position:"absolute",top:0,bottom:0,left:`${beforeAfter}%`,transform:"translateX(-50%)",width:2,background:"#fff",zIndex:10,pointerEvents:"none"}}>
+            {/* Handle */}
+            <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:40,height:40,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 24px rgba(0,0,0,.8)",cursor:"ew-resize"}}>
+              <span style={{fontSize:14,color:"#000",fontWeight:900,letterSpacing:"-2px"}}>◀▶</span>
             </div>
           </div>
-          {/* Mouse-tracking 3D wrapper */}
-          <div style={{transform:`perspective(1600px) rotateY(${mouse.x*10}deg) rotateX(${-mouse.y*6}deg)`,transition:"transform .08s ease-out",transformStyle:"preserve-3d",position:"relative",zIndex:1}}>
-            <Phone3D size="large"/>
-            {/* Orbiting icons */}
-            <div style={{position:"absolute",top:"50%",left:"50%",width:0,height:0,pointerEvents:"none"}}>
-              <div style={{position:"absolute",width:46,height:46,borderRadius:13,background:"rgba(91,108,255,.15)",border:"1px solid rgba(91,108,255,.35)",backdropFilter:"blur(10px)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,animation:"orbit 9s linear infinite",boxShadow:`0 0 24px rgba(91,108,255,.3)`}}>⚡</div>
-              <div style={{position:"absolute",width:40,height:40,borderRadius:11,background:"rgba(168,85,247,.14)",border:"1px solid rgba(168,85,247,.35)",backdropFilter:"blur(10px)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,animation:"orbit2 14s linear infinite"}}>🎨</div>
-              <div style={{position:"absolute",width:36,height:36,borderRadius:10,background:"rgba(52,211,153,.12)",border:"1px solid rgba(52,211,153,.3)",backdropFilter:"blur(10px)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,animation:"orbit3 7s linear infinite"}}>✓</div>
-            </div>
+        </div>
+        <div style={{textAlign:"center",marginTop:14,fontSize:12,color:"rgba(255,255,255,.2)",fontWeight:500}}>← Glisse pour voir la différence →</div>
+      </section>
+
+      {/* ═══════ STYLES SHOWCASE ═══════ */}
+      <section id="styles" style={{padding:"80px max(20px,4vw)",background:"rgba(255,255,255,.015)",borderTop:"1px solid rgba(255,255,255,.05)",borderBottom:"1px solid rgba(255,255,255,.05)"}}>
+        <div style={{maxWidth:1100,margin:"0 auto"}}>
+          <div style={{textAlign:"center",marginBottom:48}}>
+            <p style={{fontSize:11,color:"#a855f7",fontWeight:700,letterSpacing:".12em",textTransform:"uppercase",marginBottom:12}}>28 Styles viraux</p>
+            <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,4vw,52px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95}}>
+              Choisis ton style.<br/><span style={{color:"rgba(255,255,255,.25)"}}>Change tout.</span>
+            </h2>
           </div>
-          {/* Ground shadow */}
-          <div style={{position:"absolute",bottom:-60,left:"50%",transform:"translateX(-50%)",width:280,height:60,background:`radial-gradient(${T.acc}28,transparent 70%)`,filter:"blur(30px)",pointerEvents:"none"}}/>
-        </div>
-      </div>
 
-      {/* MARQUEE LOGOS */}
-      <div style={{position:"relative",zIndex:1,borderTop:"1px solid rgba(255,255,255,.05)",borderBottom:"1px solid rgba(255,255,255,.05)",padding:"16px 0",overflow:"hidden",marginBottom:120,background:"rgba(255,255,255,.015)"}}>
-        <div style={{display:"flex",width:"max-content",animation:"marquee 22s linear infinite"}}>
-          {[...["TikTok","YouTube Shorts","Instagram Reels","LinkedIn","Twitter / X","Podcast","Twitch","Snapchat"],...["TikTok","YouTube Shorts","Instagram Reels","LinkedIn","Twitter / X","Podcast","Twitch","Snapchat"]].map((p,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"0 32px",flexShrink:0,color:"rgba(255,255,255,.25)",fontSize:12,fontWeight:600,letterSpacing:".04em",textTransform:"uppercase"}}>
-              <span style={{width:4,height:4,borderRadius:"50%",background:"#7c3aed",opacity:.8}}/>
-              {p}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* FEATURES */}
-      <div id="fonctionnalités" style={{position:"relative",zIndex:1,maxWidth:1160,margin:"0 auto 140px",padding:"0 48px"}} className="mobile-p">
-        <div style={{textAlign:"center",marginBottom:64}}>
-          <p style={{fontSize:11,color:"#7c3aed",fontWeight:700,letterSpacing:".15em",textTransform:"uppercase",marginBottom:16}}>Fonctionnalités</p>
-          <h2 className="syne" style={{fontWeight:800,fontSize:"clamp(32px,4vw,60px)",letterSpacing:"-.05em",marginBottom:16,color:"#fff",lineHeight:.95}}>
-            Tout ce qu'il faut<br/><span style={{background:"linear-gradient(135deg,#c084fc,#a855f7,#7c3aed)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>pour dominer</span>
-          </h2>
-          <p style={{fontSize:16,color:"rgba(255,255,255,.4)",maxWidth:440,margin:"0 auto",lineHeight:1.7}}>Des outils pensés pour les créateurs qui veulent aller vite et aller loin.</p>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:2}} className="mobile-grid1">
-          {feats.map((f,i)=>(
-            <div key={i} onMouseEnter={()=>setHovFeat(i)} onMouseLeave={()=>setHovFeat(null)}
-              style={{padding:"32px 28px",background:hovFeat===i?"rgba(124,58,237,.08)":"transparent",
-                borderTop:"1px solid rgba(255,255,255,.06)",borderRight:i%3!==2?"1px solid rgba(255,255,255,.06)":"none",
-                transition:"all .3s cubic-bezier(.22,1,.36,1)",cursor:"default",position:"relative",overflow:"hidden"}}>
-              {hovFeat===i&&<div style={{position:"absolute",inset:0,background:`radial-gradient(circle at 30% 50%,${f.color}12,transparent 70%)`,pointerEvents:"none"}}/>}
-              <div style={{width:44,height:44,borderRadius:12,background:`${f.color}18`,border:`1px solid ${f.color}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,marginBottom:20,position:"relative",zIndex:1,transition:"all .3s",transform:hovFeat===i?"scale(1.1)":"scale(1)"}}>{f.icon}</div>
-              <div className="syne" style={{fontWeight:700,fontSize:15,marginBottom:8,letterSpacing:"-.02em",position:"relative",zIndex:1,color:"#fff"}}>{f.title}</div>
-              <div style={{fontSize:13,color:"rgba(255,255,255,.4)",lineHeight:1.75,position:"relative",zIndex:1}}>{f.desc}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* SUBTITLE SHOWCASE */}
-      <div id="exemples" style={{position:"relative",zIndex:1,maxWidth:1160,margin:"0 auto 140px",padding:"0 48px"}} className="mobile-p">
-        <div style={{textAlign:"center",marginBottom:56}}>
-          <span style={{display:"inline-block",fontSize:10,padding:"3px 14px",borderRadius:100,background:"rgba(52,211,153,.08)",border:"1px solid rgba(52,211,153,.2)",color:T.green,fontWeight:700,letterSpacing:".1em",marginBottom:20}}>24 STYLES VIRAUX</span>
-          <h2 className="syne" style={{fontWeight:800,fontSize:"clamp(28px,3.5vw,50px)",letterSpacing:"-.04em"}}>
-            Choisis ton <span style={{background:"linear-gradient(135deg,#34d399,#22d3ee)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>style signature</span>
-          </h2>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))",gap:10}}>
-          {SUBTITLE_STYLES.slice(0,12).map((s,i)=>(
-            <div key={s.id} style={{borderRadius:16,background:T.surf,border:"1px solid rgba(255,255,255,.055)",padding:"18px 14px",textAlign:"center",cursor:"default",transition:"all .3s",overflow:"hidden",position:"relative",animation:`fadeUp .4s ${i*.04}s both`}} onMouseEnter={e=>{e.currentTarget.style.background=T.surf2;e.currentTarget.style.borderColor="rgba(255,255,255,.14)";e.currentTarget.style.transform="translateY(-3px)";}} onMouseLeave={e=>{e.currentTarget.style.background=T.surf;e.currentTarget.style.borderColor="rgba(255,255,255,.055)";e.currentTarget.style.transform="none";}}>
-              <div style={{height:56,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:8}}>
-                <span style={{fontFamily:s.preview?.font||"DM Sans",fontWeight:s.preview?.weight||700,fontSize:16,color:s.preview?.color||"#fff",textShadow:s.preview?.shadow}}>{s.label.toUpperCase()}</span>
-              </div>
-              <div style={{fontSize:10,color:T.muted,fontWeight:500,letterSpacing:".04em"}}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* HOW IT WORKS */}
-      <div id="comment" style={{position:"relative",zIndex:1,maxWidth:1060,margin:"0 auto 140px",padding:"0 48px"}} className="mobile-p">
-        <div style={{textAlign:"center",marginBottom:72}}>
-          <span style={{display:"inline-block",fontSize:10,padding:"3px 14px",borderRadius:100,background:"rgba(251,191,36,.08)",border:"1px solid rgba(251,191,36,.2)",color:T.yellow,fontWeight:700,letterSpacing:".1em",marginBottom:20}}>COMMENT ÇA MARCHE</span>
-          <h2 className="syne" style={{fontWeight:800,fontSize:"clamp(28px,3.5vw,50px)",letterSpacing:"-.04em"}}>
-            De zéro à viral en <span style={{background:"linear-gradient(135deg,#ffd700,#ffa500)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>3 étapes</span>
-          </h2>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:20,position:"relative"}} className="mobile-grid1">
-          <div style={{position:"absolute",top:38,left:"17%",right:"17%",height:1,background:"linear-gradient(90deg,transparent,rgba(91,108,255,.4),rgba(168,85,247,.35),transparent)"}} className="hide-mobile"/>
-          {[{n:"01",icon:"📁",title:"Upload ta vidéo",desc:"Glisse-dépose ton MP4 ou colle un lien YouTube / TikTok directement.",color:"#7c3aed"},{n:"02",icon:"⚡",title:"L'IA transcrit",desc:"Whisper génère tes sous-titres en 10 secondes. 99% de précision.",color:"#a855f7"},{n:"03",icon:"✦",title:"Exporte en 1 clic",desc:"Choisis ton style parmi 24 templates viraux et exporte ton MP4 HD.",color:"#22c55e"}].map((step,i)=>(
-            <div key={i} style={{padding:"36px 32px",borderRadius:24,background:"rgba(255,255,255,.025)",border:"1px solid rgba(255,255,255,.07)",position:"relative",overflow:"hidden",transition:"all .3s cubic-bezier(.22,1,.36,1)",animation:`fadeUp .5s ${i*.1}s both`}}
-              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-6px)";e.currentTarget.style.borderColor=`${step.color}50`;e.currentTarget.style.boxShadow=`0 24px 60px rgba(0,0,0,.5),0 0 80px ${step.color}15`;}}
-              onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.borderColor="rgba(255,255,255,.07)";e.currentTarget.style.boxShadow="none";}}>
-              <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${step.color}60,transparent)`}}/>
-              <span className="syne" style={{fontSize:64,fontWeight:800,color:"rgba(255,255,255,.04)",lineHeight:1,display:"block",marginBottom:20}}>{step.n}</span>
-              <div style={{fontSize:32,marginBottom:16,filter:`drop-shadow(0 0 12px ${step.color}80)`}}>{step.icon}</div>
-              <div className="syne" style={{fontWeight:700,fontSize:18,marginBottom:10,letterSpacing:"-.03em",color:"#fff"}}>{step.title}</div>
-              <div style={{fontSize:14,color:"rgba(255,255,255,.4)",lineHeight:1.75}}>{step.desc}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* TESTIMONIALS */}
-      <div style={{position:"relative",zIndex:1,maxWidth:1160,margin:"0 auto 140px",padding:"0 48px"}} className="mobile-p">
-        <div style={{textAlign:"center",marginBottom:60}}>
-          <h2 className="syne" style={{fontWeight:800,fontSize:"clamp(26px,3vw,46px)",letterSpacing:"-.04em",marginBottom:14}}>Ils ont <span className="grad-text">déjà sauté le pas</span></h2>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:3,marginBottom:8}}>{"★★★★★".split("").map((s,i)=><span key={i} style={{color:T.yellow,fontSize:18}}>{s}</span>)}</div>
-          <div style={{fontSize:13,color:T.muted}}>4.9/5 · 2 400+ avis vérifiés</div>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}} className="mobile-grid1">
-          {[{name:"Sophie M.",role:"TikToker · 890k abonnés",avatar:"SM",text:"J'ai multiplié mes vues par 3 en 2 semaines. Les styles sont juste parfaits pour mon contenu.",color:"#a855f7"},{name:"Lucas D.",role:"YouTubeur · 210k abonnés",avatar:"LD",text:"La transcription en 10 secondes c'est dingue. Avant je passais 2h par vidéo, maintenant c'est 5 minutes.",color:"#22c55e"},{name:"Emma W.",role:"Créatrice Reels · 450k",avatar:"EW",text:"L'interface est magnifique et les styles vraiment pro. Mes Reels ont explosé depuis que j'utilise SubCraft.",color:"#f43f5e"}].map((r,i)=>(
-            <div key={i} style={{padding:"28px",borderRadius:20,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.07)",position:"relative",overflow:"hidden",transition:"all .3s cubic-bezier(.22,1,.36,1)"}}
-              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-5px)";e.currentTarget.style.background="rgba(124,58,237,.07)";e.currentTarget.style.borderColor="rgba(124,58,237,.3)";e.currentTarget.style.boxShadow="0 20px 60px rgba(0,0,0,.4)";}}
-              onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.background="rgba(255,255,255,.03)";e.currentTarget.style.borderColor="rgba(255,255,255,.07)";e.currentTarget.style.boxShadow="none";}}>
-              <div style={{display:"flex",gap:2,marginBottom:16}}>{"★★★★★".split("").map((s,j)=><span key={j} style={{color:"#facc15",fontSize:14}}>{s}</span>)}</div>
-              <p style={{fontSize:14,color:"rgba(255,255,255,.6)",lineHeight:1.8,marginBottom:20}}>"{r.text}"</p>
-              <div style={{display:"flex",alignItems:"center",gap:12}}>
-                <div style={{width:38,height:38,borderRadius:"50%",background:`linear-gradient(135deg,${r.color}80,${r.color}30)`,border:`1px solid ${r.color}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"#fff",flexShrink:0}}>{r.avatar}</div>
-                <div><div style={{fontWeight:600,fontSize:14,color:"#fff"}}>{r.name}</div><div style={{fontSize:11,color:"rgba(255,255,255,.35)",marginTop:1}}>{r.role}</div></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* PRICING */}
-      <div id="tarifs" style={{position:"relative",zIndex:1,maxWidth:1060,margin:"0 auto 140px",padding:"0 48px"}} className="mobile-p">
-        <div style={{textAlign:"center",marginBottom:60}}>
-          <span style={{display:"inline-block",fontSize:10,padding:"3px 14px",borderRadius:100,background:"rgba(91,108,255,.08)",border:"1px solid rgba(91,108,255,.2)",color:T.acc,fontWeight:700,letterSpacing:".1em",marginBottom:20}}>TARIFS</span>
-          <h2 className="syne" style={{fontWeight:800,fontSize:"clamp(28px,3.5vw,50px)",letterSpacing:"-.04em",marginBottom:20}}>Simple, transparent, <span className="grad-text">sans surprise</span></h2>
-          <div style={{display:"inline-flex",alignItems:"center",gap:0,background:T.surf,borderRadius:12,padding:3,border:"1px solid rgba(255,255,255,.06)"}}>
-            <button onClick={()=>setBillingY(false)} style={{padding:"7px 18px",borderRadius:9,background:!billingY?T.surf2:"transparent",border:"none",color:!billingY?T.text:T.muted,fontSize:13,fontWeight:!billingY?700:400,cursor:"pointer",transition:"all .2s"}}>Mensuel</button>
-            <button onClick={()=>setBillingY(true)} style={{padding:"7px 18px",borderRadius:9,background:billingY?T.surf2:"transparent",border:"none",color:billingY?T.text:T.muted,fontSize:13,fontWeight:billingY?700:400,cursor:"pointer",transition:"all .2s",display:"flex",alignItems:"center",gap:6}}>Annuel <span style={{fontSize:9,padding:"2px 6px",borderRadius:4,background:"rgba(52,211,153,.12)",color:T.green,fontWeight:800}}>-30%</span></button>
+          {/* Style selector */}
+          <div style={{display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap",marginBottom:36}}>
+            {STYLES_DEMO.map((s,i)=>(
+              <button key={s.id} onClick={()=>setActiveStyle(i)}
+                style={{padding:"6px 16px",borderRadius:100,background:activeStyle===i?"rgba(99,102,241,.2)":"rgba(255,255,255,.04)",border:activeStyle===i?"1px solid rgba(99,102,241,.5)":"1px solid rgba(255,255,255,.07)",color:activeStyle===i?"#a5b4fc":"rgba(255,255,255,.4)",fontSize:12,fontWeight:600,cursor:"pointer",transition:"all .2s"}}>
+                {s.label}
+              </button>
+            ))}
           </div>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}} className="mobile-grid1">
-          {PLANS.map((plan,i)=>(
-            <div key={plan.id} style={{borderRadius:22,background:plan.popular?"linear-gradient(145deg,rgba(91,108,255,.1),rgba(168,85,247,.07))":T.surf,border:plan.popular?"1px solid rgba(91,108,255,.38)":"1px solid rgba(255,255,255,.055)",padding:"26px 20px",position:"relative",overflow:"hidden",transition:"all .3s",boxShadow:plan.popular?"0 0 60px rgba(91,108,255,.12)":"none",animation:`fadeUp .4s ${i*.07}s both`}} onMouseEnter={e=>{e.currentTarget.style.transform="perspective(600px) translateY(-6px) rotateX(2deg)";e.currentTarget.style.boxShadow=`0 24px 60px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.08)`;}} onMouseLeave={e=>{e.currentTarget.style.transform="perspective(600px) translateY(0) rotateX(0)";e.currentTarget.style.boxShadow="none";}}>
-              {plan.popular&&<><div style={{position:"absolute",top:0,left:0,right:0,height:2,background:T.grad}}/><div style={{position:"absolute",top:14,right:14,fontSize:8,padding:"3px 9px",borderRadius:20,background:T.grad,color:"#fff",fontWeight:800,letterSpacing:".07em"}}>POPULAIRE</div><ParticleField count={8} color={T.acc}/></>}
-              <div style={{position:"relative",zIndex:1}}>
-                <div style={{fontWeight:600,fontSize:11,color:plan.color,letterSpacing:".1em",marginBottom:8}}>{plan.name.toUpperCase()}</div>
-                <div style={{display:"flex",alignItems:"baseline",gap:3,marginBottom:4}}>
-                  <span className="syne" style={{fontWeight:800,fontSize:40,color:"#fff",letterSpacing:"-.04em"}}>€{billingY?plan.priceY:plan.price}</span>
-                  <span style={{fontSize:11,color:T.muted}}>/mois</span>
+
+          {/* Demo screen */}
+          <div style={{borderRadius:20,overflow:"hidden",border:"1px solid rgba(255,255,255,.07)",background:"linear-gradient(180deg,#0d0d1a 0%,#060610 100%)",aspectRatio:"16/7",maxHeight:300,display:"flex",alignItems:"center",justifyContent:"center",position:"relative",boxShadow:"0 40px 80px rgba(0,0,0,.8)"}}>
+            <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,transparent 40%,rgba(0,0,0,.8) 100%)"}}/>
+            {/* Fake video content */}
+            <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",opacity:.06}}>
+              <div style={{fontSize:120}}>🎬</div>
+            </div>
+            {/* Subtitle */}
+            <div style={{position:"absolute",bottom:"15%",left:"50%",transform:"translateX(-50%)",textAlign:"center",padding:"0 20px",width:"100%"}}>
+              {(()=>{
+                const s=STYLES_DEMO[activeStyle];
+                return(
+                  <span key={activeStyle} style={{fontFamily:s.font+",sans-serif",fontWeight:s.weight,fontSize:"clamp(20px,3.5vw,48px)",color:s.color||"#fff",textShadow:s.shadow||"none",textTransform:s.transform||"none",background:s.bg||"transparent",padding:s.bg?"4px 16px":"0",borderRadius:s.bg?"8px":"0",display:"inline-block",animation:"subtitlePop .3s cubic-bezier(.34,1.56,.64,1) both"}}>
+                    SOUS-TITRES EN DIRECT
+                  </span>
+                );
+              })()}
+            </div>
+            {/* Social buttons overlay */}
+            <div style={{position:"absolute",right:16,top:"50%",transform:"translateY(-50%)",display:"flex",flexDirection:"column",gap:12,opacity:.6}}>
+              {[["❤️","12k"],["💬","489"],["↗","1.2k"]].map(([ic,n])=>(
+                <div key={n} style={{textAlign:"center"}}>
+                  <div style={{fontSize:22}}>{ic}</div>
+                  <div style={{fontSize:9,color:"#fff",fontWeight:700}}>{n}</div>
                 </div>
-                {billingY&&plan.price>0&&<div style={{fontSize:11,marginBottom:14,display:"flex",alignItems:"center",gap:6}}><span style={{color:T.green,fontWeight:700}}>€{plan.priceY*12}/an</span><span style={{color:T.muted,fontSize:10}}>TVA incluse</span></div>}
-                <div style={{height:1,background:"rgba(255,255,255,.045)",margin:"14px 0"}}/>
-                <div style={{display:"flex",flexDirection:"column",gap:7,marginBottom:18}}>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════ FEATURES GRID ═══════ */}
+      <section id="feats" style={{padding:"100px max(20px,4vw)",maxWidth:1100,margin:"0 auto"}}>
+        <div style={{textAlign:"center",marginBottom:64}}>
+          <p style={{fontSize:11,color:"#22c55e",fontWeight:700,letterSpacing:".12em",textTransform:"uppercase",marginBottom:12}}>Fonctionnalités</p>
+          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,4vw,56px)",letterSpacing:"-.05em",color:"#fff",lineHeight:.9}}>
+            Tout ce dont tu as besoin.<br/><span style={{color:"rgba(255,255,255,.2)"}}>Rien de superflu.</span>
+          </h2>
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:1,border:"1px solid rgba(255,255,255,.06)",borderRadius:20,overflow:"hidden"}}>
+          {[
+            {icon:"⚡",title:"Transcription en 10 sec",desc:"Whisper AI transcrit n'importe quelle vidéo avec 99% de précision. 30 langues supportées.",color:"#6366f1"},
+            {icon:"🎨",title:"28 styles viraux",desc:"MrBeast, Captions, TikTok, Neon, Highlight... Inspirés des créateurs les plus viraux.",color:"#a855f7"},
+            {icon:"🌍",title:"Traduction auto",desc:"Traduis tes sous-titres en 12 langues en un clic. L'IA préserve le ton et le contexte.",color:"#22c55e"},
+            {icon:"🤖",title:"Emojis IA",desc:"Claude AI insère les emojis parfaits aux bons moments pour maximiser l'engagement.",color:"#f59e0b"},
+            {icon:"📱",title:"100% Mobile-Ready",desc:"Formats 9:16 natifs pour TikTok, Reels et Shorts. Interface pensée pour les créateurs.",color:"#f43f5e"},
+            {icon:"🔒",title:"RGPD & Privacy",desc:"Vidéos supprimées automatiquement après 24h. Aucune donnée vendue ou partagée.",color:"#22d3ee"},
+          ].map((f,i)=>(
+            <div key={i}
+              style={{padding:"32px 28px",background:hovFeat===i?"rgba(255,255,255,.04)":"rgba(255,255,255,.01)",borderRight:i%2===0?"1px solid rgba(255,255,255,.06)":"none",borderBottom:"1px solid rgba(255,255,255,.06)",transition:"background .2s",cursor:"default",position:"relative",overflow:"hidden"}}
+              onMouseEnter={()=>setHovFeat(i)} onMouseLeave={()=>setHovFeat(null)}>
+              {hovFeat===i&&<div style={{position:"absolute",top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${f.color}80,transparent)`}}/>}
+              <div style={{width:44,height:44,borderRadius:12,background:`${f.color}15`,border:`1px solid ${f.color}25`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,marginBottom:18,transition:"transform .2s",transform:hovFeat===i?"scale(1.1)":"scale(1)"}}>{f.icon}</div>
+              <div style={{fontWeight:700,fontSize:16,marginBottom:8,color:"#fff",letterSpacing:"-.02em"}}>{f.title}</div>
+              <div style={{fontSize:14,color:"rgba(255,255,255,.38)",lineHeight:1.7}}>{f.desc}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ═══════ HOW IT WORKS ═══════ */}
+      <section style={{padding:"80px max(20px,4vw)",background:"rgba(99,102,241,.04)",borderTop:"1px solid rgba(99,102,241,.1)",borderBottom:"1px solid rgba(99,102,241,.1)"}}>
+        <div style={{maxWidth:900,margin:"0 auto"}}>
+          <div style={{textAlign:"center",marginBottom:56}}>
+            <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,4vw,52px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95}}>
+              De zéro à viral<br/><span style={{background:"linear-gradient(90deg,#818cf8,#c084fc)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>en 3 étapes.</span>
+            </h2>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:2}} className="mobile-grid1">
+            {[
+              {n:"01",icon:"📁",title:"Upload",desc:"Glisse ton MP4 ou colle un lien YouTube / TikTok. Jusqu'à 300 MB, tous formats.",color:"#6366f1"},
+              {n:"02",icon:"⚡",title:"L'IA transcrit",desc:"Whisper génère tes sous-titres en 10 secondes. Tu choisis le style parmi 28 templates.",color:"#a855f7"},
+              {n:"03",icon:"✦",title:"Exporte",desc:"Ton MP4 HD avec sous-titres incrustés prêt à publier. En SRT aussi si tu préfères.",color:"#22c55e"},
+            ].map((step,i)=>(
+              <div key={i} style={{padding:"36px 28px",background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",position:"relative",overflow:"hidden"}}>
+                <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${step.color},transparent)`}}/>
+                <span style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:72,color:"rgba(255,255,255,.04)",lineHeight:1,display:"block",marginBottom:16}}>{step.n}</span>
+                <div style={{fontSize:28,marginBottom:14,filter:`drop-shadow(0 0 10px ${step.color}80)`}}>{step.icon}</div>
+                <div style={{fontWeight:700,fontSize:18,color:"#fff",marginBottom:8,letterSpacing:"-.02em"}}>{step.title}</div>
+                <div style={{fontSize:14,color:"rgba(255,255,255,.38)",lineHeight:1.7}}>{step.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════ TESTIMONIALS ═══════ */}
+      <section style={{padding:"100px max(20px,4vw)",maxWidth:1100,margin:"0 auto"}}>
+        <div style={{textAlign:"center",marginBottom:56}}>
+          <div style={{display:"inline-flex",gap:2,marginBottom:16}}>
+            {"★★★★★".split("").map((s,i)=><span key={i} style={{color:"#f59e0b",fontSize:20}}>{s}</span>)}
+          </div>
+          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,4vw,52px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95}}>
+            Ils ont déjà<br/><span style={{color:"rgba(255,255,255,.25)"}}>sauté le pas.</span>
+          </h2>
+          <p style={{fontSize:14,color:"rgba(255,255,255,.25)",marginTop:12}}>4.9/5 · 2 400+ créateurs</p>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16}} className="mobile-grid1">
+          {[
+            {name:"Sophie M.",role:"TikToker · 890k",text:"J'ai multiplié mes vues par 3 en 2 semaines. Les styles sont juste parfaits."},
+            {name:"Lucas D.",role:"YouTubeur · 210k",text:"La transcription en 10 secondes c'est dingue. J'économise 2h par vidéo."},
+            {name:"Emma W.",role:"Créatrice Reels · 450k",text:"L'interface est magnifique. Mes Reels ont explosé depuis que j'utilise SubCraft."},
+          ].map((r,i)=>(
+            <div key={i} style={{padding:"28px",borderRadius:20,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.07)",transition:"all .3s"}}
+              onMouseEnter={e=>{e.currentTarget.style.background="rgba(99,102,241,.07)";e.currentTarget.style.borderColor="rgba(99,102,241,.25)";e.currentTarget.style.transform="translateY(-4px)";}}
+              onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.03)";e.currentTarget.style.borderColor="rgba(255,255,255,.07)";e.currentTarget.style.transform="none";}}>
+              <div style={{display:"flex",gap:2,marginBottom:16}}>
+                {"★★★★★".split("").map((s,j)=><span key={j} style={{color:"#f59e0b",fontSize:14}}>{s}</span>)}
+              </div>
+              <p style={{fontSize:14,color:"rgba(255,255,255,.55)",lineHeight:1.8,marginBottom:20}}>"{r.text}"</p>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{width:36,height:36,borderRadius:"50%",background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#fff"}}>{r.name.slice(0,1)}</div>
+                <div>
+                  <div style={{fontWeight:600,fontSize:13,color:"#fff"}}>{r.name}</div>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,.3)"}}>{r.role}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ═══════ PRICING ═══════ */}
+      <section id="pricing" style={{padding:"100px max(20px,4vw)",background:"rgba(255,255,255,.015)",borderTop:"1px solid rgba(255,255,255,.05)"}}>
+        <div style={{maxWidth:1000,margin:"0 auto"}}>
+          <div style={{textAlign:"center",marginBottom:48}}>
+            <p style={{fontSize:11,color:"#6366f1",fontWeight:700,letterSpacing:".12em",textTransform:"uppercase",marginBottom:12}}>Tarifs</p>
+            <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,4vw,56px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.9,marginBottom:20}}>
+              Simple.<br/><span style={{color:"rgba(255,255,255,.2)"}}>Transparent.</span>
+            </h2>
+            {/* Toggle mensuel/annuel */}
+            <div style={{display:"inline-flex",alignItems:"center",gap:12,padding:"6px",borderRadius:12,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}}>
+              <button onClick={()=>setBillingY(false)} style={{padding:"7px 18px",borderRadius:9,background:!billingY?"#fff":"transparent",color:!billingY?"#000":"rgba(255,255,255,.4)",fontSize:13,fontWeight:700,border:"none",cursor:"pointer",transition:"all .2s"}}>Mensuel</button>
+              <button onClick={()=>setBillingY(true)} style={{padding:"7px 18px",borderRadius:9,background:billingY?"#fff":"transparent",color:billingY?"#000":"rgba(255,255,255,.4)",fontSize:13,fontWeight:700,border:"none",cursor:"pointer",transition:"all .2s",display:"flex",alignItems:"center",gap:6}}>
+                Annuel
+                <span style={{fontSize:10,padding:"2px 7px",borderRadius:100,background:billingY?"#22c55e":"rgba(34,197,94,.2)",color:billingY?"#fff":"#22c55e",fontWeight:800}}>-30%</span>
+              </button>
+            </div>
+          </div>
+
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}} className="mobile-grid1">
+            {PLANS.map((plan,i)=>(
+              <div key={plan.id} style={{borderRadius:24,padding:"32px 28px",background:plan.popular?"rgba(99,102,241,.1)":"rgba(255,255,255,.03)",border:plan.popular?"1.5px solid rgba(99,102,241,.4)":"1px solid rgba(255,255,255,.07)",position:"relative",transition:"transform .3s"}}
+                onMouseEnter={e=>e.currentTarget.style.transform="translateY(-4px)"}
+                onMouseLeave={e=>e.currentTarget.style.transform="none"}>
+                {plan.popular&&<div style={{position:"absolute",top:-12,left:"50%",transform:"translateX(-50%)",fontSize:10,padding:"4px 14px",borderRadius:100,background:"#6366f1",color:"#fff",fontWeight:800,letterSpacing:".05em",whiteSpace:"nowrap"}}>★ LE PLUS POPULAIRE</div>}
+                <div style={{marginBottom:20}}>
+                  <div style={{fontSize:12,color:"rgba(255,255,255,.4)",fontWeight:600,marginBottom:6,letterSpacing:".04em"}}>{plan.name.toUpperCase()}</div>
+                  <div style={{display:"flex",alignItems:"baseline",gap:4,marginBottom:4}}>
+                    <span style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:44,color:"#fff",letterSpacing:"-.04em",lineHeight:1}}>€{billingY?plan.priceY:plan.price}</span>
+                    <span style={{fontSize:13,color:"rgba(255,255,255,.3)"}}>/mois</span>
+                  </div>
+                  <div style={{fontSize:12,color:plan.color,fontWeight:600}}>{plan.credits}</div>
+                </div>
+                <button onClick={()=>goCheckout(plan.id,billingY)}
+                  style={{width:"100%",padding:"13px",borderRadius:12,background:plan.popular?"#6366f1":"rgba(255,255,255,.07)",border:plan.popular?"none":"1px solid rgba(255,255,255,.1)",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",transition:"all .2s",marginBottom:24,letterSpacing:"-.01em",boxShadow:plan.popular?"0 8px 32px rgba(99,102,241,.4)":"none"}}
+                  onMouseEnter={e=>{e.currentTarget.style.background=plan.popular?"#4f46e5":"rgba(255,255,255,.12)";}}
+                  onMouseLeave={e=>{e.currentTarget.style.background=plan.popular?"#6366f1":"rgba(255,255,255,.07)";}}>
+                  Commencer avec {plan.name}
+                </button>
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
                   {plan.features.map(f=>(
-                    <div key={f} style={{display:"flex",alignItems:"flex-start",gap:8,fontSize:11}}>
-                      <span style={{color:T.green,flexShrink:0,marginTop:1}}>✓</span>
-                      <span style={{color:"rgba(240,242,255,.65)"}}>{f}</span>
+                    <div key={f} style={{display:"flex",alignItems:"center",gap:8,fontSize:13}}>
+                      <span style={{width:16,height:16,borderRadius:"50%",background:`${plan.color}20`,border:`1px solid ${plan.color}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:plan.color,flexShrink:0,fontWeight:900}}>✓</span>
+                      <span style={{color:"rgba(255,255,255,.6)"}}>{f}</span>
                     </div>
                   ))}
                 </div>
-                <button onClick={()=>plan.id==="free"?onCTA():(goCheckout?goCheckout(plan.id,billingY):setPage("pricing"))} className={plan.popular?"shimmer-btn":""} style={{width:"100%",padding:"11px",borderRadius:11,background:plan.popular?T.grad:"rgba(255,255,255,.055)",border:plan.popular?"none":"1px solid rgba(255,255,255,.09)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .2s"}} onMouseEnter={e=>e.currentTarget.style.opacity=".85"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>{plan.id==="free"?"Commencer gratuit":"Choisir ce plan"}</button>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+          <p style={{textAlign:"center",marginTop:20,fontSize:12,color:"rgba(255,255,255,.2)"}}>Annulation à tout moment · Aucun engagement · RGPD conforme</p>
         </div>
-      </div>
+      </section>
 
-      {/* FAQ */}
-      <div style={{position:"relative",zIndex:1,maxWidth:700,margin:"0 auto 140px",padding:"0 48px"}} className="mobile-p">
-        <h2 className="syne" style={{fontWeight:800,fontSize:"clamp(26px,3vw,44px)",letterSpacing:"-.04em",textAlign:"center",marginBottom:48}}>Questions <span className="grad-text">fréquentes</span></h2>
-        <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {[{q:"SubCraft est-il vraiment gratuit ?",a:"Oui — plan gratuit avec 3 vidéos/mois, aucune carte bancaire requise."},{q:"Puis-je importer depuis YouTube ou TikTok ?",a:"Oui ! Colle simplement l'URL — SubCraft télécharge et traite automatiquement."},{q:"Combien de temps prend la transcription ?",a:"Moins de 10 secondes pour une vidéo de 60s. Moins de 90s pour des vidéos longues."},{q:"Mes vidéos sont-elles sécurisées ?",a:"Toutes les vidéos sont supprimées automatiquement après 24h (RGPD). Jamais partagées ni vendues."},{q:"Puis-je annuler à tout moment ?",a:"Oui, sans engagement. L'accès reste actif jusqu'à la fin de la période."}].map((item,i)=>(
-            <div key={i} style={{borderRadius:14,background:faqOpen===i?T.surf2:T.surf,border:`1px solid ${faqOpen===i?"rgba(91,108,255,.28)":"rgba(255,255,255,.055)"}`,overflow:"hidden",transition:"all .22s"}}>
-              <button onClick={()=>setFaqOpen(faqOpen===i?null:i)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",background:"transparent",border:"none",color:T.text,fontSize:14,fontWeight:600,textAlign:"left",cursor:"pointer",gap:12}}>
-                <span style={{letterSpacing:"-.01em"}}>{item.q}</span>
-                <span style={{fontSize:18,color:faqOpen===i?T.acc:T.muted,transition:"transform .22s",transform:faqOpen===i?"rotate(45deg)":"none",flexShrink:0}}>+</span>
+      {/* ═══════ FAQ ═══════ */}
+      <section id="faq" style={{padding:"100px max(20px,4vw)",maxWidth:760,margin:"0 auto"}}>
+        <div style={{textAlign:"center",marginBottom:56}}>
+          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,4vw,52px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95}}>
+            Questions<br/><span style={{color:"rgba(255,255,255,.2)"}}>fréquentes.</span>
+          </h2>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:2}}>
+          {FAQS.map((faq,i)=>(
+            <div key={i} style={{borderBottom:"1px solid rgba(255,255,255,.06)",overflow:"hidden"}}>
+              <button onClick={()=>setFaqOpen(faqOpen===i?null:i)}
+                style={{width:"100%",padding:"20px 0",background:"transparent",border:"none",color:"#fff",fontSize:16,fontWeight:600,textAlign:"left",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,letterSpacing:"-.01em"}}
+                onMouseEnter={e=>e.currentTarget.style.color="rgba(255,255,255,.7)"}
+                onMouseLeave={e=>e.currentTarget.style.color="#fff"}>
+                <span>{faq.q}</span>
+                <span style={{fontSize:18,color:"rgba(255,255,255,.3)",transition:"transform .2s",transform:faqOpen===i?"rotate(45deg)":"none",flexShrink:0}}>+</span>
               </button>
-              {faqOpen===i&&<div style={{padding:"0 20px 16px",fontSize:13,color:T.muted,lineHeight:1.7,animation:"fadeIn .2s both"}}>{item.a}</div>}
+              {faqOpen===i&&(
+                <div style={{paddingBottom:20,fontSize:15,color:"rgba(255,255,255,.45)",lineHeight:1.75,animation:"fadeDown .2s ease"}}>
+                  {faq.a}
+                </div>
+              )}
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* FINAL CTA */}
-      <div style={{position:"relative",zIndex:1,textAlign:"center",padding:"80px 48px 110px",maxWidth:780,margin:"0 auto"}} className="mobile-p">
-        <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at center,rgba(91,108,255,.1) 0%,transparent 68%)",pointerEvents:"none"}}/>
-        <div style={{position:"relative"}}>
-          <h2 className="syne" style={{fontWeight:800,fontSize:"clamp(34px,5vw,62px)",letterSpacing:"-.045em",marginBottom:20}}>Prêt à faire <span className="grad-text">exploser tes vues</span> ?</h2>
-          <p style={{fontSize:15,color:T.muted,marginBottom:40,lineHeight:1.7}}>Rejoins 10 000+ créateurs qui font confiance à SubCraft.</p>
-          <button onClick={onCTA} className="shimmer-btn" style={{display:"inline-flex",alignItems:"center",gap:12,padding:"16px 40px",borderRadius:16,background:T.grad,border:"none",color:"#fff",fontSize:16,fontWeight:700,cursor:"pointer",boxShadow:`0 0 60px ${T.accGlow},0 20px 60px rgba(91,108,255,.18)`,animation:"glow 3s infinite",letterSpacing:"-.025em"}} onMouseEnter={e=>e.currentTarget.style.transform="scale(1.04)"} onMouseLeave={e=>e.currentTarget.style.transform="none"}>
-            <span style={{fontSize:20}}>✦</span> Générer mes sous-titres — Gratuit
+      {/* ═══════ CTA FINAL ═══════ */}
+      <section style={{padding:"100px max(20px,4vw)",textAlign:"center",position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:"600px",height:"400px",background:"radial-gradient(circle,rgba(99,102,241,.2) 0%,transparent 65%)",pointerEvents:"none",filter:"blur(60px)"}}/>
+        <div style={{position:"relative",zIndex:1,maxWidth:700,margin:"0 auto"}}>
+          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(32px,5vw,72px)",letterSpacing:"-.05em",color:"#fff",lineHeight:.9,marginBottom:24}}>
+            Prêt à faire<br/><span style={{background:"linear-gradient(90deg,#818cf8,#c084fc)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>exploser tes vues ?</span>
+          </h2>
+          <p style={{fontSize:17,color:"rgba(255,255,255,.4)",marginBottom:36,lineHeight:1.65}}>3 vidéos gratuites. Aucune carte bancaire. En ligne en 30 secondes.</p>
+          <button onClick={onCTA}
+            style={{display:"inline-flex",alignItems:"center",gap:10,padding:"16px 40px",borderRadius:16,background:"#6366f1",border:"none",color:"#fff",fontSize:16,fontWeight:700,cursor:"pointer",boxShadow:"0 12px 60px rgba(99,102,241,.6)",transition:"all .3s",letterSpacing:"-.01em"}}
+            onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.boxShadow="0 20px 80px rgba(99,102,241,.75)";}}
+            onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 12px 60px rgba(99,102,241,.6)";}}>
+            ✦ &nbsp;Commencer gratuitement
           </button>
-          <div style={{marginTop:18,fontSize:11,color:T.muted}}>Aucune carte bancaire · Annulation à tout moment · RGPD conforme</div>
+          <div style={{marginTop:16,fontSize:12,color:"rgba(255,255,255,.2)"}}>✓ RGPD conforme &nbsp;·&nbsp; ✓ Sans engagement &nbsp;·&nbsp; ✓ Vidéos supprimées en 24h</div>
         </div>
-      </div>
+      </section>
 
-      {/* FOOTER */}
-      <footer style={{position:"relative",zIndex:1,borderTop:"1px solid rgba(255,255,255,.045)",padding:"32px 48px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:14}} className="mobile-p">
+      {/* ═══════ FOOTER ═══════ */}
+      <footer style={{padding:"32px max(20px,4vw)",borderTop:"1px solid rgba(255,255,255,.06)",display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <div style={{width:28,height:28,borderRadius:8,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:900}}>✦</div>
-          <span className="syne grad-text-chrome" style={{fontWeight:800,fontSize:14}}>SubCraft</span>
+          <div style={{width:24,height:24,borderRadius:7,background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11}}>✦</div>
+          <span style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:13,color:"rgba(255,255,255,.5)"}}>SubCraft</span>
         </div>
-        <div style={{display:"flex",gap:18,flexWrap:"wrap"}}>
+        <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
           {[["CGU","cgu"],["Confidentialité","privacy"],["RGPD","rgpd"],["Changelog","changelog"],["Statut","status"]].map(([label,route])=>(
-            <button key={route} onClick={()=>setPage(route)} style={{background:"none",border:"none",color:T.muted,fontSize:12,cursor:"pointer",transition:"color .15s"}} onMouseEnter={e=>e.currentTarget.style.color=T.text} onMouseLeave={e=>e.currentTarget.style.color=T.muted}>{label}</button>
+            <button key={route} onClick={()=>setPage(route)} style={{background:"none",border:"none",color:"rgba(255,255,255,.25)",fontSize:12,cursor:"pointer",transition:"color .15s",padding:0}} onMouseEnter={e=>e.currentTarget.style.color="rgba(255,255,255,.6)"} onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.25)"}>{label}</button>
           ))}
         </div>
-        <div style={{fontSize:11,color:T.dim}}>© 2026 SubCraft · Alès, France 🇫🇷</div>
+        <div style={{marginLeft:"auto",fontSize:11,color:"rgba(255,255,255,.2)"}}>© 2026 SubCraft · KEVININDUSTRIE SAS · Paris, France 🇫🇷</div>
       </footer>
 
-      {/* EXIT POPUP */}
-      {exitPopup&&!exitDone&&(
-        <div style={{position:"fixed",inset:0,zIndex:1000,background:"rgba(2,3,10,.88)",backdropFilter:"blur(24px)",display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>{setExitPopup(false);setExitDone(true);}}>
-          <div style={{maxWidth:420,width:"100%",borderRadius:24,background:T.surf,border:"1px solid rgba(232,57,112,.3)",padding:"40px 34px",textAlign:"center",animation:"popInBig .4s cubic-bezier(.34,1.56,.64,1) both",boxShadow:"0 0 80px rgba(232,57,112,.12)"}} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:48,marginBottom:16,animation:"bounce 1s ease infinite"}}>🎁</div>
-            <div className="syne" style={{fontWeight:800,fontSize:24,marginBottom:8,letterSpacing:"-.03em"}}>Avant de partir...</div>
-            <div style={{fontSize:14,color:T.muted,marginBottom:24,lineHeight:1.7}}>On t'offre <strong style={{color:T.pink}}>-20% sur ton premier mois</strong>. Code :</div>
-            <div style={{display:"flex",alignItems:"center",gap:8,padding:"12px 16px",borderRadius:12,background:"rgba(232,57,112,.08)",border:"1px solid rgba(232,57,112,.22)",justifyContent:"center",marginBottom:24}}>
-              <span className="mono" style={{fontSize:22,fontWeight:700,color:T.pink,letterSpacing:".1em"}}>RESTE20</span>
-              <button onClick={()=>{navigator.clipboard?.writeText("RESTE20");notify("Code copié !","success");}} style={{padding:"4px 10px",borderRadius:7,background:"rgba(232,57,112,.12)",border:"none",color:T.pink,fontSize:11,fontWeight:700,cursor:"pointer"}}>📋 Copier</button>
-            </div>
-            <button onClick={onCTA} className="shimmer-btn" style={{width:"100%",padding:"13px",borderRadius:12,background:T.gradP,border:"none",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",marginBottom:12}}>Je veux -20% →</button>
-            <button onClick={()=>{setExitPopup(false);setExitDone(true);}} style={{background:"none",border:"none",color:T.dim,fontSize:12,cursor:"pointer"}}>Non merci</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
+
 
 
 const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
