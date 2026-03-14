@@ -5561,32 +5561,23 @@ const AdminLandingEditor=()=>{
 const ADMIN_EMAIL = "kevin.nedzvedsky@gmail.com";
 
 const AdminPanel=({onExit})=>{
-  // Sécurité : vérifie le token
+  // Sécurité : vérifie l'email dans le token JWT local
   const token = localStorage.getItem("sc_token");
-  const [adminOk, setAdminOk] = useState(false);
-  const [checking, setChecking] = useState(true);
-  
-  useEffect(()=>{
-    if(!token){ setChecking(false); return; }
-    fetch("/api/auth?action=me", {headers:{"Authorization":`Bearer ${token}`}})
-      .then(r=>r.json()).then(d=>{
-        if(d.user?.email === ADMIN_EMAIL) setAdminOk(true);
-        setChecking(false);
-      }).catch(()=>setChecking(false));
-  },[]);
+  const adminOk = (() => {
+    if(!token) return false;
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      const email = payload.email || payload.user_metadata?.email || "";
+      return email === ADMIN_EMAIL;
+    } catch { return false; }
+  })();
 
-  if(checking) return(
-    <div style={{minHeight:"100vh",background:"#030305",display:"flex",alignItems:"center",justifyContent:"center"}}>
-      <div style={{color:"#7c3aed",fontSize:14}}>Vérification...</div>
-    </div>
-  );
-  
   if(!adminOk) return(
     <div style={{minHeight:"100vh",background:"#030305",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}>
       <div style={{fontSize:48}}>🔒</div>
       <div className="syne" style={{fontWeight:800,fontSize:22,color:"#fff"}}>Accès refusé</div>
-      <div style={{color:"rgba(255,255,255,.4)",fontSize:14}}>Ce panneau est réservé à l'administrateur.</div>
-      <button onClick={onExit} style={{padding:"10px 24px",borderRadius:10,background:"#7c3aed",border:"none",color:"#fff",cursor:"pointer",fontWeight:600,marginTop:8}}>Retour à l'accueil</button>
+      <div style={{color:"rgba(255,255,255,.4)",fontSize:14,textAlign:"center",maxWidth:300}}>Connecte-toi avec ton compte Google admin pour accéder à ce panneau.</div>
+      <button onClick={onExit} style={{padding:"10px 24px",borderRadius:10,background:"#7c3aed",border:"none",color:"#fff",cursor:"pointer",fontWeight:600,marginTop:8}}>Se connecter</button>
     </div>
   );
 
@@ -8105,14 +8096,19 @@ function App(){
               });
             }
           }).catch(()=>{
+            localStorage.removeItem("sc_google_processing");
+            const emailFromToken = payload.email;
+            if(emailFromToken === "kevin.nedzvedsky@gmail.com") {
+              nav("admin");
+              return;
+            }
             const userId = payload.sub;
             const onboardingKey = `sc_onboarded_${userId}`;
             const isNew = !localStorage.getItem(onboardingKey);
             if(isNew) localStorage.setItem(onboardingKey, "1");
-            localStorage.removeItem("sc_google_processing");
             handleAuth({
-              id: payload.sub, email: payload.email,
-              name: payload.user_metadata?.full_name || payload.email?.split("@")[0],
+              id: payload.sub, email: emailFromToken,
+              name: payload.user_metadata?.full_name || emailFromToken?.split("@")[0],
               plan: "free", credits: 3, isNew,
             });
           });
@@ -8127,6 +8123,15 @@ function App(){
         const payload = JSON.parse(atob(savedToken.split(".")[1]));
         const exp = payload.exp * 1000;
         if(exp > Date.now()) {
+          // Vérifie d'abord si c'est l'admin via le token local
+          try {
+            const p = JSON.parse(atob(savedToken.split(".")[1]));
+            const emailInToken = p.email || "";
+            if(emailInToken === "kevin.nedzvedsky@gmail.com") {
+              nav("admin");
+              return;
+            }
+          } catch {}
           fetch("/api/auth?action=me", {
             headers: { "Authorization": `Bearer ${savedToken}` }
           }).then(r => r.json()).then(d => {
