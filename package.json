@@ -1,15 +1,25 @@
 {
-  "name": "subcraft-api",
+  "name": "subcraft",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "SubCraft — Vercel API proxy layer",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
   "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "formidable": "^3.5.1",
     "form-data": "^4.0.0",
     "micro": "^10.0.1",
     "node-fetch": "^3.3.2",
     "stripe": "^15.7.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.2"
   },
   "engines": {
     "node": ">=18"

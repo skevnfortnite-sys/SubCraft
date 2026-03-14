@@ -1,5 +1,7 @@
 {
-  "outputDirectory": ".",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
   "functions": {
     "api/anthropic.js": { "maxDuration": 30 },
     "api/whisper.js":   { "maxDuration": 60 },
