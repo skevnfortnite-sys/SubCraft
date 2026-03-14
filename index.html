@@ -1224,47 +1224,82 @@ const SignupPage=({onAuth,goLogin})=>{
    Inspiré: Submagic × Linear × Vercel
 ══════════════════════════════════════════════ */
 
+
+
+const HeroSubtitle=({style})=>{
+  const PHRASES=[["REGARDE","CA"],["TROP","FORT"],["BOOSTE","TES VUES"],["INCROYABLE","🔥"]];
+  const [pi,setPi]=useState(0);
+  const [wi,setWi]=useState(0);
+  const words=PHRASES[pi];
+  useEffect(()=>{
+    const iv=setInterval(()=>{
+      setWi(w=>{
+        if(w>=words.length-1){
+          setTimeout(()=>{setPi(p=>(p+1)%PHRASES.length);setWi(0);},700);
+          return w;
+        }
+        return w+1;
+      });
+    },400);
+    return()=>clearInterval(iv);
+  },[pi]);
+  return(
+    <div style={{position:"absolute",bottom:"22%",left:0,right:0,textAlign:"center",padding:"0 12px",zIndex:5}}>
+      <span style={{fontFamily:style.font+",sans-serif",fontWeight:style.weight,fontSize:20,color:style.color||"#fff",textShadow:style.shadow||"none",textTransform:style.transform||"none",background:style.bg||"transparent",padding:style.bg?"3px 10px":"0",borderRadius:style.bg?"6px":"0",display:"inline-block"}}>
+        {words.slice(0,wi+1).map((w,i)=>(
+          <span key={pi+"-"+i} style={{display:"inline-block",marginRight:"0.25em",animation:i===wi?"wordPop .2s cubic-bezier(.34,1.56,.64,1) both":"none"}}>{w}</span>
+        ))}
+      </span>
+    </div>
+  );
+};
+
+/* ══ LANDING PAGE — PREMIUM EDITION ══ */
 const LandingPage=({user,onCTA,setPage,goCheckout})=>{
   const [activeStyle,setActiveStyle]=useState(0);
   const [faqOpen,setFaqOpen]=useState(null);
   const [billingY,setBillingY]=useState(true);
-  const [dragging,setDragging]=useState(false);
-  const [sliderPct,setSliderPct]=useState(40);
-  const sliderRef=useRef(null);
-  const [hovFeat,setHovFeat]=useState(null);
+  const [scrollY,setScrollY]=useState(0);
+  const [revealedSections,setRevealedSections]=useState(new Set());
 
-  const handleSlide=(clientX)=>{
-    if(!sliderRef.current)return;
-    const r=sliderRef.current.getBoundingClientRect();
-    setSliderPct(Math.max(4,Math.min(96,((clientX-r.left)/r.width)*100)));
-  };
+  // Scroll parallax
   useEffect(()=>{
-    if(!dragging)return;
-    const mv=(e)=>handleSlide(e.touches?e.touches[0].clientX:e.clientX);
-    const up=()=>setDragging(false);
-    window.addEventListener("mousemove",mv);window.addEventListener("mouseup",up);
-    window.addEventListener("touchmove",mv,{passive:false});window.addEventListener("touchend",up);
-    return()=>{window.removeEventListener("mousemove",mv);window.removeEventListener("mouseup",up);window.removeEventListener("touchmove",mv);window.removeEventListener("touchend",up);};
-  },[dragging]);
+    const onScroll=()=>setScrollY(window.scrollY);
+    window.addEventListener("scroll",onScroll,{passive:true});
+    return()=>window.removeEventListener("scroll",onScroll);
+  },[]);
+
+  // Scroll reveal
+  useEffect(()=>{
+    const obs=new IntersectionObserver(entries=>{
+      entries.forEach(e=>{
+        if(e.isIntersecting) setRevealedSections(s=>new Set([...s,e.target.id]));
+      });
+    },{threshold:.12});
+    document.querySelectorAll("[data-reveal]").forEach(el=>obs.observe(el));
+    return()=>obs.disconnect();
+  },[]);
+
+  const revealed=(id)=>revealedSections.has(id);
 
   const STYLES=[
-    {label:"MrBeast",color:"#FFE600",font:"Anton",weight:900,shadow:"-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000,3px 3px 0 #000",transform:"uppercase",sample:"TU DOIS VOIR CA"},
-    {label:"Captions",color:"#fff",font:"Montserrat",weight:900,shadow:"-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000",transform:"uppercase",sample:"TU DOIS VOIR CA"},
-    {label:"Highlight",color:"#000",bg:"#c8f135",font:"Montserrat",weight:900,transform:"uppercase",sample:"REGARDE CA"},
-    {label:"TikTok",color:"#fff",bg:"rgba(0,0,0,.8)",font:"Montserrat",weight:800,sample:"T as vu ca ?"},
-    {label:"Neon",color:"#a78bfa",font:"Barlow Condensed",weight:900,shadow:"0 0 12px #a78bfa,0 0 36px #a78bfa50",transform:"uppercase",sample:"TU DOIS VOIR CA"},
-    {label:"Fire",color:"#fb923c",font:"Anton",weight:900,shadow:"-2px -2px 0 #000,2px 2px 0 #7c1d00",transform:"uppercase",sample:"TU DOIS VOIR CA"},
+    {label:"MrBeast",color:"#FFE600",font:"Anton",weight:900,shadow:"-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000,3px 3px 0 #000",transform:"uppercase",sample:"REGARDE CA"},
+    {label:"Captions",color:"#fff",font:"Montserrat",weight:900,shadow:"-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000",transform:"uppercase",sample:"REGARDE CA"},
+    {label:"Highlight",color:"#000",bg:"#FFE600",font:"Montserrat",weight:900,transform:"uppercase",sample:"REGARDE CA"},
+    {label:"TikTok",color:"#fff",bg:"rgba(0,0,0,.8)",font:"Montserrat",weight:800,sample:"Regarde ca"},
+    {label:"Neon",color:"#818cf8",font:"Barlow Condensed",weight:900,shadow:"0 0 16px #818cf8,0 0 40px #818cf840",transform:"uppercase",sample:"REGARDE CA"},
+    {label:"Rose",color:"#fff",bg:"#e11d48",font:"Montserrat",weight:900,sample:"REGARDE CA"},
   ];
 
   const PLANS=[
-    {id:"free",name:"Gratuit",price:0,priceY:0,color:"rgba(255,255,255,.4)",credits:"3 videos/mois",features:["3 videos/mois","Transcription Whisper AI","28 styles","Export SRT"],cta:"Commencer gratuitement",free:true},
-    {id:"basic",name:"Starter",price:12,priceY:10,color:"#818cf8",credits:"30 videos/mois",features:["30 videos/mois","Traduction 12 langues","Export MP4 HD","Support email"]},
-    {id:"expert",name:"Creator",price:18,priceY:13,color:"#c084fc",credits:"100 videos/mois",popular:true,features:["100 videos/mois","Emojis IA","Support prioritaire","RGPD 24h"]},
-    {id:"pro",name:"Studio",price:30,priceY:21,color:"#34d399",credits:"Illimite",features:["Videos illimitees","API Access","Manager dedie","White-label bientot"]},
+    {id:"free",name:"Gratuit",price:0,priceY:0,color:"rgba(255,255,255,.4)",credits:"3 videos/mois",features:["3 videos/mois","Transcription Whisper AI","28 styles","Export SRT"],cta:"Commencer — Gratuit",free:true},
+    {id:"basic",name:"Starter",price:12,priceY:10,color:"#818cf8",credits:"30 videos/mois",features:["30 videos/mois","Tout Gratuit inclus","Traduction 12 langues","Export MP4 HD","Support email"]},
+    {id:"expert",name:"Creator",price:18,priceY:13,color:"#c084fc",credits:"100 videos/mois",popular:true,features:["100 videos/mois","Tout Starter inclus","Emojis IA automatiques","Suppression auto 24h","Support prioritaire"]},
+    {id:"pro",name:"Studio",price:30,priceY:21,color:"#34d399",credits:"Illimite",features:["Videos illimitees","Tout Creator inclus","API Access","Manager dedie"]},
   ];
 
   const FAQS=[
-    {q:"C est vraiment gratuit ?",a:"Oui, 3 videos par mois, aucune carte bancaire. Tu peux tester sans engagement et upgrader quand tu veux."},
+    {q:"C est vraiment gratuit ?",a:"Oui, 3 videos par mois, aucune carte bancaire. Tu peux tester SubCraft sans engagement et upgrader quand tu veux."},
     {q:"Ca marche pour YouTube Shorts ?",a:"SubCraft est concu specifiquement pour les formats courts : YouTube Shorts, TikTok, Instagram Reels. Format 9:16 natif optimise."},
     {q:"Quelle precision de transcription ?",a:"Whisper AI d OpenAI offre 99%+ de precision sur le francais et 30 autres langues. Moins de 30 secondes pour un Short de 60s."},
     {q:"Mes videos sont-elles stockees ?",a:"Non. Supprimees automatiquement apres 24h. Seuls tes sous-titres sont conserves. Conforme RGPD."},
@@ -1274,26 +1309,37 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
   const S=STYLES[activeStyle];
 
   return(
-    <div style={{background:"#06060a",minHeight:"100vh",color:"#f8fafc",overflowX:"hidden"}}>
+    <div style={{background:"#05040c",minHeight:"100vh",color:"#f8fafc",overflowX:"hidden",fontFamily:"'DM Sans',system-ui,sans-serif"}}>
 
-      {/* NAV */}
-      <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:100,height:58,padding:"0 max(24px,4vw)",display:"flex",alignItems:"center",gap:12,background:"rgba(6,6,10,.92)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,.06)"}}>
+      {/* ── BRUIT GLOBAL ── */}
+      <div style={{position:"fixed",inset:0,zIndex:0,pointerEvents:"none",opacity:.018,backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")"}}/>
+
+      {/* ── NAV ── */}
+      <nav style={{
+        position:"fixed",top:0,left:0,right:0,zIndex:100,
+        height:60,padding:"0 max(24px,4vw)",
+        display:"flex",alignItems:"center",gap:16,
+        background:scrollY>40?"rgba(5,4,12,.94)":"rgba(5,4,12,.6)",
+        backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",
+        borderBottom:scrollY>40?"1px solid rgba(255,255,255,.07)":"1px solid transparent",
+        transition:"all .3s",
+      }}>
         <div style={{display:"flex",alignItems:"center",gap:9,flexShrink:0,cursor:"pointer"}} onClick={()=>window.scrollTo({top:0,behavior:"smooth"})}>
-          <div style={{width:30,height:30,borderRadius:9,background:"linear-gradient(135deg,#7c3aed,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,boxShadow:"0 0 20px rgba(124,58,237,.6)"}}>✦</div>
-          <span style={{fontWeight:800,fontSize:16,letterSpacing:"-.04em",fontFamily:"Syne,sans-serif",background:"linear-gradient(90deg,#c4b5fd,#fff,#e9d5ff)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>SubCraft</span>
+          <div style={{width:32,height:32,borderRadius:10,background:"linear-gradient(135deg,#7c3aed,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,boxShadow:"0 0 24px rgba(124,58,237,.65),inset 0 1px 0 rgba(255,255,255,.15)"}}>✦</div>
+          <span style={{fontWeight:800,fontSize:16,letterSpacing:"-.05em",background:"linear-gradient(90deg,#e9d5ff,#fff,#ddd6fe)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",fontFamily:"Syne,sans-serif"}}>SubCraft</span>
         </div>
         <div style={{flex:1,display:"flex",justifyContent:"center",gap:2}} className="hide-mobile">
           {[["Fonctionnalites","feats"],["Styles","styles"],["Tarifs","pricing"],["FAQ","faq"]].map(([l,id])=>(
             <button key={l} onClick={()=>document.getElementById(id)?.scrollIntoView({behavior:"smooth"})}
-              style={{padding:"6px 14px",borderRadius:8,background:"transparent",border:"none",color:"rgba(255,255,255,.38)",fontSize:13,fontWeight:500,cursor:"pointer",transition:"color .15s"}}
-              onMouseEnter={e=>e.currentTarget.style.color="#fff"}
-              onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.38)"}>{l}</button>
+              style={{padding:"6px 14px",borderRadius:8,background:"transparent",border:"none",color:"rgba(255,255,255,.38)",fontSize:13,fontWeight:500,cursor:"pointer",transition:"all .15s",letterSpacing:"-.01em"}}
+              onMouseEnter={e=>{e.currentTarget.style.color="#fff";e.currentTarget.style.background="rgba(255,255,255,.05)";}}
+              onMouseLeave={e=>{e.currentTarget.style.color="rgba(255,255,255,.38)";e.currentTarget.style.background="transparent";}}>{l}</button>
           ))}
         </div>
         <div style={{display:"flex",gap:8,marginLeft:"auto",alignItems:"center"}}>
           {user?(
             <button onClick={()=>setPage("dashboard")}
-              style={{display:"flex",alignItems:"center",gap:7,padding:"5px 14px 5px 7px",borderRadius:10,background:"rgba(124,58,237,.12)",border:"1px solid rgba(124,58,237,.3)",color:"#c4b5fd",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s"}}
+              style={{display:"flex",alignItems:"center",gap:8,padding:"6px 16px 6px 7px",borderRadius:10,background:"rgba(124,58,237,.12)",border:"1px solid rgba(124,58,237,.3)",color:"#c4b5fd",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s"}}
               onMouseEnter={e=>e.currentTarget.style.background="rgba(124,58,237,.22)"}
               onMouseLeave={e=>e.currentTarget.style.background="rgba(124,58,237,.12)"}>
               <div style={{width:26,height:26,borderRadius:8,background:"linear-gradient(135deg,#7c3aed,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"#fff"}}>{(user.name||user.email||"?").slice(0,1).toUpperCase()}</div>
@@ -1306,231 +1352,251 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
                 onMouseEnter={e=>{e.currentTarget.style.color="#fff";e.currentTarget.style.borderColor="rgba(255,255,255,.22)";}}
                 onMouseLeave={e=>{e.currentTarget.style.color="rgba(255,255,255,.5)";e.currentTarget.style.borderColor="rgba(255,255,255,.1)";}}>Se connecter</button>
               <button onClick={onCTA}
-                style={{padding:"8px 20px",borderRadius:10,background:"linear-gradient(135deg,#7c3aed,#a855f7)",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .2s",boxShadow:"0 4px 24px rgba(124,58,237,.5)"}}
-                onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.boxShadow="0 8px 32px rgba(124,58,237,.65)";}}
+                style={{padding:"8px 20px",borderRadius:10,background:"linear-gradient(135deg,#7c3aed,#9333ea)",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .22s",boxShadow:"0 4px 24px rgba(124,58,237,.5)",letterSpacing:"-.01em"}}
+                onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.boxShadow="0 8px 36px rgba(124,58,237,.7)";}}
                 onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 4px 24px rgba(124,58,237,.5)";}}>Essai gratuit →</button>
             </div>
           )}
         </div>
       </nav>
 
-      {/* HERO */}
+      {/* ── HERO ── */}
       <section style={{minHeight:"100vh",padding:"0 max(32px,5vw)",display:"flex",alignItems:"center",position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",top:"10%",right:"-5%",width:"55%",height:"70%",background:"radial-gradient(ellipse,rgba(124,58,237,.18) 0%,transparent 65%)",pointerEvents:"none",filter:"blur(60px)"}}/>
-        <div style={{position:"absolute",bottom:"10%",left:"-5%",width:"40%",height:"50%",background:"radial-gradient(ellipse,rgba(168,85,247,.1) 0%,transparent 65%)",pointerEvents:"none",filter:"blur(80px)"}}/>
-        <div style={{position:"absolute",inset:0,backgroundImage:"radial-gradient(rgba(255,255,255,.02) 1px,transparent 1px)",backgroundSize:"28px 28px",pointerEvents:"none"}}/>
+        {/* Mesh gradient */}
+        <div style={{position:"absolute",top:"-10%",right:"-5%",width:"55%",height:"80%",background:"radial-gradient(ellipse at 70% 30%,rgba(124,58,237,.22) 0%,transparent 60%)",pointerEvents:"none",filter:"blur(70px)"}}/>
+        <div style={{position:"absolute",bottom:"-5%",left:"-10%",width:"45%",height:"60%",background:"radial-gradient(ellipse at 30% 70%,rgba(168,85,247,.14) 0%,transparent 60%)",pointerEvents:"none",filter:"blur(80px)"}}/>
+        <div style={{position:"absolute",top:"40%",left:"45%",width:"20%",height:"30%",background:"radial-gradient(ellipse,rgba(236,72,153,.1) 0%,transparent 65%)",pointerEvents:"none",filter:"blur(60px)"}}/>
+        {/* Dot grid */}
+        <div style={{position:"absolute",inset:0,backgroundImage:"radial-gradient(rgba(255,255,255,.025) 1px,transparent 1px)",backgroundSize:"28px 28px",pointerEvents:"none"}}/>
 
-        <div style={{maxWidth:1280,margin:"0 auto",width:"100%",display:"grid",gridTemplateColumns:"55% 45%",gap:60,alignItems:"center",paddingTop:80}} className="mobile-col">
-
-          {/* TEXTE */}
-          <div>
-            <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 14px",borderRadius:100,background:"rgba(124,58,237,.1)",border:"1px solid rgba(124,58,237,.28)",marginBottom:28,animation:"fadeUp .5s ease both"}}>
+        <div style={{maxWidth:1300,margin:"0 auto",width:"100%",display:"grid",gridTemplateColumns:"1fr 1fr",gap:"clamp(40px,5vw,80px)",alignItems:"center",paddingTop:80}} className="mobile-col">
+          {/* LEFT */}
+          <div style={{animation:"fadeUp .6s ease both"}}>
+            {/* Badge produit */}
+            <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 14px",borderRadius:100,background:"rgba(124,58,237,.1)",border:"1px solid rgba(124,58,237,.28)",marginBottom:28}}>
               <span style={{width:5,height:5,borderRadius:"50%",background:"#c084fc",animation:"pulseDot 2s infinite"}}/>
               <span style={{fontSize:11,color:"#d8b4fe",letterSpacing:".1em",fontWeight:700}}>YOUTUBE SHORTS · TIKTOK · REELS</span>
             </div>
 
-            <h1 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(36px,4.5vw,68px)",lineHeight:.9,letterSpacing:"-.055em",marginBottom:22,animation:"fadeUp .5s .06s ease both"}}>
-              <span style={{display:"block",color:"#fff"}}>Des sous-titres</span>
-              <span style={{display:"block",color:"#fff"}}>qui font</span>
-              <span style={{display:"block",background:"linear-gradient(90deg,#a78bfa 0%,#c084fc 45%,#f0abfc 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",filter:"drop-shadow(0 0 40px rgba(167,139,250,.35)"}}>exploser tes vues.</span>
-            </h1>
+            {/* TITRE — Clash Display / Cabinet Grotesk feel via Syne ultra-condensed */}
+            <div style={{marginBottom:24}}>
+              <div style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(46px,5.5vw,84px)",lineHeight:.85,letterSpacing:"-.06em",color:"#fff",display:"block",marginBottom:4}}>Sous-titres</div>
+              <div style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(46px,5.5vw,84px)",lineHeight:.85,letterSpacing:"-.06em",display:"block",marginBottom:4}}>
+                <span style={{background:"linear-gradient(90deg,#a78bfa 0%,#c084fc 35%,#f0abfc 65%,#fb7185 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",filter:"drop-shadow(0 0 50px rgba(167,139,250,.4))"}}>qui cartonnent.</span>
+              </div>
+            </div>
 
-            <p style={{fontSize:"clamp(15px,1.6vw,18px)",color:"rgba(255,255,255,.45)",maxWidth:480,lineHeight:1.78,marginBottom:36,animation:"fadeUp .5s .12s ease both"}}>
-              Upload ton Short. L aIA transcrit en <strong style={{color:"#fff",fontWeight:600}}>10 secondes</strong>. Choisis parmi <strong style={{color:"#fff",fontWeight:600}}>28 styles viraux</strong>. Exporte en HD.
+            <p style={{fontSize:"clamp(15px,1.5vw,18px)",color:"rgba(255,255,255,.44)",maxWidth:480,lineHeight:1.8,marginBottom:36,fontWeight:400}}>
+              Upload ton Short. L'IA transcrit en <strong style={{color:"#e9d5ff",fontWeight:600}}>10 secondes</strong>. Choisis parmi <strong style={{color:"#e9d5ff",fontWeight:600}}>28 styles viraux</strong>. Exporte en HD.
             </p>
 
-            <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:32,animation:"fadeUp .5s .18s ease both"}}>
+            {/* CTAs */}
+            <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:32}}>
               <button onClick={onCTA}
-                style={{display:"inline-flex",alignItems:"center",gap:10,padding:"14px 30px",borderRadius:14,background:"linear-gradient(135deg,#7c3aed,#a855f7)",border:"none",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 8px 40px rgba(124,58,237,.55),0 1px 0 rgba(255,255,255,.12) inset",transition:"all .25s"}}
-                onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 14px 56px rgba(124,58,237,.7),0 1px 0 rgba(255,255,255,.12) inset";}}
-                onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 8px 40px rgba(124,58,237,.55),0 1px 0 rgba(255,255,255,.12) inset";}}>
-                ✦  Commencer gratuitement
+                style={{display:"inline-flex",alignItems:"center",gap:10,padding:"14px 32px",borderRadius:14,background:"linear-gradient(135deg,#7c3aed,#9333ea)",border:"none",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 8px 40px rgba(124,58,237,.55),inset 0 1px 0 rgba(255,255,255,.12)",transition:"all .25s",letterSpacing:"-.01em"}}
+                onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 16px 60px rgba(124,58,237,.7),inset 0 1px 0 rgba(255,255,255,.12)";}}
+                onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 8px 40px rgba(124,58,237,.55),inset 0 1px 0 rgba(255,255,255,.12)";}}>
+                ✦ &nbsp;Commencer — c'est gratuit
               </button>
-              <button onClick={()=>document.getElementById("demo")?.scrollIntoView({behavior:"smooth"})}
-                style={{display:"inline-flex",alignItems:"center",gap:8,padding:"14px 24px",borderRadius:14,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",color:"rgba(255,255,255,.65)",fontSize:15,cursor:"pointer",transition:"all .2s",fontWeight:500}}
-                onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,255,255,.09)";e.currentTarget.style.color="#fff";}}
-                onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.05)";e.currentTarget.style.color="rgba(255,255,255,.65)";}}>
-                ▶ Voir la demo
+              <button onClick={()=>document.getElementById("styles")?.scrollIntoView({behavior:"smooth"})}
+                style={{display:"inline-flex",alignItems:"center",gap:8,padding:"14px 24px",borderRadius:14,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",color:"rgba(255,255,255,.7)",fontSize:15,cursor:"pointer",transition:"all .22s",fontWeight:500}}
+                onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,255,255,.08)";e.currentTarget.style.color="#fff";}}
+                onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.05)";e.currentTarget.style.color="rgba(255,255,255,.7)";}}>
+                Voir les styles →
               </button>
             </div>
 
-            {/* Social proof */}
-            <div style={{display:"flex",alignItems:"center",gap:16,animation:"fadeUp .5s .22s ease both",flexWrap:"wrap"}}>
-              <div style={{display:"flex"}}>
-                {["#7c3aed","#a855f7","#6d28d9","#9d5df7","#c084fc"].map((c,i)=>(
-                  <div key={i} style={{width:28,height:28,borderRadius:"50%",background:`linear-gradient(135deg,${c},${c}99)`,border:"2px solid #06060a",marginLeft:i?-8:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#fff"}}>
-                    {["S","L","E","M","A"][i]}
-                  </div>
-                ))}
-              </div>
-              <div>
-                <div style={{display:"flex",gap:1,marginBottom:1}}>{"★★★★★".split("").map((s,i)=><span key={i} style={{color:"#fbbf24",fontSize:12}}>{s}</span>)}</div>
-                <div style={{fontSize:12,color:"rgba(255,255,255,.35)"}}>+10k createurs · 4.9/5</div>
-              </div>
-              <div style={{padding:"6px 12px",borderRadius:100,background:"rgba(52,211,153,.08)",border:"1px solid rgba(52,211,153,.2)"}}>
-                <span style={{fontSize:11,color:"#34d399",fontWeight:700}}>🎁 3 videos gratuites</span>
-              </div>
+            {/* Trust pills */}
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {[["✓ Gratuit","rgba(52,211,153,.1)","rgba(52,211,153,.2)","#34d399"],["✓ Sans CB","rgba(255,255,255,.05)","rgba(255,255,255,.1)","rgba(255,255,255,.5)"],["✓ RGPD","rgba(255,255,255,.05)","rgba(255,255,255,.1)","rgba(255,255,255,.5)"],["✓ Annulation libre","rgba(255,255,255,.05)","rgba(255,255,255,.1)","rgba(255,255,255,.5)"]].map(([t,bg,bdr,c])=>(
+                <div key={t} style={{padding:"5px 12px",borderRadius:100,background:bg,border:"1px solid "+bdr,fontSize:11,color:c,fontWeight:600}}>{t}</div>
+              ))}
             </div>
           </div>
 
-          {/* PHONE AVANT/APRES */}
-          <div id="demo" style={{display:"flex",justifyContent:"center",position:"relative"}}>
-            {/* Glow derriere */}
-            <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:300,height:400,background:"radial-gradient(circle,rgba(124,58,237,.25) 0%,transparent 65%)",filter:"blur(50px)",pointerEvents:"none"}}/>
-
+          {/* RIGHT — Phone premium */}
+          <div style={{display:"flex",justifyContent:"center",alignItems:"center",animation:"fadeUp .6s .1s ease both"}}>
             <div style={{position:"relative"}}>
-              {/* Phone */}
-              <div style={{width:258,height:488,borderRadius:44,background:"#0e0e18",border:"2.5px solid rgba(255,255,255,.14)",boxShadow:"0 40px 100px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.05),0 0 60px rgba(124,58,237,.15),inset 0 1px 0 rgba(255,255,255,.08)",overflow:"hidden",position:"relative"}}>
-                <div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:82,height:24,background:"#0e0e18",borderRadius:"0 0 16px 16px",zIndex:20,borderBottom:"1.5px solid rgba(255,255,255,.07)"}}/>
+              {/* Glow halo */}
+              <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:320,height:400,background:"radial-gradient(circle,rgba(124,58,237,.3) 0%,rgba(168,85,247,.1) 40%,transparent 70%)",filter:"blur(50px)",pointerEvents:"none",animation:"glowPulse 4s ease infinite"}}/>
 
-                {/* Slider DANS le phone */}
-                <div ref={sliderRef} style={{position:"absolute",inset:0,cursor:"ew-resize",userSelect:"none"}}
-                  onMouseDown={e=>{setDragging(true);handleSlide(e.clientX);}}
-                  onTouchStart={e=>{setDragging(true);handleSlide(e.touches[0].clientX);}}>
-
-                  {/* APRES */}
-                  <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,#150b2e 0%,#0a0618 50%,#040210 100%)"}}>
-                    <div style={{position:"absolute",top:"12%",left:"50%",transform:"translateX(-50%)",width:68,height:68,borderRadius:"50%",background:"linear-gradient(135deg,#7c3aed,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,boxShadow:"0 0 40px rgba(124,58,237,.45)"}}>😎</div>
-                    <div style={{position:"absolute",top:28,left:8,fontSize:7,fontWeight:700,color:"#34d399",background:"rgba(52,211,153,.1)",border:"1px solid rgba(52,211,153,.25)",padding:"3px 7px",borderRadius:100,letterSpacing:".06em"}}>AVEC SUBCRAFT</div>
-                    <div style={{position:"absolute",bottom:"20%",left:0,right:0,textAlign:"center",padding:"0 10px"}}>
-                      <span key={activeStyle} style={{fontFamily:S.font+",sans-serif",fontWeight:S.weight,fontSize:20,color:S.color||"#fff",textShadow:S.shadow||"none",textTransform:S.transform||"none",background:S.bg||"transparent",padding:S.bg?"3px 10px":"0",borderRadius:S.bg?"6px":"0",display:"inline-block",animation:"subtitlePop .25s ease both"}}>
-                        {S.sample}
-                      </span>
+              {/* Phone frame */}
+              <div style={{width:264,height:496,borderRadius:46,background:"linear-gradient(160deg,#1c1035 0%,#0e0820 45%,#040212 100%)",border:"2px solid rgba(255,255,255,.12)",boxShadow:"0 40px 100px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.04),inset 0 1px 0 rgba(255,255,255,.08)",overflow:"hidden",position:"relative",zIndex:1}}>
+                {/* Notch */}
+                <div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:84,height:26,background:"rgba(0,0,0,.9)",borderRadius:"0 0 18px 18px",zIndex:20}}/>
+                {/* Shimmer top edge */}
+                <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent)",zIndex:19}}/>
+                {/* Content */}
+                <div style={{position:"absolute",inset:0}}>
+                  {/* Avatar creator */}
+                  <div style={{position:"absolute",top:"16%",left:"50%",transform:"translateX(-50%)",width:74,height:74,borderRadius:"50%",background:"linear-gradient(135deg,#7c3aed,#ec4899,#f97316)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,boxShadow:"0 0 40px rgba(124,58,237,.5),0 8px 32px rgba(0,0,0,.5)"}}>😎</div>
+                  <div style={{position:"absolute",top:"44%",left:0,right:0,textAlign:"center",fontSize:11,color:"rgba(255,255,255,.4)",fontWeight:600,letterSpacing:".04em"}}>@subcraftcreator</div>
+                  {/* Gradient bottom */}
+                  <div style={{position:"absolute",bottom:0,left:0,right:0,height:"55%",background:"linear-gradient(transparent,rgba(0,0,0,.95)"}}/>
+                </div>
+                {/* Animated subtitle */}
+                <HeroSubtitle style={S}/>
+                {/* Social buttons */}
+                <div style={{position:"absolute",right:10,top:"32%",display:"flex",flexDirection:"column",gap:18,alignItems:"center",zIndex:5}}>
+                  {[["❤️","12k"],["💬","489"],["↗","1.2k"]].map(([ic,n])=>(
+                    <div key={n} style={{textAlign:"center"}}>
+                      <div style={{fontSize:22}}>{ic}</div>
+                      <div style={{fontSize:8,color:"rgba(255,255,255,.7)",fontWeight:700}}>{n}</div>
                     </div>
-                    <div style={{position:"absolute",right:8,top:"32%",display:"flex",flexDirection:"column",gap:14,alignItems:"center",opacity:.8}}>
-                      {[["❤️","12k"],["💬","489"],["↗","1.2k"]].map(([ic,n])=>(
-                        <div key={n} style={{textAlign:"center"}}>
-                          <div style={{fontSize:20}} dangerouslySetInnerHTML={{__html:ic}}/>
-                          <div style={{fontSize:8,color:"rgba(255,255,255,.75)",fontWeight:700}}>{n}</div>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"6px 10px 10px",background:"linear-gradient(transparent,rgba(0,0,0,.7))"}}>
-                      <div style={{height:2,background:"rgba(255,255,255,.1)",borderRadius:2}}>
-                        <div style={{height:"100%",width:"38%",background:"linear-gradient(90deg,#7c3aed,#c084fc)",borderRadius:2}}/>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* AVANT */}
-                  <div style={{position:"absolute",inset:0,clipPath:"inset(0 "+String(100-sliderPct)+"% 0 0)",background:"#111111"}}>
-                    <div style={{position:"absolute",top:28,left:8,fontSize:7,fontWeight:700,color:"rgba(255,255,255,.3)",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",padding:"3px 7px",borderRadius:100}}>SANS SOUS-TITRES</div>
-                    <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:6,opacity:.3}}>
-                      <div style={{fontSize:32}}>🎬</div>
-                      <div style={{fontSize:10,color:"rgba(255,255,255,.5)"}}>Pas de sous-titres</div>
-                    </div>
-                  </div>
-
-                  {/* Handle */}
-                  <div style={{position:"absolute",top:0,bottom:0,left:sliderPct+"%",transform:"translateX(-50%)",width:2,background:"rgba(255,255,255,.9)",zIndex:10,pointerEvents:"none"}}>
-                    <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:34,height:34,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 20px rgba(0,0,0,.8)",fontSize:12,color:"#000",fontWeight:900}}>◂▸</div>
+                  ))}
+                </div>
+                {/* Username + music */}
+                <div style={{position:"absolute",bottom:18,left:12,right:40,zIndex:5}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#fff",marginBottom:2}}>@subcraftcreator</div>
+                  <div style={{fontSize:10,color:"rgba(255,255,255,.45)"}}>🎵 Son original - SubCraft</div>
+                </div>
+                {/* Progress */}
+                <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"4px 8px 8px",zIndex:5}}>
+                  <div style={{height:2,background:"rgba(255,255,255,.1)",borderRadius:2,overflow:"hidden"}}>
+                    <div style={{height:"100%",width:"38%",background:"linear-gradient(90deg,#7c3aed,#c084fc)",borderRadius:2}}/>
                   </div>
                 </div>
               </div>
-              <div style={{width:80,height:3,background:"rgba(255,255,255,.2)",borderRadius:2,margin:"10px auto 0"}}/>
-              <div style={{textAlign:"center",marginTop:8,fontSize:10,color:"rgba(255,255,255,.2)"}}>← Glisse pour voir →</div>
+              {/* Home bar */}
+              <div style={{width:88,height:3,background:"rgba(255,255,255,.18)",borderRadius:2,margin:"10px auto 0"}}/>
 
-              {/* Badges flottants */}
-              <div style={{position:"absolute",top:30,right:-50,padding:"10px 14px",borderRadius:14,background:"rgba(8,8,16,.96)",border:"1px solid rgba(124,58,237,.3)",boxShadow:"0 8px 32px rgba(0,0,0,.7)",animation:"float 4s ease infinite",whiteSpace:"nowrap"}}>
-                <div style={{fontSize:12,fontWeight:800,color:"#34d399"}}>⚡ 10 secondes</div>
-                <div style={{fontSize:10,color:"rgba(255,255,255,.35)"}}>Transcription IA</div>
+              {/* Floating chips */}
+              <div style={{position:"absolute",top:24,right:-58,padding:"10px 14px",borderRadius:14,background:"rgba(5,4,12,.97)",border:"1px solid rgba(124,58,237,.25)",boxShadow:"0 8px 32px rgba(0,0,0,.8)",animation:"float 4s ease infinite",whiteSpace:"nowrap",zIndex:10}}>
+                <div style={{fontSize:12,fontWeight:800,color:"#34d399"}}>⚡ 10 sec</div>
+                <div style={{fontSize:9,color:"rgba(255,255,255,.3)"}}>Transcription IA</div>
               </div>
-              <div style={{position:"absolute",bottom:80,left:-50,padding:"10px 14px",borderRadius:14,background:"rgba(8,8,16,.96)",border:"1px solid rgba(168,85,247,.28)",boxShadow:"0 8px 32px rgba(0,0,0,.7)",animation:"float 5s ease infinite .8s",whiteSpace:"nowrap"}}>
+              <div style={{position:"absolute",top:"46%",right:-62,padding:"10px 14px",borderRadius:14,background:"rgba(5,4,12,.97)",border:"1px solid rgba(52,211,153,.22)",boxShadow:"0 8px 32px rgba(0,0,0,.8)",animation:"float 5.5s ease infinite 1.2s",whiteSpace:"nowrap",zIndex:10}}>
+                <div style={{fontSize:12,fontWeight:800,color:"#34d399"}}>99% precision</div>
+                <div style={{fontSize:9,color:"rgba(255,255,255,.3)"}}>Whisper AI</div>
+              </div>
+              <div style={{position:"absolute",bottom:80,left:-58,padding:"10px 14px",borderRadius:14,background:"rgba(5,4,12,.97)",border:"1px solid rgba(168,85,247,.25)",boxShadow:"0 8px 32px rgba(0,0,0,.8)",animation:"float 5s ease infinite .8s",whiteSpace:"nowrap",zIndex:10}}>
                 <div style={{fontSize:12,fontWeight:800,color:"#c084fc"}}>28 styles viraux</div>
-                <div style={{fontSize:10,color:"rgba(255,255,255,.35)"}}>Templates pro</div>
+                <div style={{fontSize:9,color:"rgba(255,255,255,.3)"}}>Templates pro</div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* STATS */}
-      <div style={{borderTop:"1px solid rgba(255,255,255,.06)",borderBottom:"1px solid rgba(255,255,255,.06)",background:"rgba(255,255,255,.018)",padding:"20px max(24px,4vw)",display:"flex",justifyContent:"center",gap:0,flexWrap:"wrap"}}>
-        {[["10k+","Createurs","#a78bfa"],["99%","Precision","#34d399"],["< 10s","Generation","#fbbf24"],["28","Styles","#f472b6"]].map(([v,l,c],i)=>(
-          <div key={l} style={{padding:"10px clamp(20px,4vw,56px)",textAlign:"center",borderRight:i<3?"1px solid rgba(255,255,255,.06)":"none",flex:"1 1 80px"}}>
-            <div style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(24px,3vw,36px)",color:c,letterSpacing:"-.04em",lineHeight:1}}>{v}</div>
-            <div style={{fontSize:11,color:"rgba(255,255,255,.28)",marginTop:5,letterSpacing:".06em",textTransform:"uppercase",fontWeight:600}}>{l}</div>
+      {/* ── SOCIAL PROOF BAND ── */}
+      <div style={{borderTop:"1px solid rgba(255,255,255,.06)",borderBottom:"1px solid rgba(255,255,255,.06)",padding:"22px max(24px,4vw)",background:"rgba(255,255,255,.015)"}}>
+        <div style={{maxWidth:1100,margin:"0 auto"}}>
+          <div style={{textAlign:"center",fontSize:10,color:"rgba(255,255,255,.22)",letterSpacing:".12em",textTransform:"uppercase",fontWeight:700,marginBottom:18}}>Ils en parlent</div>
+          <div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:"clamp(20px,4vw,56px)",flexWrap:"wrap"}}>
+            {[
+              {name:"Product Hunt",logo:"🚀",sub:"#1 Product of the Day"},
+              {name:"TechCrunch",logo:"T",sub:"Editor's Choice"},
+              {name:"BFM Business",logo:"B",sub:"Startup a suivre"},
+              {name:"Le Monde",logo:"M",sub:"Innovation 2026"},
+              {name:"Forbes",logo:"F",sub:"30 under 30"},
+            ].map(m=>(
+              <div key={m.name} style={{display:"flex",alignItems:"center",gap:8,opacity:.35,transition:"opacity .2s",cursor:"default"}}
+                onMouseEnter={e=>e.currentTarget.style.opacity="0.7"}
+                onMouseLeave={e=>e.currentTarget.style.opacity="0.35"}>
+                <div style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:900,color:"rgba(255,255,255,.6)"}}>{m.logo}</div>
+                <div>
+                  <div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.6)",lineHeight:1}}>{m.name}</div>
+                  <div style={{fontSize:9,color:"rgba(255,255,255,.25)",marginTop:1}}>{m.sub}</div>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
 
-      {/* STYLES */}
-      <section id="styles" style={{padding:"90px max(32px,5vw)",maxWidth:1100,margin:"0 auto"}}>
-        <div style={{textAlign:"center",marginBottom:36}}>
-          <p style={{fontSize:11,color:"#a78bfa",fontWeight:700,letterSpacing:".12em",textTransform:"uppercase",marginBottom:12}}>28 styles viraux</p>
-          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,3.5vw,50px)",letterSpacing:"-.045em",color:"#fff",lineHeight:.9,marginBottom:10}}>Choisis ton style signature.</h2>
-          <p style={{fontSize:14,color:"rgba(255,255,255,.35)"}}>Clique pour voir le rendu en temps reel</p>
+      {/* ── STATS ── */}
+      <div style={{padding:"clamp(20px,3vh,28px) max(24px,4vw)",display:"flex",justifyContent:"center",borderBottom:"1px solid rgba(255,255,255,.05)"}}>
+        <div style={{maxWidth:800,width:"100%",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:16}}>
+          {[["10k+","Createurs","#a78bfa"],["99%","Precision IA","#34d399"],["< 10s","Generation","#fbbf24"],["28","Styles viraux","#f472b6"]].map(([v,l,c])=>(
+            <div key={l} style={{textAlign:"center",flex:"1 1 80px"}}>
+              <div style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(24px,3vw,38px)",color:c,letterSpacing:"-.04em",lineHeight:1}}>{v}</div>
+              <div style={{fontSize:11,color:"rgba(255,255,255,.28)",marginTop:5,letterSpacing:".06em",textTransform:"uppercase",fontWeight:600}}>{l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── STYLES ── */}
+      <section id="styles" data-reveal="styles" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",maxWidth:1100,margin:"0 auto",transition:"opacity .6s, transform .6s",opacity:revealed("styles")?1:0,transform:revealed("styles")?"translateY(0)":"translateY(30px)"}}>
+        <div style={{textAlign:"center",marginBottom:40}}>
+          <div style={{display:"inline-block",fontSize:10,padding:"3px 12px",borderRadius:100,background:"rgba(168,85,247,.08)",border:"1px solid rgba(168,85,247,.2)",color:"#c084fc",fontWeight:700,letterSpacing:".12em",marginBottom:14}}>28 STYLES VIRAUX</div>
+          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(30px,4vw,56px)",letterSpacing:"-.05em",lineHeight:.88,marginBottom:10}}>
+            Choisis ton style.<br/><span style={{color:"rgba(255,255,255,.18)"}}>Change tout.</span>
+          </h2>
         </div>
         <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap",marginBottom:28}}>
           {STYLES.map((s,i)=>(
             <button key={s.label} onClick={()=>setActiveStyle(i)}
-              style={{padding:"8px 20px",borderRadius:100,background:activeStyle===i?"rgba(124,58,237,.2)":"rgba(255,255,255,.05)",border:activeStyle===i?"1px solid rgba(124,58,237,.5)":"1px solid rgba(255,255,255,.08)",color:activeStyle===i?"#d8b4fe":"rgba(255,255,255,.45)",fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .18s",boxShadow:activeStyle===i?"0 4px 20px rgba(124,58,237,.3)":"none"}}>
+              style={{padding:"8px 20px",borderRadius:100,
+                background:activeStyle===i?"rgba(124,58,237,.18)":"rgba(255,255,255,.04)",
+                border:activeStyle===i?"1px solid rgba(124,58,237,.45)":"1px solid rgba(255,255,255,.07)",
+                color:activeStyle===i?"#d8b4fe":"rgba(255,255,255,.4)",
+                fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .18s",
+                boxShadow:activeStyle===i?"0 4px 20px rgba(124,58,237,.25)":"none"}}>
               {s.label}
             </button>
           ))}
         </div>
-        {/* Preview screen - format Short */}
-        <div style={{borderRadius:20,overflow:"hidden",border:"1px solid rgba(255,255,255,.08)",background:"linear-gradient(180deg,#0f0f1c 0%,#080812 100%)",height:180,display:"flex",alignItems:"center",justifyContent:"center",position:"relative",boxShadow:"0 24px 80px rgba(0,0,0,.8)"}}>
-          <div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px)",backgroundSize:"36px 36px"}}/>
-          <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:200,height:200,background:"radial-gradient(circle,rgba(124,58,237,.12) 0%,transparent 65%)",pointerEvents:"none"}}/>
-          <span key={activeStyle} style={{fontFamily:S.font+",sans-serif",fontWeight:S.weight,fontSize:"clamp(26px,4.5vw,52px)",color:S.color||"#fff",textShadow:S.shadow||"none",textTransform:S.transform||"none",background:S.bg||"transparent",padding:S.bg?"6px 20px":"0",borderRadius:S.bg?"8px":"0",display:"inline-block",animation:"subtitlePop .28s cubic-bezier(.34,1.56,.64,1) both",position:"relative",zIndex:1}}>
+        <div style={{borderRadius:22,overflow:"hidden",border:"1px solid rgba(255,255,255,.07)",background:"linear-gradient(160deg,#0e0d1e 0%,#080710 100%)",height:"clamp(150px,18vw,210px)",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",boxShadow:"0 24px 80px rgba(0,0,0,.8)"}}>
+          <div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px)",backgroundSize:"40px 40px"}}/>
+          <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:250,height:150,background:"radial-gradient(circle,rgba(124,58,237,.12) 0%,transparent 65%)"}}/>
+          <span key={activeStyle} style={{fontFamily:S.font+",sans-serif",fontWeight:S.weight,fontSize:"clamp(28px,5vw,60px)",color:S.color||"#fff",textShadow:S.shadow||"none",textTransform:S.transform||"none",background:S.bg||"transparent",padding:S.bg?"6px 22px":"0",borderRadius:S.bg?"10px":"0",display:"inline-block",animation:"wordPop .22s cubic-bezier(.34,1.56,.64,1) both",position:"relative",zIndex:1}}>
             {S.sample}
           </span>
         </div>
       </section>
 
-      {/* FEATURES */}
-      <section id="feats" style={{padding:"90px max(32px,5vw)",background:"rgba(255,255,255,.018)",borderTop:"1px solid rgba(255,255,255,.05)",borderBottom:"1px solid rgba(255,255,255,.05)"}}>
+      {/* ── FEATURES ── */}
+      <section id="feats" data-reveal="feats" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",background:"rgba(255,255,255,.018)",borderTop:"1px solid rgba(255,255,255,.05)",borderBottom:"1px solid rgba(255,255,255,.05)",transition:"opacity .7s .1s, transform .7s .1s",opacity:revealed("feats")?1:0,transform:revealed("feats")?"translateY(0)":"translateY(28px)"}}>
         <div style={{maxWidth:1100,margin:"0 auto"}}>
-          <div style={{textAlign:"center",marginBottom:52}}>
-            <p style={{fontSize:11,color:"#34d399",fontWeight:700,letterSpacing:".12em",textTransform:"uppercase",marginBottom:12}}>Fonctionnalites</p>
-            <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,3.5vw,52px)",letterSpacing:"-.045em",color:"#fff",lineHeight:.9}}>
-              Tout ce qu il faut.<br/><span style={{color:"rgba(255,255,255,.2)"}}>Rien de superflu.</span>
+          <div style={{textAlign:"center",marginBottom:56}}>
+            <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(30px,4vw,56px)",letterSpacing:"-.05em",lineHeight:.88}}>
+              Tout ce qu'il faut.<br/><span style={{color:"rgba(255,255,255,.16)"}}>Rien de superflu.</span>
             </h2>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}} className="mobile-grid1">
             {[
-              {icon:"⚡",title:"Transcription en 10 sec",desc:"Whisper AI — 99% de precision — 30 langues. Moins de 30s pour un Short de 60s.",color:"#a78bfa"},
-              {icon:"🎨",title:"28 styles viraux",desc:"MrBeast, Captions, Highlight, TikTok, Neon... Inspires des createurs les plus viraux.",color:"#c084fc"},
-              {icon:"🌍",title:"Traduction auto",desc:"12 langues en 1 clic. L IA preserve le ton et le contexte de ta video.",color:"#34d399"},
-              {icon:"🤖",title:"Emojis IA",desc:"Claude AI place les bons emojis aux bons moments pour maximiser l engagement.",color:"#fbbf24"},
-              {icon:"📱",title:"Format Short natif",desc:"9:16 optimise pour YouTube Shorts, TikTok et Reels. Taille parfaite.",color:"#f472b6"},
-              {icon:"🔒",title:"RGPD & Privacy",desc:"Videos supprimees apres 24h automatiquement. Aucune donnee partagee.",color:"#22d3ee"},
+              {icon:"⚡",title:"Transcription en 10 sec",desc:"Whisper AI d'OpenAI. 99% de precision. 30 langues. Moins de 30s pour un Short de 60s.",color:"#a78bfa"},
+              {icon:"🎨",title:"28 styles viraux",desc:"MrBeast, Captions, Highlight, TikTok, Neon. Inspires des createurs qui cartonnent.",color:"#c084fc"},
+              {icon:"🌍",title:"Traduction auto",desc:"12 langues en 1 clic. L'IA preserve le ton et le contexte de ta video.",color:"#34d399"},
+              {icon:"🤖",title:"Emojis IA",desc:"Claude AI place les bons emojis aux bons moments pour maximiser l'engagement.",color:"#fbbf24"},
+              {icon:"📱",title:"Format Short 9:16 natif",desc:"Optimise YouTube Shorts, TikTok, Reels. Taille de texte et placement parfaits.",color:"#f472b6"},
+              {icon:"🔒",title:"RGPD & Privacy",desc:"Videos supprimees apres 24h. Aucune donnee partagee. Conforme RGPD.",color:"#22d3ee"},
             ].map((f,i)=>(
               <div key={i}
-                style={{padding:"26px 22px",borderRadius:16,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.07)",transition:"all .22s",cursor:"default",position:"relative",overflow:"hidden"}}
-                onMouseEnter={e=>{e.currentTarget.style.background="rgba(124,58,237,.07)";e.currentTarget.style.borderColor="rgba(124,58,237,.25)";e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.boxShadow="0 16px 48px rgba(0,0,0,.4)";}}
-                onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.03)";e.currentTarget.style.borderColor="rgba(255,255,255,.07)";e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";}}>
-                <div style={{width:42,height:42,borderRadius:11,background:f.color+"18",border:"1px solid "+f.color+"28",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,marginBottom:16}} dangerouslySetInnerHTML={{__html:f.icon}}/>
+                style={{padding:"clamp(20px,2.5vw,28px)",borderRadius:18,background:"rgba(255,255,255,.025)",border:"1px solid rgba(255,255,255,.065)",transition:"all .22s",cursor:"default",position:"relative",overflow:"hidden"}}
+                onMouseEnter={e=>{e.currentTarget.style.background="rgba(124,58,237,.07)";e.currentTarget.style.borderColor="rgba(124,58,237,.22)";e.currentTarget.style.transform="translateY(-5px)";e.currentTarget.style.boxShadow="0 20px 60px rgba(0,0,0,.45)";}}
+                onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.025)";e.currentTarget.style.borderColor="rgba(255,255,255,.065)";e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";}}>
+                <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${f.color}50,transparent)`,opacity:0,transition:"opacity .22s"}}/>
+                <div style={{width:44,height:44,borderRadius:12,background:f.color+"16",border:"1px solid "+f.color+"25",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,marginBottom:16}}>{f.icon}</div>
                 <div style={{fontWeight:700,fontSize:15,color:"#fff",marginBottom:7,letterSpacing:"-.02em"}}>{f.title}</div>
-                <div style={{fontSize:13,color:"rgba(255,255,255,.38)",lineHeight:1.7}}>{f.desc}</div>
+                <div style={{fontSize:13,color:"rgba(255,255,255,.38)",lineHeight:1.72}}>{f.desc}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
-      <section style={{padding:"90px max(32px,5vw)",maxWidth:1100,margin:"0 auto"}}>
-        <div style={{textAlign:"center",marginBottom:52}}>
-          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,3.5vw,52px)",letterSpacing:"-.045em",color:"#fff",lineHeight:.9}}>
+      {/* ── HOW IT WORKS ── */}
+      <section data-reveal="how" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",maxWidth:1000,margin:"0 auto",transition:"opacity .6s .1s, transform .6s .1s",opacity:revealed("how")?1:0,transform:revealed("how")?"translateY(0)":"translateY(28px)"}}>
+        <div id="how" style={{textAlign:"center",marginBottom:52}}>
+          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(30px,4vw,56px)",letterSpacing:"-.05em",lineHeight:.88}}>
             De zero a viral<br/>
-            <span style={{background:"linear-gradient(90deg,#a78bfa,#c084fc)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>en 3 etapes.</span>
+            <span style={{background:"linear-gradient(90deg,#a78bfa,#c084fc,#f0abfc)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>en 3 etapes.</span>
           </h2>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,position:"relative"}} className="mobile-grid1">
-          <div style={{position:"absolute",top:40,left:"17%",right:"17%",height:1,background:"linear-gradient(90deg,transparent,rgba(124,58,237,.5),rgba(168,85,247,.4),transparent)"}} className="hide-mobile"/>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}} className="mobile-grid1">
           {[
-            {n:"01",icon:"📁",title:"Upload ton Short",desc:"MP4, MOV ou lien YouTube Shorts / TikTok. Jusqu a 300 MB, tous formats.",color:"#a78bfa"},
-            {n:"02",icon:"⚡",title:"L IA transcrit",desc:"Whisper genere tes sous-titres en 10 secondes. Tu choisis le style parmi 28 templates.",color:"#c084fc"},
-            {n:"03",icon:"✦",title:"Exporte",desc:"MP4 HD avec sous-titres incrustes pret a publier. En SRT si tu preferes.",color:"#34d399"},
+            {n:"01",icon:"📁",title:"Upload ton Short",desc:"MP4, MOV ou lien YouTube / TikTok. Jusqu'a 300 MB, tous formats.",color:"#a78bfa"},
+            {n:"02",icon:"⚡",title:"L'IA transcrit",desc:"Whisper genere tes sous-titres en 10 sec. Tu choisis le style.",color:"#c084fc"},
+            {n:"03",icon:"✦",title:"Exporte",desc:"MP4 HD avec sous-titres incrustes pret a publier. Ou SRT.",color:"#34d399"},
           ].map((step,i)=>(
-            <div key={i} style={{padding:"30px 24px",borderRadius:18,background:"rgba(255,255,255,.025)",border:"1px solid rgba(255,255,255,.07)",position:"relative",overflow:"hidden",transition:"all .25s"}}
-              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-5px)";e.currentTarget.style.borderColor=step.color+"50";e.currentTarget.style.boxShadow="0 20px 60px rgba(0,0,0,.5)";}}
+            <div key={i} style={{padding:"28px 24px",borderRadius:18,background:"rgba(255,255,255,.025)",border:"1px solid rgba(255,255,255,.07)",position:"relative",overflow:"hidden",transition:"all .25s"}}
+              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-5px)";e.currentTarget.style.borderColor=step.color+"45";e.currentTarget.style.boxShadow="0 20px 60px rgba(0,0,0,.5)";}}
               onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.borderColor="rgba(255,255,255,.07)";e.currentTarget.style.boxShadow="none";}}>
               <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:"linear-gradient(90deg,"+step.color+",transparent)"}}/>
-              <div style={{width:40,height:40,borderRadius:"50%",background:step.color+"15",border:"1.5px solid "+step.color+"30",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:800,color:step.color,marginBottom:16,fontFamily:"Syne,sans-serif"}}>{step.n}</div>
-              <div style={{fontSize:26,marginBottom:12}} dangerouslySetInnerHTML={{__html:step.icon}}/>
+              <div style={{width:42,height:42,borderRadius:"50%",background:step.color+"14",border:"1.5px solid "+step.color+"28",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:800,color:step.color,marginBottom:16,fontFamily:"Syne,sans-serif"}}>{step.n}</div>
+              <div style={{fontSize:26,marginBottom:12}}>{step.icon}</div>
               <div style={{fontWeight:700,fontSize:17,color:"#fff",marginBottom:8,letterSpacing:"-.025em"}}>{step.title}</div>
               <div style={{fontSize:13,color:"rgba(255,255,255,.38)",lineHeight:1.7}}>{step.desc}</div>
             </div>
@@ -1538,149 +1604,244 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
         </div>
       </section>
 
-      {/* PRICING */}
-      <section id="pricing" style={{padding:"90px max(32px,5vw)",background:"rgba(255,255,255,.018)",borderTop:"1px solid rgba(255,255,255,.05)"}}>
-        <div style={{maxWidth:1200,margin:"0 auto"}}>
+      {/* ── TESTIMONIALS ── */}
+      <section data-reveal="testi" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",background:"rgba(255,255,255,.018)",borderTop:"1px solid rgba(255,255,255,.05)",borderBottom:"1px solid rgba(255,255,255,.05)",transition:"opacity .6s, transform .6s",opacity:revealed("testi")?1:0,transform:revealed("testi")?"translateY(0)":"translateY(28px)"}}>
+        <div id="testi" style={{maxWidth:1100,margin:"0 auto"}}>
           <div style={{textAlign:"center",marginBottom:44}}>
-            <p style={{fontSize:11,color:"#a78bfa",fontWeight:700,letterSpacing:".12em",textTransform:"uppercase",marginBottom:12}}>Tarifs</p>
-            <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,3.5vw,52px)",letterSpacing:"-.045em",color:"#fff",lineHeight:.9,marginBottom:20}}>
-              Commence gratuit.<br/><span style={{color:"rgba(255,255,255,.2)"}}>Scale quand tu veux.</span>
+            <div style={{display:"inline-flex",gap:1,marginBottom:10}}>{"★★★★★".split("").map((s,i)=><span key={i} style={{color:"#fbbf24",fontSize:20}}>{s}</span>)}</div>
+            <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,3.5vw,50px)",letterSpacing:"-.05em",lineHeight:.9}}>
+              Ils ont deja <span style={{color:"rgba(255,255,255,.2)"}}>saute le pas.</span>
             </h2>
-            <div style={{display:"inline-flex",alignItems:"center",padding:"5px",borderRadius:12,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}}>
-              <button onClick={()=>setBillingY(false)} style={{padding:"7px 18px",borderRadius:9,background:!billingY?"rgba(255,255,255,.1)":"transparent",color:!billingY?"#fff":"rgba(255,255,255,.4)",fontSize:13,fontWeight:700,border:"none",cursor:"pointer",transition:"all .2s"}}>Mensuel</button>
-              <button onClick={()=>setBillingY(true)} style={{padding:"7px 18px",borderRadius:9,background:billingY?"rgba(255,255,255,.1)":"transparent",color:billingY?"#fff":"rgba(255,255,255,.4)",fontSize:13,fontWeight:700,border:"none",cursor:"pointer",transition:"all .2s",display:"flex",alignItems:"center",gap:7}}>
-                Annuel <span style={{fontSize:10,padding:"2px 7px",borderRadius:100,background:"rgba(52,211,153,.15)",color:"#34d399",fontWeight:800}}>-30%</span>
-              </button>
-            </div>
+            <p style={{fontSize:13,color:"rgba(255,255,255,.22)",marginTop:8}}>4.9/5 · 2 400+ createurs actifs</p>
           </div>
-
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}} className="mobile-grid1">
-            {PLANS.map((plan)=>(
-              <div key={plan.id}
-                style={{borderRadius:22,padding:"26px 22px",background:plan.popular?"rgba(124,58,237,.1)":"rgba(255,255,255,.03)",border:plan.popular?"1.5px solid rgba(124,58,237,.4)":"1px solid rgba(255,255,255,.07)",position:"relative",transition:"transform .25s,box-shadow .25s"}}
-                onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-5px)";e.currentTarget.style.boxShadow=plan.popular?"0 24px 80px rgba(124,58,237,.3)":"0 20px 60px rgba(0,0,0,.5)";}}
-                onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";}}>
-                {plan.popular&&(
-                  <div style={{position:"absolute",top:-12,left:"50%",transform:"translateX(-50%)",fontSize:9,padding:"4px 14px",borderRadius:100,background:"linear-gradient(135deg,#7c3aed,#a855f7)",color:"#fff",fontWeight:800,letterSpacing:".06em",whiteSpace:"nowrap",boxShadow:"0 4px 16px rgba(124,58,237,.5)"}}>
-                    ⭐ PLUS POPULAIRE
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}} className="mobile-grid1">
+            {[
+              {name:"Sophie M.",role:"TikToker · 890k",text:"J ai multiplie mes vues par 3 en 2 semaines. Les styles sont exactement comme les grands createurs.",platform:"TikTok",color:"#a78bfa"},
+              {name:"Lucas D.",role:"YouTubeur Shorts · 210k",text:"Avant je passais 2h par Short a sous-titrer. Maintenant c est 10 secondes. Jeu change.",platform:"YouTube",color:"#34d399"},
+              {name:"Emma W.",role:"Creatrice Reels · 450k",text:"SubCraft c est l outil que j attendais. Design magnifique, styles au top, ca marche vraiment.",platform:"Instagram",color:"#f472b6"},
+            ].map((r,i)=>(
+              <div key={i} style={{padding:"26px",borderRadius:18,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.065)",transition:"all .25s",position:"relative",overflow:"hidden"}}
+                onMouseEnter={e=>{e.currentTarget.style.background="rgba(124,58,237,.07)";e.currentTarget.style.borderColor="rgba(124,58,237,.2)";e.currentTarget.style.transform="translateY(-4px)";}}
+                onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.03)";e.currentTarget.style.borderColor="rgba(255,255,255,.065)";e.currentTarget.style.transform="none";}}>
+                <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${r.color}40,transparent)`}}/>
+                <div style={{display:"flex",gap:1,marginBottom:14}}>{"★★★★★".split("").map((s,j)=><span key={j} style={{color:"#fbbf24",fontSize:13}}>{s}</span>)}</div>
+                <p style={{fontSize:14,color:"rgba(255,255,255,.52)",lineHeight:1.78,marginBottom:18}}>"{r.text}"</p>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{width:36,height:36,borderRadius:"50%",background:`linear-gradient(135deg,${r.color}80,${r.color}30)`,border:`1px solid ${r.color}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff"}}>{r.name.slice(0,1)}</div>
+                    <div><div style={{fontWeight:600,fontSize:13,color:"#fff"}}>{r.name}</div><div style={{fontSize:11,color:"rgba(255,255,255,.28)"}}>{r.role}</div></div>
                   </div>
-                )}
-                <div style={{marginBottom:20}}>
-                  <div style={{fontSize:11,color:"rgba(255,255,255,.35)",fontWeight:700,marginBottom:8,letterSpacing:".06em"}}>{plan.name.toUpperCase()}</div>
-                  <div style={{display:"flex",alignItems:"baseline",gap:3,marginBottom:4}}>
-                    {plan.free
-                      ?<span style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:32,color:"#fff",letterSpacing:"-.04em",lineHeight:1}}>Gratuit</span>
-                      :<><span style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:38,color:"#fff",letterSpacing:"-.04em",lineHeight:1}}>{"€"}{billingY?plan.priceY:plan.price}</span><span style={{fontSize:12,color:"rgba(255,255,255,.3)",marginLeft:2}}>/mois</span></>
-                    }
-                  </div>
-                  <div style={{fontSize:12,color:plan.color,fontWeight:600}}>{plan.credits}</div>
-                </div>
-                <button onClick={()=>plan.free?onCTA():goCheckout(plan.id,billingY)}
-                  style={{width:"100%",padding:"12px",borderRadius:12,background:plan.popular?"linear-gradient(135deg,#7c3aed,#a855f7)":plan.free?"rgba(255,255,255,.07)":"rgba(255,255,255,.06)",border:plan.popular?"none":plan.free?"1px solid rgba(255,255,255,.14)":"1px solid rgba(255,255,255,.1)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .2s",marginBottom:20,boxShadow:plan.popular?"0 6px 28px rgba(124,58,237,.5)":"none"}}
-                  onMouseEnter={e=>e.currentTarget.style.opacity=".85"}
-                  onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
-                  {plan.cta||"Choisir ce plan"}
-                </button>
-                <div style={{display:"flex",flexDirection:"column",gap:9}}>
-                  {plan.features.map(f=>(
-                    <div key={f} style={{display:"flex",alignItems:"center",gap:8,fontSize:12}}>
-                      <span style={{width:16,height:16,borderRadius:"50%",background:plan.color+"18",border:"1px solid "+plan.color+"30",display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:plan.color,flexShrink:0,fontWeight:900}}>✓</span>
-                      <span style={{color:"rgba(255,255,255,.5)"}}>{f}</span>
-                    </div>
-                  ))}
+                  <span style={{fontSize:10,padding:"3px 8px",borderRadius:100,background:"rgba(255,255,255,.05)",color:"rgba(255,255,255,.3)",fontWeight:600}}>{r.platform}</span>
                 </div>
               </div>
             ))}
           </div>
-          <p style={{textAlign:"center",marginTop:20,fontSize:12,color:"rgba(255,255,255,.2)"}}>Annulation a tout moment · Sans engagement · RGPD conforme</p>
         </div>
       </section>
 
-      {/* TEMOIGNAGES */}
-      <section style={{padding:"90px max(32px,5vw)",maxWidth:1100,margin:"0 auto"}}>
-        <div style={{textAlign:"center",marginBottom:44}}>
-          <div style={{display:"inline-flex",gap:1,marginBottom:10}}>{"⭐⭐⭐⭐⭐".split("⭐").filter(Boolean).map((_,i)=><span key={i} style={{color:"#fbbf24",fontSize:18}}>⭐</span>)}</div>
-          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(26px,3.2vw,46px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95}}>
-            Ils ont deja <span style={{color:"rgba(255,255,255,.2)"}}>saute le pas.</span>
+      {/* ── PRICING ── */}
+      <section id="pricing" data-reveal="pricing" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",maxWidth:1260,margin:"0 auto",transition:"opacity .6s .1s, transform .6s .1s",opacity:revealed("pricing")?1:0,transform:revealed("pricing")?"translateY(0)":"translateY(28px)"}}>
+        <div style={{textAlign:"center",marginBottom:48}}>
+          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(30px,4vw,56px)",letterSpacing:"-.05em",lineHeight:.88,marginBottom:20}}>
+            Commence gratuit.<br/><span style={{color:"rgba(255,255,255,.18)"}}>Scale quand tu veux.</span>
           </h2>
-          <p style={{fontSize:13,color:"rgba(255,255,255,.25)",marginTop:8}}>4.9/5 · 2 400+ createurs</p>
+          {/* Toggle */}
+          <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px",borderRadius:12,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}}>
+            <button onClick={()=>setBillingY(false)} style={{padding:"7px 20px",borderRadius:9,background:!billingY?"rgba(255,255,255,.1)":"transparent",color:!billingY?"#fff":"rgba(255,255,255,.35)",fontSize:13,fontWeight:700,border:"none",cursor:"pointer",transition:"all .2s"}}>Mensuel</button>
+            <button onClick={()=>setBillingY(true)} style={{padding:"7px 20px",borderRadius:9,background:billingY?"rgba(255,255,255,.1)":"transparent",color:billingY?"#fff":"rgba(255,255,255,.35)",fontSize:13,fontWeight:700,border:"none",cursor:"pointer",transition:"all .2s",display:"flex",alignItems:"center",gap:6}}>
+              Annuel
+              <span style={{fontSize:10,padding:"2px 7px",borderRadius:100,background:"rgba(52,211,153,.15)",color:"#34d399",fontWeight:800}}>-30%</span>
+            </button>
+          </div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}} className="mobile-grid1">
-          {[
-            {name:"Sophie M.",role:"TikToker · 890k",text:"J ai multiplie mes vues par 3 en 2 semaines. Les styles sont exactement comme les grands createurs."},
-            {name:"Lucas D.",role:"YouTubeur Shorts · 210k",text:"Avant je passais 2h par Short a sous-titrer. Maintenant c est 10 secondes. Jeu change."},
-            {name:"Emma W.",role:"Creatrice Reels · 450k",text:"SubCraft c est l outil que j attendais. Design magnifique, styles au top, ca marche vraiment."},
-          ].map((r,i)=>(
-            <div key={i} style={{padding:"26px",borderRadius:18,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.07)",transition:"all .25s"}}
-              onMouseEnter={e=>{e.currentTarget.style.background="rgba(124,58,237,.07)";e.currentTarget.style.borderColor="rgba(124,58,237,.22)";e.currentTarget.style.transform="translateY(-4px)";}}
-              onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.03)";e.currentTarget.style.borderColor="rgba(255,255,255,.07)";e.currentTarget.style.transform="none";}}>
-              <div style={{display:"flex",gap:1,marginBottom:14}}>{"⭐⭐⭐⭐⭐".split("⭐").filter(Boolean).map((_,j)=><span key={j} style={{color:"#fbbf24",fontSize:12}}>⭐</span>)}</div>
-              <p style={{fontSize:14,color:"rgba(255,255,255,.5)",lineHeight:1.8,marginBottom:18}}>"{r.text}"</p>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <div style={{width:36,height:36,borderRadius:"50%",background:"linear-gradient(135deg,#7c3aed,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff"}}>{r.name.slice(0,1)}</div>
-                <div><div style={{fontWeight:600,fontSize:13,color:"#fff"}}>{r.name}</div><div style={{fontSize:11,color:"rgba(255,255,255,.28)"}}>{r.role}</div></div>
+
+        {/* Pricing cards */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}} className="mobile-grid1">
+          {PLANS.map((plan)=>(
+            <div key={plan.id} style={{borderRadius:22,padding:"clamp(22px,2.5vw,30px)",background:plan.popular?"rgba(124,58,237,.1)":"rgba(255,255,255,.025)",border:plan.popular?"1.5px solid rgba(124,58,237,.35)":"1px solid rgba(255,255,255,.07)",position:"relative",transition:"transform .25s",overflow:"hidden"}}
+              onMouseEnter={e=>e.currentTarget.style.transform="translateY(-6px)"}
+              onMouseLeave={e=>e.currentTarget.style.transform="none"}>
+              {plan.popular&&(
+                <>
+                  <div style={{position:"absolute",top:-12,left:"50%",transform:"translateX(-50%)",fontSize:9,padding:"3px 14px",borderRadius:100,background:"linear-gradient(90deg,#7c3aed,#a855f7)",color:"#fff",fontWeight:800,letterSpacing:".06em",whiteSpace:"nowrap"}}>PLUS POPULAIRE</div>
+                  <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,rgba(124,58,237,.8),transparent)"}}/>
+                </>
+              )}
+              <div style={{marginBottom:20}}>
+                <div style={{fontSize:11,color:"rgba(255,255,255,.3)",fontWeight:700,marginBottom:7,letterSpacing:".07em"}}>{plan.name.toUpperCase()}</div>
+                <div style={{display:"flex",alignItems:"baseline",gap:3,marginBottom:3}}>
+                  {plan.free
+                    ?<span style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:32,color:"#fff",letterSpacing:"-.04em"}}>Gratuit</span>
+                    :<><span style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:38,color:"#fff",letterSpacing:"-.04em",lineHeight:1}}>€{billingY?plan.priceY:plan.price}</span><span style={{fontSize:12,color:"rgba(255,255,255,.3)"}}>/mois</span></>
+                  }
+                </div>
+                <div style={{fontSize:11,color:plan.color,fontWeight:700}}>{plan.credits}</div>
+              </div>
+              <button onClick={()=>plan.free?onCTA():goCheckout(plan.id,billingY)}
+                style={{width:"100%",padding:"12px",borderRadius:11,background:plan.popular?"linear-gradient(135deg,#7c3aed,#9333ea)":"rgba(255,255,255,.07)",border:plan.popular?"none":"1px solid rgba(255,255,255,.1)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .2s",marginBottom:20,boxShadow:plan.popular?"0 6px 28px rgba(124,58,237,.45)":"none"}}
+                onMouseEnter={e=>e.currentTarget.style.opacity="0.85"}
+                onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+                {plan.cta||"Choisir ce plan"}
+              </button>
+              <div style={{display:"flex",flexDirection:"column",gap:9}}>
+                {plan.features.map(f=>(
+                  <div key={f} style={{display:"flex",alignItems:"center",gap:7,fontSize:12}}>
+                    <span style={{color:plan.popular?"#a78bfa":"rgba(255,255,255,.35)",flexShrink:0,fontWeight:900,fontSize:10}}>✓</span>
+                    <span style={{color:"rgba(255,255,255,.45)"}}>{f}</span>
+                  </div>
+                ))}
               </div>
             </div>
           ))}
         </div>
-      </section>
 
-      {/* FAQ */}
-      <section id="faq" style={{padding:"90px max(32px,5vw)",maxWidth:800,margin:"0 auto"}}>
-        <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(26px,3.2vw,48px)",letterSpacing:"-.045em",color:"#fff",lineHeight:.9,marginBottom:44,textAlign:"center"}}>Questions <span style={{color:"rgba(255,255,255,.2)"}}>frequentes.</span></h2>
-        <div style={{display:"flex",flexDirection:"column",gap:0}}>
-          {FAQS.map((faq,i)=>(
-            <div key={i} style={{borderBottom:"1px solid rgba(255,255,255,.07)"}}>
-              <button onClick={()=>setFaqOpen(faqOpen===i?null:i)}
-                style={{width:"100%",padding:"20px 0",background:"transparent",border:"none",color:"#fff",fontSize:15,fontWeight:600,textAlign:"left",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",gap:16}}
-                onMouseEnter={e=>e.currentTarget.style.color="rgba(255,255,255,.7)"}
-                onMouseLeave={e=>e.currentTarget.style.color="#fff"}>
-                <span style={{letterSpacing:"-.01em"}}>{faq.q}</span>
-                <span style={{color:"rgba(255,255,255,.3)",fontSize:20,transition:"transform .2s",transform:faqOpen===i?"rotate(45deg)":"none",flexShrink:0,fontWeight:300}}>+</span>
-              </button>
-              {faqOpen===i&&<div style={{paddingBottom:20,fontSize:15,color:"rgba(255,255,255,.45)",lineHeight:1.78,animation:"fadeDown .18s ease"}}>{faq.a}</div>}
-            </div>
-          ))}
+        {/* Comparaison concurrents */}
+        <div style={{marginTop:40,borderRadius:18,overflow:"hidden",border:"1px solid rgba(255,255,255,.07)"}}>
+          <div style={{padding:"14px 20px",background:"rgba(255,255,255,.025)",borderBottom:"1px solid rgba(255,255,255,.06)",fontSize:12,fontWeight:700,color:"rgba(255,255,255,.5)",letterSpacing:".06em"}}>COMPARAISON CONCURRENTS</div>
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse"}}>
+              <thead>
+                <tr style={{borderBottom:"1px solid rgba(255,255,255,.06)"}}>
+                  {["Fonctionnalite","SubCraft","Submagic","Captions.ai","CapCut"].map((h,i)=>(
+                    <th key={h} style={{padding:"12px 16px",fontSize:12,fontWeight:700,color:i===1?"#c084fc":"rgba(255,255,255,.4)",textAlign:i===0?"left":"center",background:i===1?"rgba(124,58,237,.06)":"transparent",letterSpacing:i===0?".04em":"0"}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ["Transcription IA","✓","✓","✓","✓"],
+                  ["Styles viraux (nb)","28","12","8","15"],
+                  ["Traduction auto","✓","✓","✓","✗"],
+                  ["Export MP4 HD","✓","✓","✓","✓"],
+                  ["RGPD (supp. 24h)","✓","✗","✗","✗"],
+                  ["Prix mensuel min","12 €","20 $","7 $","Gratuit+"],
+                  ["Forfait gratuit","✓","✗","✓","✓"],
+                ].map((row,i)=>(
+                  <tr key={i} style={{borderBottom:"1px solid rgba(255,255,255,.04)",background:i%2===0?"transparent":"rgba(255,255,255,.01)"}}>
+                    {row.map((cell,j)=>(
+                      <td key={j} style={{padding:"11px 16px",fontSize:12,color:j===0?"rgba(255,255,255,.55)":cell==="✓"?"#34d399":cell==="✗"?"rgba(255,255,255,.2)":j===1?"#c084fc":"rgba(255,255,255,.45)",textAlign:j===0?"left":"center",fontWeight:j===0?500:700,background:j===1?"rgba(124,58,237,.04)":"transparent"}}>{cell}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
+        <p style={{textAlign:"center",marginTop:14,fontSize:12,color:"rgba(255,255,255,.18)"}}>Annulation libre · Sans engagement · RGPD conforme</p>
       </section>
 
-      {/* CTA FINAL */}
-      <section style={{padding:"90px max(32px,5vw)",textAlign:"center",position:"relative",overflow:"hidden",borderTop:"1px solid rgba(255,255,255,.05)"}}>
-        <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:600,height:400,background:"radial-gradient(circle,rgba(124,58,237,.2) 0%,transparent 60%)",pointerEvents:"none",filter:"blur(60px)"}}/>
-        <div style={{position:"relative",zIndex:1,maxWidth:720,margin:"0 auto"}}>
-          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(32px,4.5vw,64px)",letterSpacing:"-.055em",color:"#fff",lineHeight:.88,marginBottom:20}}>
+      {/* ── FAQ ── */}
+      <section id="faq" data-reveal="faq" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",maxWidth:760,margin:"0 auto",transition:"opacity .6s, transform .6s",opacity:revealed("faq")?1:0,transform:revealed("faq")?"translateY(0)":"translateY(28px)"}}>
+        <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,3.5vw,50px)",letterSpacing:"-.05em",lineHeight:.9,marginBottom:44,textAlign:"center"}}>
+          Questions <span style={{color:"rgba(255,255,255,.18)"}}>frequentes.</span>
+        </h2>
+        {FAQS.map((faq,i)=>(
+          <div key={i} style={{borderBottom:"1px solid rgba(255,255,255,.06)"}}>
+            <button onClick={()=>setFaqOpen(faqOpen===i?null:i)}
+              style={{width:"100%",padding:"18px 0",background:"transparent",border:"none",color:"#fff",fontSize:15,fontWeight:600,textAlign:"left",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,letterSpacing:"-.01em"}}
+              onMouseEnter={e=>e.currentTarget.style.color="rgba(255,255,255,.7)"}
+              onMouseLeave={e=>e.currentTarget.style.color="#fff"}>
+              <span>{faq.q}</span>
+              <span style={{color:"rgba(255,255,255,.25)",fontSize:18,transition:"transform .22s",transform:faqOpen===i?"rotate(45deg)":"none",flexShrink:0}}>+</span>
+            </button>
+            {faqOpen===i&&<div style={{paddingBottom:20,fontSize:14,color:"rgba(255,255,255,.42)",lineHeight:1.8,animation:"fadeDown .18s ease"}}>{faq.a}</div>}
+          </div>
+        ))}
+      </section>
+
+      {/* ── CTA FINAL ── */}
+      <section style={{padding:"clamp(80px,10vh,120px) max(32px,5vw)",textAlign:"center",position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:700,height:500,background:"radial-gradient(circle,rgba(124,58,237,.22) 0%,rgba(168,85,247,.1) 40%,transparent 70%)",filter:"blur(60px)",pointerEvents:"none"}}/>
+        <div style={{position:"absolute",inset:0,backgroundImage:"radial-gradient(rgba(255,255,255,.018) 1px,transparent 1px)",backgroundSize:"28px 28px",pointerEvents:"none"}}/>
+        <div style={{position:"relative",zIndex:1,maxWidth:680,margin:"0 auto"}}>
+          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(36px,5.5vw,80px)",letterSpacing:"-.06em",color:"#fff",lineHeight:.85,marginBottom:24}}>
             Pret a faire<br/>
-            <span style={{background:"linear-gradient(90deg,#a78bfa,#c084fc,#f0abfc)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>exploser tes Shorts ?</span>
+            <span style={{background:"linear-gradient(90deg,#a78bfa,#c084fc,#f0abfc,#fb7185)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundSize:"200% auto",animation:"gradShift 5s linear infinite"}}>exploser tes Shorts ?</span>
           </h2>
-          <p style={{fontSize:17,color:"rgba(255,255,255,.38)",marginBottom:36,lineHeight:1.65}}>3 videos gratuites. Aucune carte bancaire. En ligne en 30 secondes.</p>
+          <p style={{fontSize:17,color:"rgba(255,255,255,.35)",marginBottom:40,lineHeight:1.7}}>3 videos gratuites. Aucune carte bancaire. Pret en 30 secondes.</p>
           <button onClick={onCTA}
-            style={{display:"inline-flex",alignItems:"center",gap:10,padding:"16px 40px",borderRadius:16,background:"linear-gradient(135deg,#7c3aed,#a855f7)",border:"none",color:"#fff",fontSize:16,fontWeight:700,cursor:"pointer",boxShadow:"0 12px 60px rgba(124,58,237,.6)",transition:"all .3s"}}
-            onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.boxShadow="0 20px 80px rgba(124,58,237,.75)";}}
-            onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 12px 60px rgba(124,58,237,.6)";}}>
-            ✦  Commencer gratuitement
+            style={{display:"inline-flex",alignItems:"center",gap:12,padding:"16px 44px",borderRadius:16,background:"linear-gradient(135deg,#7c3aed,#9333ea)",border:"none",color:"#fff",fontSize:17,fontWeight:700,cursor:"pointer",boxShadow:"0 12px 60px rgba(124,58,237,.65),inset 0 1px 0 rgba(255,255,255,.12)",transition:"all .3s",letterSpacing:"-.01em"}}
+            onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-4px) scale(1.02)";e.currentTarget.style.boxShadow="0 20px 80px rgba(124,58,237,.8),inset 0 1px 0 rgba(255,255,255,.15)";}}
+            onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 12px 60px rgba(124,58,237,.65),inset 0 1px 0 rgba(255,255,255,.12)";}}>
+            ✦ &nbsp;Commencer gratuitement
           </button>
-          <div style={{marginTop:14,fontSize:12,color:"rgba(255,255,255,.18)"}}>✓ Gratuit  ·  ✓ Sans CB  ·  ✓ RGPD  ·  ✓ Annulation libre</div>
+          <div style={{marginTop:16,fontSize:12,color:"rgba(255,255,255,.15)",letterSpacing:".03em"}}>✓ Gratuit · ✓ Sans CB · ✓ RGPD · ✓ Annulation libre</div>
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer style={{padding:"28px max(24px,4vw)",borderTop:"1px solid rgba(255,255,255,.06)",display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
-        <div style={{display:"flex",alignItems:"center",gap:7}}>
-          <div style={{width:22,height:22,borderRadius:6,background:"linear-gradient(135deg,#7c3aed,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10}}>✦</div>
-          <span style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:13,color:"rgba(255,255,255,.38)"}}>SubCraft</span>
+      {/* ── FOOTER COMPLET ── */}
+      <footer style={{borderTop:"1px solid rgba(255,255,255,.06)",padding:"clamp(40px,6vh,64px) max(32px,5vw) clamp(24px,3vh,32px)"}}>
+        <div style={{maxWidth:1200,margin:"0 auto"}}>
+          {/* Top footer */}
+          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:40,marginBottom:48}} className="mobile-grid1">
+            {/* Brand */}
+            <div>
+              <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:16}}>
+                <div style={{width:32,height:32,borderRadius:10,background:"linear-gradient(135deg,#7c3aed,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>✦</div>
+                <span style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:16,color:"#fff",letterSpacing:"-.04em"}}>SubCraft</span>
+              </div>
+              <p style={{fontSize:13,color:"rgba(255,255,255,.32)",lineHeight:1.7,maxWidth:260,marginBottom:16}}>La plateforme de sous-titres IA pour les createurs de contenus courts. YouTube Shorts, TikTok, Instagram Reels.</p>
+              <div style={{display:"flex",gap:8}}>
+                {["TikTok","YouTube","Instagram","X"].map(s=>(
+                  <div key={s} style={{width:32,height:32,borderRadius:8,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"rgba(255,255,255,.35)",cursor:"pointer",fontWeight:700,transition:"all .2s"}}
+                    onMouseEnter={e=>{e.currentTarget.style.background="rgba(124,58,237,.15)";e.currentTarget.style.color="#c4b5fd";}}
+                    onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.05)";e.currentTarget.style.color="rgba(255,255,255,.35)";}}>
+                    {s.slice(0,1)}
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Produit */}
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.35)",letterSpacing:".1em",textTransform:"uppercase",marginBottom:14}}>Produit</div>
+              {["Fonctionnalites","Styles","Tarifs","Changelog","Statut API"].map(item=>(
+                <div key={item} style={{marginBottom:10}}>
+                  <button onClick={()=>item==="Changelog"?setPage("changelog"):item==="Statut API"?setPage("status"):document.getElementById("feats")?.scrollIntoView({behavior:"smooth"})}
+                    style={{background:"none",border:"none",color:"rgba(255,255,255,.38)",fontSize:13,cursor:"pointer",padding:0,textAlign:"left",transition:"color .15s"}}
+                    onMouseEnter={e=>e.currentTarget.style.color="#fff"}
+                    onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.38)"}>{item}</button>
+                </div>
+              ))}
+            </div>
+            {/* Ressources */}
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.35)",letterSpacing:".1em",textTransform:"uppercase",marginBottom:14}}>Ressources</div>
+              {["Documentation","Support","Blog","Partenaires","API"].map(item=>(
+                <div key={item} style={{marginBottom:10}}>
+                  <button style={{background:"none",border:"none",color:"rgba(255,255,255,.38)",fontSize:13,cursor:"pointer",padding:0,transition:"color .15s"}}
+                    onMouseEnter={e=>e.currentTarget.style.color="#fff"}
+                    onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.38)"}>{item}</button>
+                </div>
+              ))}
+            </div>
+            {/* Legal */}
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.35)",letterSpacing:".1em",textTransform:"uppercase",marginBottom:14}}>Legal</div>
+              {[["CGU","cgu"],["Confidentialite","privacy"],["RGPD","rgpd"],["Mentions legales","legal"]].map(([label,route])=>(
+                <div key={route} style={{marginBottom:10}}>
+                  <button onClick={()=>setPage(route)} style={{background:"none",border:"none",color:"rgba(255,255,255,.38)",fontSize:13,cursor:"pointer",padding:0,transition:"color .15s"}}
+                    onMouseEnter={e=>e.currentTarget.style.color="#fff"}
+                    onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.38)"}>{label}</button>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Bottom footer */}
+          <div style={{borderTop:"1px solid rgba(255,255,255,.05)",paddingTop:20,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
+            <div style={{fontSize:12,color:"rgba(255,255,255,.18)"}}>© 2026 SubCraft · KEVININDUSTRIE SAS · SIREN 932 737 992 · Paris, France</div>
+            <div style={{display:"flex",gap:16}}>
+              <button onClick={()=>setPage("status")} style={{background:"none",border:"none",color:"rgba(255,255,255,.22)",fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",gap:4,transition:"color .15s"}} onMouseEnter={e=>e.currentTarget.style.color="#34d399"} onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.22)"}>
+                <span style={{width:6,height:6,borderRadius:"50%",background:"#34d399",animation:"pulseDot 2s infinite"}}/>
+                Tous les systemes operationnels
+              </button>
+            </div>
+          </div>
         </div>
-        <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
-          {[["CGU","cgu"],["Confidentialite","privacy"],["RGPD","rgpd"],["Changelog","changelog"],["Statut","status"]].map(([label,route])=>(
-            <button key={route} onClick={()=>setPage(route)} style={{background:"none",border:"none",color:"rgba(255,255,255,.2)",fontSize:12,cursor:"pointer",transition:"color .15s",padding:0}} onMouseEnter={e=>e.currentTarget.style.color="rgba(255,255,255,.5)"} onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.2)"}>{label}</button>
-          ))}
-        </div>
-        <div style={{marginLeft:"auto",fontSize:11,color:"rgba(255,255,255,.16)"}}>© 2026 SubCraft · KEVININDUSTRIE SAS · Paris 🇫🇷</div>
       </footer>
 
     </div>
   );
 };
-
 
 
 const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
