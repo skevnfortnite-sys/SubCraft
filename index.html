@@ -343,6 +343,80 @@ const ConfirmModal=({open,title,desc,onConfirm,onCancel,danger=true})=>{
   );
 };
 
+const ChatBubble=({setPage,user})=>{
+  const [open,setOpen]=useState(false);
+  const [msg,setMsg]=useState("");
+  const [msgs,setMsgs]=useState([{from:"bot",text:"Bonjour ! Comment puis-je t'aider ? 👋"}]);
+  const [loading,setLoading]=useState(false);
+  const endRef=useRef(null);
+  useEffect(()=>{endRef.current?.scrollIntoView({behavior:"smooth"});},[msgs]);
+
+  const send=async()=>{
+    if(!msg.trim())return;
+    const txt=msg.trim();
+    setMsg("");
+    setMsgs(m=>[...m,{from:"user",text:txt}]);
+    setLoading(true);
+    try{
+      const r=await fetch("/api/anthropic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:500,system:"Tu es Sophie, l'assistante SubCraft. Reponds en francais, de facon concise (2-3 phrases max). Tu aides les createurs de contenu avec les sous-titres IA. Sois sympathique et utile.",messages:[...msgs.filter(m=>m.from!=="bot"||msgs.indexOf(m)===0).map(m=>({role:m.from==="user"?"user":"assistant",content:m.text})),{role:"user",content:txt}]})});
+      const d=await r.json();
+      const reply=d.content?.[0]?.text||"Je suis la pour t'aider !";
+      setMsgs(m=>[...m,{from:"bot",text:reply}]);
+    }catch{
+      setMsgs(m=>[...m,{from:"bot",text:"Desolee, je suis momentanement indisponible. Reessaie ! 🔄"}]);
+    }
+    setLoading(false);
+  };
+
+  return(
+    <div style={{position:"fixed",bottom:24,right:24,zIndex:999}}>
+      {open&&(
+        <div style={{position:"absolute",bottom:68,right:0,width:320,background:"#0e0e18",border:"1px solid rgba(124,58,237,.3)",borderRadius:20,boxShadow:"0 24px 60px rgba(0,0,0,.7)",overflow:"hidden",animation:"fadeDown .2s ease"}}>
+          {/* Header */}
+          <div style={{padding:"14px 18px",background:"linear-gradient(135deg,#7c3aed,#a855f7)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:32,height:32,borderRadius:"50%",background:"rgba(255,255,255,.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>✦</div>
+              <div>
+                <div style={{fontWeight:700,fontSize:13,color:"#fff"}}>Sophie — SubCraft</div>
+                <div style={{fontSize:10,color:"rgba(255,255,255,.7)",display:"flex",alignItems:"center",gap:4}}>
+                  <span style={{width:5,height:5,borderRadius:"50%",background:"#34d399",display:"inline-block"}}/>En ligne
+                </div>
+              </div>
+            </div>
+            <button onClick={()=>setOpen(false)} style={{background:"none",border:"none",color:"rgba(255,255,255,.7)",fontSize:18,cursor:"pointer",lineHeight:1}}>×</button>
+          </div>
+          {/* Messages */}
+          <div style={{height:260,overflowY:"auto",padding:"14px 14px 0",display:"flex",flexDirection:"column",gap:10}}>
+            {msgs.map((m,i)=>(
+              <div key={i} style={{display:"flex",justifyContent:m.from==="user"?"flex-end":"flex-start"}}>
+                <div style={{maxWidth:"80%",padding:"9px 13px",borderRadius:m.from==="user"?"14px 14px 2px 14px":"14px 14px 14px 2px",background:m.from==="user"?"#7c3aed":"rgba(255,255,255,.07)",color:"#fff",fontSize:13,lineHeight:1.55}}>
+                  {m.text}
+                </div>
+              </div>
+            ))}
+            {loading&&<div style={{display:"flex",gap:4,padding:"8px 13px",background:"rgba(255,255,255,.07)",borderRadius:"14px 14px 14px 2px",width:"fit-content"}}>
+              {[0,1,2].map(i=><span key={i} style={{width:6,height:6,borderRadius:"50%",background:"rgba(255,255,255,.4)",animation:`bounce .8s ease ${i*.15}s infinite`}}/>)}
+            </div>}
+            <div ref={endRef}/>
+          </div>
+          {/* Input */}
+          <div style={{padding:"10px 12px",borderTop:"1px solid rgba(255,255,255,.07)",display:"flex",gap:8}}>
+            <input value={msg} onChange={e=>setMsg(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()} placeholder="Ecris ton message..." style={{flex:1,padding:"9px 13px",borderRadius:10,background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",color:"#fff",fontSize:13,outline:"none"}}/>
+            <button onClick={send} disabled={!msg.trim()||loading} style={{width:36,height:36,borderRadius:10,background:"#7c3aed",border:"none",color:"#fff",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:!msg.trim()?0.4:1}}>↑</button>
+          </div>
+        </div>
+      )}
+      {/* Bouton */}
+      <button onClick={()=>setOpen(o=>!o)}
+        style={{width:52,height:52,borderRadius:"50%",background:"linear-gradient(135deg,#7c3aed,#a855f7)",border:"none",color:"#fff",fontSize:22,cursor:"pointer",boxShadow:"0 8px 32px rgba(124,58,237,.6)",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s"}}
+        onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.08)";}}
+        onMouseLeave={e=>{e.currentTarget.style.transform="none";}}>
+        {open?"×":"💬"}
+      </button>
+    </div>
+  );
+};
+
 const NotifProvider=()=>{
   const [notifs,setNotifs]=useState([]);
   useEffect(()=>{
@@ -1380,7 +1454,7 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
 
             {/* TITRE — Clash Display / Cabinet Grotesk feel via Syne ultra-condensed */}
             <div style={{marginBottom:24}}>
-              <div style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(46px,5.5vw,84px)",lineHeight:.85,letterSpacing:"-.06em",color:"#fff",display:"block",marginBottom:4}}>Sous-titres</div>
+              <div style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(46px,5.5vw,84px)",lineHeight:.85,letterSpacing:"-.06em",color:"#fff",display:"block",marginBottom:4}}>Tes sous-titres</div>
               <div style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(46px,5.5vw,84px)",lineHeight:.85,letterSpacing:"-.06em",display:"block",marginBottom:4}}>
                 <span style={{background:"linear-gradient(90deg,#a78bfa 0%,#c084fc 35%,#f0abfc 65%,#fb7185 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",filter:"drop-shadow(0 0 50px rgba(167,139,250,.4))"}}>qui cartonnent.</span>
               </div>
@@ -1517,7 +1591,7 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
       </div>
 
       {/* ── STYLES ── */}
-      <section id="styles" data-reveal="styles" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",maxWidth:1100,margin:"0 auto",transition:"opacity .6s, transform .6s",opacity:revealed("styles")?1:0,transform:revealed("styles")?"translateY(0)":"translateY(30px)"}}>
+      <section id="styles" data-reveal="styles" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",maxWidth:1100,margin:"0 auto",transition:"opacity .6s, transform .6s",opacity:1}}>
         <div style={{textAlign:"center",marginBottom:40}}>
           <div style={{display:"inline-block",fontSize:10,padding:"3px 12px",borderRadius:100,background:"rgba(168,85,247,.08)",border:"1px solid rgba(168,85,247,.2)",color:"#c084fc",fontWeight:700,letterSpacing:".12em",marginBottom:14}}>28 STYLES VIRAUX</div>
           <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(30px,4vw,56px)",letterSpacing:"-.05em",lineHeight:.88,marginBottom:10}}>
@@ -1547,7 +1621,7 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
       </section>
 
       {/* ── FEATURES ── */}
-      <section id="feats" data-reveal="feats" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",background:"rgba(255,255,255,.018)",borderTop:"1px solid rgba(255,255,255,.05)",borderBottom:"1px solid rgba(255,255,255,.05)",transition:"opacity .7s .1s, transform .7s .1s",opacity:revealed("feats")?1:0,transform:revealed("feats")?"translateY(0)":"translateY(28px)"}}>
+      <section id="feats" data-reveal="feats" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",background:"rgba(255,255,255,.018)",borderTop:"1px solid rgba(255,255,255,.05)",borderBottom:"1px solid rgba(255,255,255,.05)",transition:"opacity .7s .1s, transform .7s .1s",opacity:1}}>
         <div style={{maxWidth:1100,margin:"0 auto"}}>
           <div style={{textAlign:"center",marginBottom:56}}>
             <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(30px,4vw,56px)",letterSpacing:"-.05em",lineHeight:.88}}>
@@ -1578,7 +1652,7 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
       </section>
 
       {/* ── HOW IT WORKS ── */}
-      <section data-reveal="how" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",maxWidth:1000,margin:"0 auto",transition:"opacity .6s .1s, transform .6s .1s",opacity:revealed("how")?1:0,transform:revealed("how")?"translateY(0)":"translateY(28px)"}}>
+      <section data-reveal="how" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",maxWidth:1000,margin:"0 auto",transition:"opacity .6s .1s, transform .6s .1s",opacity:1}}>
         <div id="how" style={{textAlign:"center",marginBottom:52}}>
           <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(30px,4vw,56px)",letterSpacing:"-.05em",lineHeight:.88}}>
             De zero a viral<br/>
@@ -1605,7 +1679,7 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
       </section>
 
       {/* ── TESTIMONIALS ── */}
-      <section data-reveal="testi" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",background:"rgba(255,255,255,.018)",borderTop:"1px solid rgba(255,255,255,.05)",borderBottom:"1px solid rgba(255,255,255,.05)",transition:"opacity .6s, transform .6s",opacity:revealed("testi")?1:0,transform:revealed("testi")?"translateY(0)":"translateY(28px)"}}>
+      <section data-reveal="testi" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",background:"rgba(255,255,255,.018)",borderTop:"1px solid rgba(255,255,255,.05)",borderBottom:"1px solid rgba(255,255,255,.05)",transition:"opacity .6s, transform .6s",opacity:1}}>
         <div id="testi" style={{maxWidth:1100,margin:"0 auto"}}>
           <div style={{textAlign:"center",marginBottom:44}}>
             <div style={{display:"inline-flex",gap:1,marginBottom:10}}>{"★★★★★".split("").map((s,i)=><span key={i} style={{color:"#fbbf24",fontSize:20}}>{s}</span>)}</div>
@@ -1640,7 +1714,7 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
       </section>
 
       {/* ── PRICING ── */}
-      <section id="pricing" data-reveal="pricing" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",maxWidth:1260,margin:"0 auto",transition:"opacity .6s .1s, transform .6s .1s",opacity:revealed("pricing")?1:0,transform:revealed("pricing")?"translateY(0)":"translateY(28px)"}}>
+      <section id="pricing" data-reveal="pricing" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",maxWidth:1260,margin:"0 auto",transition:"opacity .6s .1s, transform .6s .1s",opacity:1}}>
         <div style={{textAlign:"center",marginBottom:48}}>
           <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(30px,4vw,56px)",letterSpacing:"-.05em",lineHeight:.88,marginBottom:20}}>
             Commence gratuit.<br/><span style={{color:"rgba(255,255,255,.18)"}}>Scale quand tu veux.</span>
@@ -1731,7 +1805,7 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
       </section>
 
       {/* ── FAQ ── */}
-      <section id="faq" data-reveal="faq" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",maxWidth:760,margin:"0 auto",transition:"opacity .6s, transform .6s",opacity:revealed("faq")?1:0,transform:revealed("faq")?"translateY(0)":"translateY(28px)"}}>
+      <section id="faq" data-reveal="faq" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",maxWidth:760,margin:"0 auto",transition:"opacity .6s, transform .6s",opacity:1}}>
         <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,3.5vw,50px)",letterSpacing:"-.05em",lineHeight:.9,marginBottom:44,textAlign:"center"}}>
           Questions <span style={{color:"rgba(255,255,255,.18)"}}>frequentes.</span>
         </h2>
@@ -1794,23 +1868,23 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
             {/* Produit */}
             <div>
               <div style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.35)",letterSpacing:".1em",textTransform:"uppercase",marginBottom:14}}>Produit</div>
-              {["Fonctionnalites","Styles","Tarifs","Changelog","Statut API"].map(item=>(
-                <div key={item} style={{marginBottom:10}}>
-                  <button onClick={()=>item==="Changelog"?setPage("changelog"):item==="Statut API"?setPage("status"):document.getElementById("feats")?.scrollIntoView({behavior:"smooth"})}
+              {[["Fonctionnalites","feats"],["Styles","styles"],["Tarifs","pricing"],["FAQ","faq"],["Changelog","changelog"],["Statut","status"]].map(([label,id])=>(
+                <div key={label} style={{marginBottom:10}}>
+                  <button onClick={()=>["changelog","status"].includes(id)?setPage(id):document.getElementById(id)?.scrollIntoView({behavior:"smooth"})}
                     style={{background:"none",border:"none",color:"rgba(255,255,255,.38)",fontSize:13,cursor:"pointer",padding:0,textAlign:"left",transition:"color .15s"}}
                     onMouseEnter={e=>e.currentTarget.style.color="#fff"}
-                    onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.38)"}>{item}</button>
+                    onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.38)"}>{label}</button>
                 </div>
               ))}
             </div>
-            {/* Ressources */}
+            {/* Contact */}
             <div>
-              <div style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.35)",letterSpacing:".1em",textTransform:"uppercase",marginBottom:14}}>Ressources</div>
-              {["Documentation","Support","Blog","Partenaires","API"].map(item=>(
-                <div key={item} style={{marginBottom:10}}>
-                  <button style={{background:"none",border:"none",color:"rgba(255,255,255,.38)",fontSize:13,cursor:"pointer",padding:0,transition:"color .15s"}}
+              <div style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.35)",letterSpacing:".1em",textTransform:"uppercase",marginBottom:14}}>Contact</div>
+              {[["Support","support@subcraftai.com"],["Presse","legal@subcraftai.com"],["Partenariats","legal@subcraftai.com"]].map(([label,email])=>(
+                <div key={label} style={{marginBottom:10}}>
+                  <a href={"mailto:"+email} style={{background:"none",border:"none",color:"rgba(255,255,255,.38)",fontSize:13,cursor:"pointer",textDecoration:"none",transition:"color .15s",display:"block"}}
                     onMouseEnter={e=>e.currentTarget.style.color="#fff"}
-                    onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.38)"}>{item}</button>
+                    onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.38)"}>{label}</a>
                 </div>
               ))}
             </div>
@@ -8347,7 +8421,8 @@ function App(){
 
       {/* Push permission banner */}
 
-      {page==="landing"&&<LandingPage user={user} onCTA={()=>nav(user?"dashboard":"signup")} setPage={nav} goCheckout={goCheckout}/>}
+      {page==="landing"&&<LandingPage user={user} onCTA={()=>nav(user?"dashboard":"signup")} setPage={nav} goCheckout={goCheckout}/>
+      <ChatBubble setPage={nav} user={user}/>}
       {page==="login"&&<LoginPage onAuth={handleAuth} onAdmin={()=>nav("admin")} goSignup={()=>nav("signup")}/>}
       {page==="signup"&&<SignupPage onAuth={handleAuth} goLogin={()=>nav("login")}/>}
       {page==="auth"&&<LoginPage onAuth={handleAuth} onAdmin={()=>nav("admin")} goSignup={()=>nav("signup")}/>}
