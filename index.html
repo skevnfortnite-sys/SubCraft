@@ -6467,6 +6467,7 @@ const CheckoutPage=({plan,yearly,onBack,onSuccess,user})=>{
   const [email,setEmail]=useState(user?.email||"");
   const [coupon,setCoupon]=useState("");
   const [couponApplied,setCouponApplied]=useState(null);
+  const [couponData,setCouponData]=useState(null);
   const [paypal,setPaypal]=useState(false);
   const [errors,setErrors]=useState({});
   const [saveCard,setSaveCard]=useState(true);
@@ -6478,7 +6479,8 @@ const CheckoutPage=({plan,yearly,onBack,onSuccess,user})=>{
   const finalPrice=basePrice-discount;
   const savings=yearly?(selectedPlan.price-selectedPlan.priceY)*12:0;
 
-  const COUPONS={BETA50:50,WELCOME20:20,CREATOR30:30,SUMMER25:25};
+  // Validation coupon via API Supabase
+  const COUPONS={BETA50:50,WELCOME20:20,CREATOR30:30,SUMMER25:25}; // fallback offline
 
   const fmtCard=(v)=>{
     const d=v.replace(/\D/g,"").slice(0,16);
@@ -6717,8 +6719,8 @@ const CheckoutPage=({plan,yearly,onBack,onSuccess,user})=>{
               <input value={coupon} onChange={e=>setCoupon(e.target.value.toUpperCase())} placeholder="Ex: BETA50" style={{flex:1,padding:"10px 14px",borderRadius:10,fontSize:14,fontFamily:"JetBrains Mono",background:T.surf,border:`1px solid ${couponApplied?T.green:T.border}`,color:T.text,letterSpacing:".05em"}}
                 onFocus={e=>e.target.style.borderColor=T.acc}
                 onBlur={e=>e.target.style.borderColor=couponApplied?T.green:T.border}/>
-              <Btn v={couponApplied?"success":"dark"} onClick={applyCoupon} disabled={!!couponApplied}>
-                {couponApplied?`-${couponApplied}% ✓`:"Appliquer"}
+              <Btn v={couponApplied?"success":"dark"} onClick={applyCoupon} disabled={!!couponApplied||couponChecking}>
+                {couponChecking?"...":couponApplied?`-${couponApplied}% ✓`:"Appliquer"}
               </Btn>
             </div>
             <div style={{fontSize:11,color:T.muted,marginTop:6}}>Codes disponibles en démo : BETA50 · WELCOME20 · CREATOR30 · SUMMER25</div>
@@ -8164,19 +8166,7 @@ function App(){
       </div>
 
       {/* Push permission banner */}
-      {user&&!pushDismissed&&(
-        <div style={{position:"fixed",bottom:76,left:"50%",transform:"translateX(-50%)",zIndex:400,background:T.surf2,border:`1px solid ${T.acc}40`,borderRadius:16,padding:"12px 18px",display:"flex",gap:12,alignItems:"center",boxShadow:"0 8px 40px rgba(0,0,0,.6)",width:"min(440px,90vw)",animation:"popIn .4s cubic-bezier(.34,1.56,.64,1)"}}>
-          <span style={{fontSize:24,flexShrink:0}}>🔔</span>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontWeight:700,fontSize:13,marginBottom:2}}>Activer les notifications push</div>
-            <div style={{fontSize:11,color:T.muted}}>Sois alerté dès que ta vidéo est prête — sans rester sur la page !</div>
-          </div>
-          <div style={{display:"flex",gap:6,flexShrink:0}}>
-            <button onClick={()=>setPushDismissed(true)} style={{padding:"5px 10px",borderRadius:7,background:"transparent",border:`1px solid ${T.border}`,color:T.muted,fontSize:11,cursor:"pointer"}}>Plus tard</button>
-            <button onClick={()=>{setPushDismissed(true);notify("🔔 Notifications activées !","success");showPushToast("SubCraft","Notifications activées ! Tu seras alerté quand tes vidéos sont prêtes 🎉");}} style={{padding:"5px 12px",borderRadius:7,background:T.acc,border:"none",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>Activer</button>
-          </div>
-        </div>
-      )}
+
 
       {page==="landing"&&<LandingPage user={user} onCTA={()=>nav(user?"dashboard":"signup")} setPage={nav} goCheckout={goCheckout}/>}
       {page==="login"&&<LoginPage onAuth={handleAuth} onAdmin={()=>nav("admin")} goSignup={()=>nav("signup")}/>}
