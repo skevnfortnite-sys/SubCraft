@@ -1113,7 +1113,7 @@ const AuthCard=({children,title,subtitle})=>(
   <div style={{minHeight:"100vh",background:"#08080f",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px",position:"relative",overflow:"hidden"}}>
     {/* Background glow */}
     <div style={{position:"fixed",top:"30%",left:"50%",transform:"translateX(-50%)",width:500,height:400,background:"radial-gradient(circle,rgba(99,102,241,.14) 0%,transparent 60%)",pointerEvents:"none",filter:"blur(50px)"}}/>
-    <div style={{width:"100%",maxWidth:420,position:"relative",zIndex:1}}>
+    <div style={{width:"100%",maxWidth:460,position:"relative",zIndex:1}}>
       {/* Logo */}
       <div style={{textAlign:"center",marginBottom:32}}>
         <div style={{width:48,height:48,borderRadius:14,background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,margin:"0 auto 14px",boxShadow:"0 0 40px rgba(99,102,241,.5)"}}>✦</div>
@@ -1157,8 +1157,8 @@ const LoginPage=({onAuth,onAdmin,goSignup})=>{
   return(
     <AuthCard title="Bienvenue" subtitle="Connecte-toi à ton espace SubCraft">
       {/* Google OAuth — CTA principal */}
-      <GoogleBtn/>
-      {/* Séparateur */}
+      <GoogleBtn onClick={signInWithGoogle}/>
+      {/* Séparateur */
       <div style={{display:"flex",alignItems:"center",gap:12,margin:"18px 0"}}>
         <div style={{flex:1,height:1,background:"rgba(255,255,255,.08)"}}/>
         <span style={{fontSize:11,color:"rgba(255,255,255,.22)",fontWeight:600,letterSpacing:".06em"}}>OU</span>
@@ -1220,7 +1220,7 @@ const SignupPage=({onAuth,goLogin})=>{
   return(
     <AuthCard title="Créer un compte" subtitle="3 vidéos gratuites · Aucune carte bancaire">
       {/* Google OAuth — CTA principal */}
-      <GoogleBtn/>
+      <GoogleBtn onClick={signInWithGoogle}/>
       <div style={{display:"flex",alignItems:"center",gap:12,margin:"18px 0"}}>
         <div style={{flex:1,height:1,background:"rgba(255,255,255,.08)"}}/>
         <span style={{fontSize:11,color:"rgba(255,255,255,.22)",fontWeight:600,letterSpacing:".06em"}}>OU</span>
@@ -1342,7 +1342,7 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
       </nav>
 
       {/* ─── HERO ─── */}
-      <section style={{paddingTop:120,paddingBottom:80,padding:"120px max(20px,5vw) 80px",maxWidth:1100,margin:"0 auto",display:"grid",gridTemplateColumns:"1fr 1fr",gap:60,alignItems:"center"}} className="mobile-col">
+      <section style={{paddingTop:120,paddingBottom:80,padding:"120px max(40px,6vw) 80px",maxWidth:1200,margin:"0 auto",display:"grid",gridTemplateColumns:"1fr 1fr",gap:80,alignItems:"center"}} className="mobile-col">
 
         {/* LEFT — texte */}
         <div>
@@ -1468,7 +1468,7 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
       </div>
 
       {/* ─── STYLES SELECTOR ─── */}
-      <section id="styles" style={{padding:"80px max(20px,4vw)",maxWidth:900,margin:"0 auto"}}>
+      <section id="styles" style={{padding:"80px max(32px,5vw)",maxWidth:900,margin:"0 auto"}}>
         <div style={{textAlign:"center",marginBottom:32}}>
           <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(26px,3.5vw,46px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95,marginBottom:10}}>Choisis ton style.</h2>
           <p style={{fontSize:14,color:"rgba(255,255,255,.35)"}}>Clique pour voir le rendu en temps réel</p>
@@ -1491,7 +1491,7 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
       </section>
 
       {/* ─── FEATURES ─── */}
-      <section id="feats" style={{padding:"80px max(20px,4vw)",background:"rgba(255,255,255,.02)",borderTop:"1px solid rgba(255,255,255,.05)",borderBottom:"1px solid rgba(255,255,255,.05)"}}>
+      <section id="feats" style={{padding:"80px max(32px,5vw)",background:"rgba(255,255,255,.02)",borderTop:"1px solid rgba(255,255,255,.05)",borderBottom:"1px solid rgba(255,255,255,.05)"}}>
         <div style={{maxWidth:1000,margin:"0 auto"}}>
           <div style={{textAlign:"center",marginBottom:48}}>
             <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(26px,3.5vw,48px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95}}>
@@ -1520,7 +1520,7 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
       </section>
 
       {/* ─── HOW IT WORKS ─── */}
-      <section style={{padding:"80px max(20px,4vw)",maxWidth:900,margin:"0 auto"}}>
+      <section style={{padding:"80px max(32px,5vw)",maxWidth:900,margin:"0 auto"}}>
         <div style={{textAlign:"center",marginBottom:48}}>
           <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(26px,3.5vw,48px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95}}>
             De zéro à viral<br/><span style={{background:"linear-gradient(90deg,#818cf8,#c084fc)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>en 3 étapes.</span>
@@ -1544,7 +1544,7 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
       </section>
 
       {/* ─── PRICING ─── */}
-      <section id="pricing" style={{padding:"80px max(20px,4vw)",background:"rgba(255,255,255,.02)",borderTop:"1px solid rgba(255,255,255,.05)"}}>
+      <section id="pricing" style={{padding:"80px max(32px,5vw)",background:"rgba(255,255,255,.02)",borderTop:"1px solid rgba(255,255,255,.05)"}}>
         <div style={{maxWidth:1060,margin:"0 auto"}}>
           <div style={{textAlign:"center",marginBottom:40}}>
             <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(26px,3.5vw,48px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95,marginBottom:16}}>
@@ -1596,7 +1596,7 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
       </section>
 
       {/* ─── TEMOIGNAGES ─── */}
-      <section style={{padding:"80px max(20px,4vw)",maxWidth:960,margin:"0 auto"}}>
+      <section style={{padding:"80px max(32px,5vw)",maxWidth:960,margin:"0 auto"}}>
         <div style={{textAlign:"center",marginBottom:40}}>
           <div style={{display:"inline-flex",gap:1,marginBottom:10}}>{"★★★★★".split("").map((s,i)=><span key={i} style={{color:"#f59e0b",fontSize:18}}>{s}</span>)}</div>
           <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(24px,3.5vw,44px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95}}>Ils ont déjà <span style={{color:"rgba(255,255,255,.25)"}}>sauté le pas.</span></h2>
@@ -1623,7 +1623,7 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
       </section>
 
       {/* ─── FAQ ─── */}
-      <section id="faq" style={{padding:"80px max(20px,4vw)",maxWidth:700,margin:"0 auto"}}>
+      <section id="faq" style={{padding:"80px max(32px,5vw)",maxWidth:700,margin:"0 auto"}}>
         <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(24px,3.5vw,44px)",letterSpacing:"-.04em",color:"#fff",lineHeight:.95,marginBottom:40,textAlign:"center"}}>Questions <span style={{color:"rgba(255,255,255,.22)"}}>fréquentes.</span></h2>
         <div style={{display:"flex",flexDirection:"column",gap:1}}>
           {FAQS.map((faq,i)=>(
@@ -1639,7 +1639,7 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
       </section>
 
       {/* ─── CTA FINAL ─── */}
-      <section style={{padding:"80px max(20px,4vw)",textAlign:"center",borderTop:"1px solid rgba(255,255,255,.05)",position:"relative",overflow:"hidden"}}>
+      <section style={{padding:"80px max(32px,5vw)",textAlign:"center",borderTop:"1px solid rgba(255,255,255,.05)",position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:500,height:300,background:"radial-gradient(circle,rgba(99,102,241,.18) 0%,transparent 65%)",pointerEvents:"none",filter:"blur(50px)"}}/>
         <div style={{position:"relative",zIndex:1,maxWidth:600,margin:"0 auto"}}>
           <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(30px,5vw,64px)",letterSpacing:"-.05em",color:"#fff",lineHeight:.9,marginBottom:20}}>
