@@ -534,7 +534,7 @@ const WordByWord=({text, style, startTime, currentTime, dur})=>{
   );
 };
 
-const PhoneMockup=({subs,currentTime,styleId,fontSize,fontFamily,playing,onToggle,liveStyle,subYPos=20,onSubYChange,stripEmoji})=>{
+const PhoneMockup=({subs,currentTime,styleId,fontSize,fontFamily,playing,onToggle,liveStyle,subYPos=20,onSubYChange,stripEmoji,displayMode='word',videoFile,videoRef,onTimeUpdate})=>{
   const st=SUBTITLE_STYLES.find(s=>s.id===styleId)||SUBTITLE_STYLES[0];
   const active=subs.find(s=>currentTime>=s.start&&currentTime<=s.end);
   const totalDur=subs.length>0?subs[subs.length-1].end+2:18;
@@ -575,7 +575,7 @@ const PhoneMockup=({subs,currentTime,styleId,fontSize,fontFamily,playing,onToggl
     background:st.preview.bg,
     padding:st.preview.bg!=='transparent'?'3px 8px':'0 2px',
     borderRadius:'6px',
-    animation:'subtitlePop .22s cubic-bezier(.34,1.56,.64,1) both',
+    animation:'none',
   };
   const subStyle={
     ...baseStyle,
@@ -598,20 +598,35 @@ const PhoneMockup=({subs,currentTime,styleId,fontSize,fontFamily,playing,onToggl
         onTouchStart={onSubYChange?startDrag:undefined}>
         <div style={{position:'absolute',top:0,left:'50%',transform:'translateX(-50%)',width:72,height:24,background:'#040611',borderRadius:'0 0 18px 18px',zIndex:20,borderBottom:'1.5px solid rgba(91,108,255,.15)'}}/>
         <div style={{position:'absolute',top:0,left:0,right:0,height:'45%',background:'linear-gradient(180deg,rgba(255,255,255,.04),transparent)',borderRadius:'42px 42px 0 0',pointerEvents:'none',zIndex:15}}/>
-        <div style={{width:'100%',height:'100%',background:'linear-gradient(180deg,#121a38 0%,#070812 55%,#080318 100%)',position:'relative',display:'flex',alignItems:'center',justifyContent:'center'}}>
-          <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <div style={{fontSize:100,opacity:.04}}>👤</div>
-          </div>
-          <div style={{position:'absolute',top:0,left:0,right:0,height:'60%',background:'linear-gradient(180deg,rgba(30,42,120,.45) 0%,transparent 100%)'}}/>
-          <div style={{position:'absolute',bottom:0,left:0,right:0,height:'45%',background:'linear-gradient(0deg,rgba(5,2,25,.95) 0%,transparent 100%)'}}/>
-          <div style={{position:'absolute',top:'18%',left:'10%',width:70,height:70,borderRadius:'50%',background:'radial-gradient(#4f6dff25,transparent 70%)',animation:'breathe 3s ease infinite'}}/>
-          <div style={{position:'absolute',top:'30%',right:'8%',width:50,height:50,borderRadius:'50%',background:'radial-gradient(#e8397022,transparent 70%)',animation:'breathe 4.5s ease infinite',animationDelay:'.7s'}}/>
-          {/* SUBTITLE — Mot par mot */}
-          <div style={{position:'absolute',bottom:`${subYPos}%`,left:0,right:0,textAlign:'center',padding:'0 6px',zIndex:10,display:'flex',justifyContent:'center',alignItems:'center',pointerEvents:'none',flexWrap:'nowrap'}}>
+        <div style={{width:'100%',height:'100%',background:'#000',position:'relative',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
+          {/* Vraie vidéo si disponible */}
+          {videoFile && videoFile instanceof File ? (
+            <video
+              ref={videoRef}
+              src={URL.createObjectURL(videoFile)}
+              style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}
+              muted={false}
+              playsInline
+              onTimeUpdate={e=>onTimeUpdate&&onTimeUpdate(+(e.target.currentTime.toFixed(1)))}
+              onEnded={()=>{}}
+            />
+          ) : (
+            <>
+              <div style={{position:'absolute',inset:0,background:'linear-gradient(180deg,#12103a 0%,#070812 55%,#030210 100%)'}}/>
+              <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <div style={{fontSize:80,opacity:.06}}>🎬</div>
+              </div>
+            </>
+          )}
+          <div style={{position:'absolute',bottom:0,left:0,right:0,height:'40%',background:'linear-gradient(0deg,rgba(0,0,0,.85) 0%,transparent 100%)',pointerEvents:'none'}}/>
+          {/* SUBTITLE */}
+          <div style={{position:'absolute',bottom:`${subYPos}%`,left:0,right:0,textAlign:'center',padding:'0 8px',zIndex:10,display:'flex',justifyContent:'center',alignItems:'center',pointerEvents:'none'}}>
             {active?(
-              <WordByWord key={active.id} text={_applyText(active.text)} style={subStyle} startTime={active.start} currentTime={currentTime} dur={active.end-active.start}/>
+              displayMode==='word'
+                ?<WordByWord key={active.id} text={_applyText(active.text)} style={subStyle} startTime={active.start} currentTime={currentTime} dur={active.end-active.start}/>
+                :<span key={active.id} style={{...subStyle,display:'inline-block'}}>{_applyText(active.text)}</span>
             ):(
-              <span style={{...subStyle,animation:'none',opacity:.18,fontSize:'9px',whiteSpace:'nowrap'}}>Sous-titre ici</span>
+              <span style={{...subStyle,animation:'none',opacity:.15,fontSize:'9px'}}>Sous-titre ici</span>
             )}
           </div>
           {/* Drag hint */}
@@ -2573,16 +2588,18 @@ const EditorPage=({onBack,file})=>{
   const [playing,setPlaying]=useState(false);
   const [editId,setEditId]=useState(null);
   const [editTxt,setEditTxt]=useState("");
-  const [styleId,setStyleId]=useState(file?.style||"yellow-bold");
+  const [styleId,setStyleId]=useState(file?.style||"captions-white");
   const [fontSize,setFontSize]=useState(68);
   const [maxChars,setMaxChars]=useState(12);
   const [fontFam,setFontFam]=useState("Impact");
-  const [activeEff,setActiveEff]=useState(["Shadow","Double line"]);
+  const [activeEff,setActiveEff]=useState([]);
   const [activeLineEff,setActiveLineEff]=useState([]);
-  const [activeWordEff,setActiveWordEff]=useState(["Highlight"]);
+  const [activeWordEff,setActiveWordEff]=useState([]);
   const [subYPos,setSubYPos]=useState(16); // % from bottom
   const [noEmoji,setNoEmoji]=useState(false);
   const [singleLine,setSingleLine]=useState(false);
+  const [displayMode,setDisplayMode]=useState("word"); // "word" | "phrase"
+  const videoRef=useRef(null);
   const [showTrans,setShowTrans]=useState(false);
   const [transLang,setTransLang]=useState("en");
   const [translating,setTranslating]=useState(false);
@@ -2697,7 +2714,7 @@ const EditorPage=({onBack,file})=>{
               hasEff("Waves")?"float 2s ease infinite":
               hasEff("Fade in")?"fadeIn .5s ease both":
               hasEff("Fade out")?"fadeOut .5s ease both":
-              "subtitlePop .22s cubic-bezier(.34,1.56,.64,1) both",
+              "none",
     overflow:singleLine?"hidden":"visible",
     textOverflow:singleLine?"ellipsis":"clip",
   };
@@ -2736,11 +2753,20 @@ const EditorPage=({onBack,file})=>{
               onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}
               style={{transition:"transform .25s ease",position:"relative"}}>
               <div style={{position:"absolute",inset:-16,background:`radial-gradient(${T.acc}14,${T.purple}06 50%,transparent 70%)`,filter:"blur(28px)",animation:"glowPulse 3s ease infinite",pointerEvents:"none"}}/>
-              <PhoneMockup subs={subs} currentTime={ct} styleId={styleId} fontSize={fontSize} fontFamily={fontFam} playing={playing} onToggle={()=>setPlaying(p=>!p)} liveStyle={liveSubStyle} subYPos={subYPos} onSubYChange={setSubYPos} stripEmoji={_stripEmoji}/>
+              <PhoneMockup subs={subs} currentTime={ct} styleId={styleId} fontSize={fontSize} fontFamily={fontFam} playing={playing} onToggle={()=>{setPlaying(p=>{const next=!p;if(videoRef.current){next?videoRef.current.play():videoRef.current.pause();}return next;});}} liveStyle={liveSubStyle} subYPos={subYPos} onSubYChange={setSubYPos} stripEmoji={_stripEmoji} displayMode={displayMode} videoFile={file} videoRef={videoRef} onTimeUpdate={(t)=>setCt(t)}/>
             </div>
           </div>
           {/* Controls — fixed compact strip at bottom */}
           <div style={{flexShrink:0,width:"100%",padding:"10px 20px 14px",borderTop:`1px solid rgba(255,255,255,.05)`,background:"rgba(2,3,10,.7)",backdropFilter:"blur(16px)",zIndex:2,display:"flex",flexDirection:"column",gap:8}}>
+            {/* Mode display — mot par mot / phrase */}
+            <div style={{display:"flex",gap:4,marginBottom:4}}>
+              {[["Mot par mot","word"],["Phrase entière","phrase"]].map(([label,mode])=>(
+                <button key={mode} onClick={()=>setDisplayMode(mode)}
+                  style={{flex:1,padding:"5px 8px",borderRadius:7,background:displayMode===mode?`${T.acc}20`:"rgba(255,255,255,.04)",border:displayMode===mode?`1px solid ${T.acc}40`:"1px solid rgba(255,255,255,.07)",color:displayMode===mode?T.acc:T.muted,fontSize:10,fontWeight:700,cursor:"pointer",transition:"all .15s"}}>
+                  {label}
+                </button>
+              ))}
+            </div>
             {/* Play row + style badge */}
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <button onClick={()=>setCt(0)} style={{width:28,height:28,borderRadius:7,background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.08)",color:T.muted,fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>⏮</button>
