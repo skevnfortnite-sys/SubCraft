@@ -8074,29 +8074,22 @@ function App(){
       }
       return; // ← STOP — ne pas exécuter le check savedToken
     }
-    // Vérifie si déjà connecté
+    // Charge l'user silencieusement — JAMAIS de redirect automatique
     const savedToken = localStorage.getItem("sc_token");
     if(savedToken && !localStorage.getItem("sc_google_processing")) {
       try {
         const payload = JSON.parse(atob(savedToken.split(".")[1]));
         const exp = payload.exp * 1000;
         if(exp > Date.now()) {
-          // Charge le user en arrière-plan SANS rediriger automatiquement
           fetch("/api/auth?action=me", {
             headers: { "Authorization": `Bearer ${savedToken}` }
           }).then(r => r.json()).then(d => {
             if(d.user) {
-              setUser(d.user);
-              // Ne redirige vers dashboard QUE si l'URL contient ?goto=dashboard
-              const urlParams = new URLSearchParams(window.location.search);
-              if(urlParams.get("goto") === "dashboard") {
-                nav("dashboard");
-              }
-              // Sinon on reste sur la landing mais l'user est connecté en mémoire
+              setUser(d.user); // ← user chargé, on reste sur la landing
             } else {
               localStorage.removeItem("sc_token");
             }
-          }).catch(()=>{ localStorage.removeItem("sc_token"); });
+          }).catch(()=>{});
         } else {
           localStorage.removeItem("sc_token");
         }
@@ -8185,7 +8178,7 @@ function App(){
         </div>
       )}
 
-      {page==="landing"&&<LandingPage onCTA={()=>nav("signup")} setPage={nav} goCheckout={goCheckout}/>}
+      {page==="landing"&&<LandingPage user={user} onCTA={()=>nav(user?"dashboard":"signup")} setPage={nav} goCheckout={goCheckout}/>}
       {page==="login"&&<LoginPage onAuth={handleAuth} onAdmin={()=>nav("admin")} goSignup={()=>nav("signup")}/>}
       {page==="signup"&&<SignupPage onAuth={handleAuth} goLogin={()=>nav("login")}/>}
       {page==="auth"&&<LoginPage onAuth={handleAuth} onAdmin={()=>nav("admin")} goSignup={()=>nav("signup")}/>}
