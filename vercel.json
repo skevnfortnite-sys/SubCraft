@@ -1,4 +1,5 @@
 {
+  "outputDirectory": ".",
   "functions": {
     "api/anthropic.js": { "maxDuration": 30 },
     "api/whisper.js":   { "maxDuration": 60 },
