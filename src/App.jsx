@@ -2871,6 +2871,149 @@ const EditorPage=({onBack,file})=>{
     notify("Fichier SRT téléchargé !","success");
   };
 
+  const [exporting,setExporting]=useState(false);
+  const [exportProgress,setExportProgress]=useState(0);
+  const [exportStatus,setExportStatus]=useState("");
+
+  const exportMP4=async()=>{
+    if(!file){notify("Aucune vidéo chargée","error");return;}
+    if(!subs.length){notify("Aucun sous-titre à incruster","error");return;}
+    setExporting(true);setExportProgress(0);setExportStatus("Préparation de la vidéo...");
+
+    try{
+      // 1. Créer un élément vidéo source
+      const videoUrl=URL.createObjectURL(file);
+      const vid=document.createElement("video");
+      vid.src=videoUrl;
+      vid.muted=true;
+      vid.playsInline=true;
+      await new Promise(r=>{vid.onloadedmetadata=r;vid.load();});
+
+      const W=vid.videoWidth||720;
+      const H=vid.videoHeight||1280;
+      const duration=vid.duration;
+      const fps=30;
+
+      setExportStatus("Initialisation du canvas...");
+      setExportProgress(5);
+
+      // 2. Canvas pour le rendu
+      const canvas=document.createElement("canvas");
+      canvas.width=W; canvas.height=H;
+      const ctx=canvas.getContext("2d");
+
+      // 3. MediaRecorder pour capter le canvas
+      const stream=canvas.captureStream(fps);
+
+      // Ajouter la piste audio de la vidéo originale
+      try{
+        const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+        const src=audioCtx.createMediaElementSource(vid);
+        const dest=audioCtx.createMediaStreamDestination();
+        src.connect(dest);
+        src.connect(audioCtx.destination);
+        dest.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
+      }catch(e){console.warn("Audio track non disponible",e);}
+
+      const mimeType=MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")?"video/webm;codecs=vp9,opus":
+                     MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")?"video/webm;codecs=vp8,opus":
+                     "video/webm";
+      const rec=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:8_000_000});
+      const chunks=[];
+      rec.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
+
+      // Style sous-titres calculé pour la résolution réelle
+      const subFontSize=Math.round(H*0.055*(fontSize/68));
+      const subFont=`${activeStyle.preview.weight} ${subFontSize}px ${fontFam||activeStyle.preview.font||"Impact"}, sans-serif`;
+      const subColor=activeStyle.preview.color||"#fff";
+      const subBg=activeStyle.preview.bg!=="transparent"||hasEff("Background");
+      const subPosY=subYPos/100; // 0=bottom, 1=top — inversé pour canvas
+
+      const drawSubtitle=(ctx,text,W,H)=>{
+        ctx.font=subFont;
+        ctx.textAlign="center";
+        ctx.textBaseline="middle";
+        const lines=text.split("\n");
+        const lineH=subFontSize*1.3;
+        const totalH=lines.length*lineH;
+        const y=H*(1-subPosY)-(totalH/2);
+
+        lines.forEach((line,i)=>{
+          const ly=y+i*lineH;
+          if(subBg){
+            const tw=ctx.measureText(line).width;
+            ctx.fillStyle="rgba(0,0,0,0.82)";
+            ctx.beginPath();
+            ctx.roundRect(W/2-tw/2-12,ly-subFontSize*0.6,tw+24,subFontSize*1.2,7);
+            ctx.fill();
+          }
+          // Shadow/stroke
+          ctx.strokeStyle="rgba(0,0,0,0.9)";
+          ctx.lineWidth=subFontSize*0.08;
+          ctx.strokeText(line,W/2,ly);
+          ctx.fillStyle=subColor;
+          ctx.fillText(line,W/2,ly);
+        });
+      };
+
+      // 4. Lancer l'enregistrement
+      rec.start(100);
+      vid.currentTime=0;
+      await new Promise(r=>setTimeout(r,50));
+      vid.play();
+
+      await new Promise((resolve,reject)=>{
+        const loop=()=>{
+          if(vid.ended||vid.currentTime>=duration){
+            resolve();return;
+          }
+          const pct=Math.round((vid.currentTime/duration)*90)+5;
+          setExportProgress(pct);
+          setExportStatus(`Export en cours... ${Math.floor(vid.currentTime)}s / ${Math.floor(duration)}s`);
+
+          // Dessiner la frame vidéo
+          ctx.drawImage(vid,0,0,W,H);
+
+          // Trouver le sous-titre actif
+          const t=vid.currentTime;
+          const active=subs.find(s=>t>=s.start&&t<=s.end);
+          if(active){
+            const txt=_stripEmoji(active.text);
+            if(txt.trim()) drawSubtitle(ctx,txt,W,H);
+          }
+          requestAnimationFrame(loop);
+        };
+        vid.onended=resolve;
+        vid.onerror=reject;
+        loop();
+      });
+
+      vid.pause();
+      setExportStatus("Finalisation...");
+      setExportProgress(95);
+      rec.stop();
+
+      await new Promise(r=>{rec.onstop=r;});
+      setExportProgress(100);
+      setExportStatus("Téléchargement...");
+
+      // 5. Télécharger
+      const blob=new Blob(chunks,{type:mimeType});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      const ext=mimeType.includes("mp4")?"mp4":"webm";
+      a.href=url;a.download=`subcraft-export.${ext}`;a.click();
+      URL.revokeObjectURL(url);URL.revokeObjectURL(videoUrl);
+
+      notify("✅ Vidéo exportée !","success");
+      setShowExport(false);
+    }catch(e){
+      console.error("[export]",e);
+      notify("Erreur export : "+e.message,"error");
+    }
+    setExporting(false);setExportProgress(0);setExportStatus("");
+  };
+
   const TABS=[{id:"captions",icon:"✨",l:"Captions"},{id:"styles",icon:"🎨",l:"Styles"},{id:"edit",icon:"🎭",l:"Effets"},{id:"timing",icon:"⏱",l:"Timing"},{id:"config",icon:"⚙️",l:"Config"}];
   const EFF_ALL=["MrBeast flash","Karaoke","Word pop","Cinematic","Double line","Use caps","Popup","Waves","Shake","Rotations","Shadow","Letter spacing","Glowy","Fade in","Fade out","Zoom","Background","Italic","Up","Bounce","Blur in","Scale out"];
   const EFF_LINE=["Highlight","Zoom","Popup","Fade","Smooth thickness"];
@@ -3321,21 +3464,40 @@ const EditorPage=({onBack,file})=>{
 
       {/* Export Modal */}
       {showExport&&(
-        <Modal title="⬆ Exporter" subtitle={`${subs.length} sous-titres prêts à l'export`} onClose={()=>setShowExport(false)} width={420}>
-          {[
-            {icon:"🎬",title:"Vidéo MP4 avec sous-titres",desc:"Sous-titres incrustés dans la vidéo — bientôt disponible",badge:"Bientôt",action:()=>notify("🚀 Export MP4 arrive très bientôt !","info")},
-            {icon:"📋",title:"Copier le texte brut",desc:"Juste le texte sans timing",action:()=>{navigator.clipboard?.writeText(subs.map(s=>s.text).join("\n"));notify("Texte copié !","success");}},
-          ].map(e=>(
-            <button key={e.title} onClick={e.action} style={{width:"100%",padding:"13px 16px",borderRadius:12,background:T.bg,border:`1px solid ${T.border}`,color:T.text,textAlign:"left",display:"flex",alignItems:"center",gap:14,cursor:"pointer",marginBottom:8,transition:"all .15s"}} onMouseEnter={e2=>{e2.currentTarget.style.borderColor=T.acc;e2.currentTarget.style.background=T.surf;}} onMouseLeave={e2=>{e2.currentTarget.style.borderColor=T.border;e2.currentTarget.style.background=T.bg;}}>
-              <span style={{fontSize:24,flexShrink:0}}>{e.icon}</span>
-              <div style={{flex:1}}>
-                <div style={{fontWeight:600,fontSize:13}}>{e.title}</div>
-                <div style={{color:T.muted,fontSize:11,marginTop:2}}>{e.desc}</div>
+        <Modal title="⬆ Exporter" subtitle={`${subs.length} sous-titres prêts à l'export`} onClose={!exporting?()=>setShowExport(false):undefined} width={420}>
+          {exporting?(
+            <div style={{textAlign:"center",padding:"20px 0"}}>
+              <div style={{fontSize:48,marginBottom:16,animation:"float 2s ease infinite"}}>🎬</div>
+              <div style={{fontWeight:700,fontSize:18,marginBottom:6}}>{exportStatus}</div>
+              <div style={{background:T.border,borderRadius:100,height:8,overflow:"hidden",margin:"16px 0 8px"}}>
+                <div style={{height:"100%",width:`${exportProgress}%`,background:T.grad,borderRadius:100,transition:"width .3s",boxShadow:`0 0 12px ${T.accGlow}`}}/>
               </div>
-              <span style={{color:T.muted,fontSize:16}}>→</span>
-            </button>
-          ))}
-          <Btn v="secondary" onClick={()=>setShowExport(false)} full style={{marginTop:4}}>Fermer</Btn>
+              <div style={{fontFamily:"JetBrains Mono",fontSize:13,color:T.acc,fontWeight:600}}>{exportProgress}%</div>
+              <div style={{fontSize:11,color:T.muted,marginTop:12}}>Ne ferme pas la page pendant l'export</div>
+            </div>
+          ):(
+            <>
+              {[
+                {icon:"🎬",title:"Vidéo MP4/WebM avec sous-titres",desc:file?"Sous-titres incrustés en temps réel dans le navigateur":"Charge d'abord une vidéo",badge:file?"HD":"",action:file?exportMP4:()=>notify("Charge une vidéo d'abord","warning"),disabled:!file},
+                {icon:"📄",title:"Fichier SRT",desc:"Format universel — compatible DaVinci, Premiere, CapCut",action:exportSRT},
+                {icon:"📋",title:"Copier le texte brut",desc:"Juste le texte sans timing",action:()=>{navigator.clipboard?.writeText(subs.map(s=>s.text).join("\n"));notify("Texte copié !","success");}},
+              ].map(e=>(
+                <button key={e.title} onClick={e.action} disabled={e.disabled} style={{width:"100%",padding:"13px 16px",borderRadius:12,background:e.disabled?T.surf:T.bg,border:`1px solid ${T.border}`,color:e.disabled?T.muted:T.text,textAlign:"left",display:"flex",alignItems:"center",gap:14,cursor:e.disabled?"not-allowed":"pointer",marginBottom:8,transition:"all .15s",opacity:e.disabled?.5:1}} onMouseEnter={e2=>{if(!e.disabled){e2.currentTarget.style.borderColor=T.acc;e2.currentTarget.style.background=T.surf;}}} onMouseLeave={e2=>{e2.currentTarget.style.borderColor=T.border;e2.currentTarget.style.background=e.disabled?T.surf:T.bg;}}>
+                  <span style={{fontSize:24,flexShrink:0}}>{e.icon}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:600,fontSize:13,display:"flex",alignItems:"center",gap:8}}>
+                      {e.title}
+                      {e.badge&&<span style={{fontSize:9,padding:"2px 7px",borderRadius:100,background:`${T.green}20`,color:T.green,fontWeight:800}}>{e.badge}</span>}
+                    </div>
+                    <div style={{color:T.muted,fontSize:11,marginTop:2}}>{e.desc}</div>
+                  </div>
+                  <span style={{color:T.muted,fontSize:16}}>→</span>
+                </button>
+              ))}
+              {!file&&<div style={{fontSize:11,color:T.yellow,padding:"8px 12px",borderRadius:8,background:`${T.yellow}10`,border:`1px solid ${T.yellow}20`,marginBottom:8}}>⚠️ L'export MP4 nécessite la vidéo originale — recharge-la si besoin</div>}
+              <Btn v="secondary" onClick={()=>setShowExport(false)} full style={{marginTop:4}}>Fermer</Btn>
+            </>
+          )}
         </Modal>
       )}
     </div>
