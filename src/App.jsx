@@ -8337,8 +8337,7 @@ export default function App(){
 
       {/* Push permission banner */}
 
-      {page==="landing"&&<LandingPage user={user} onCTA={()=>nav(user?"dashboard":"signup")} setPage={nav} goCheckout={goCheckout}/>
-      <ChatBubble setPage={nav} user={user}/>}
+      {page==="landing"&&<><LandingPage user={user} onCTA={()=>nav(user?"dashboard":"signup")} setPage={nav} goCheckout={goCheckout}/><ChatBubble setPage={nav} user={user}/></>}
       {page==="login"&&<LoginPage onAuth={handleAuth} onAdmin={()=>nav("admin")} goSignup={()=>nav("signup")}/>}
       {page==="signup"&&<SignupPage onAuth={handleAuth} goLogin={()=>nav("login")}/>}
       {page==="auth"&&<LoginPage onAuth={handleAuth} onAdmin={()=>nav("admin")} goSignup={()=>nav("signup")}/>}
