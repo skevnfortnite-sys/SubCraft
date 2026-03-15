@@ -10,6 +10,14 @@
     {
       "path": "/api/videos?action=cleanup",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/admin?action=trigger-j3",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/admin?action=reset-credits",
+      "schedule": "0 0 1 * *"
     }
   ]
 }
