@@ -6265,26 +6265,6 @@ const AdminLandingEditor=()=>{
 const ADMIN_EMAIL = "kevin.nedzvedsky@gmail.com";
 
 const AdminPanel=({onExit})=>{
-  // Sécurité : vérifie l'email dans le token JWT local
-  const token = localStorage.getItem("sc_token");
-  const adminOk = (() => {
-    if(!token) return false;
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      const email = payload.email || payload.user_metadata?.email || "";
-      return email === ADMIN_EMAIL;
-    } catch { return false; }
-  })();
-
-  if(!adminOk) return(
-    <div style={{minHeight:"100vh",background:"#030305",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}>
-      <div style={{fontSize:48}}>🔒</div>
-      <div className="syne" style={{fontWeight:800,fontSize:22,color:"#fff"}}>Accès refusé</div>
-      <div style={{color:"rgba(255,255,255,.4)",fontSize:14,textAlign:"center",maxWidth:300}}>Connecte-toi avec ton compte Google admin pour accéder à ce panneau.</div>
-      <button onClick={onExit} style={{padding:"10px 24px",borderRadius:10,background:"#7c3aed",border:"none",color:"#fff",cursor:"pointer",fontWeight:600,marginTop:8}}>Se connecter</button>
-    </div>
-  );
-
   const [users,setUsers]=useState([]);
   const [loadingUsers,setLoadingUsers]=useState(true);
   const [view,setView]=useState("dashboard");
@@ -6430,6 +6410,26 @@ const AdminPanel=({onExit})=>{
     {id:"api-keys",icon:"🔑",label:"Clés API"},
     {id:"security",icon:"🔒",label:"Sécurité"},
   ];
+
+  // ✅ Check d'auth APRÈS tous les hooks (React Rules of Hooks)
+  const token = localStorage.getItem("sc_token");
+  const adminOk = (() => {
+    if(!token) return false;
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      const email = payload.email || payload.user_metadata?.email || "";
+      return email === ADMIN_EMAIL;
+    } catch { return false; }
+  })();
+
+  if(!adminOk) return(
+    <div style={{minHeight:"100vh",background:"#030305",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}>
+      <div style={{fontSize:48}}>🔒</div>
+      <div className="syne" style={{fontWeight:800,fontSize:22,color:"#fff"}}>Accès refusé</div>
+      <div style={{color:"rgba(255,255,255,.4)",fontSize:14,textAlign:"center",maxWidth:300}}>Connecte-toi avec ton compte admin pour accéder à ce panneau.</div>
+      <button onClick={onExit} style={{padding:"10px 24px",borderRadius:10,background:"#7c3aed",border:"none",color:"#fff",cursor:"pointer",fontWeight:600,marginTop:8}}>Se connecter</button>
+    </div>
+  );
 
   return(
     <div style={{minHeight:"100vh",display:"flex",background:"#010208",position:"relative"}}>
