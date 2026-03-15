@@ -2797,7 +2797,7 @@ const EditorPage=({onBack,file})=>{
   const [activeEff,setActiveEff]=useState([]);
   const [activeLineEff,setActiveLineEff]=useState([]);
   const [activeWordEff,setActiveWordEff]=useState([]);
-  const [subYPos,setSubYPos]=useState(16); // % from bottom
+  const [subYPos,setSubYPos]=useState(50); // % from bottom — centré par défaut
   const [noEmoji,setNoEmoji]=useState(false);
   const [singleLine,setSingleLine]=useState(false);
   const [displayMode,setDisplayMode]=useState("word"); // "word" | "phrase"
@@ -8285,40 +8285,42 @@ export default function App(){
             const isNew = !localStorage.getItem(onboardingKey);
             if(isNew) localStorage.setItem(onboardingKey, "1");
             localStorage.removeItem("sc_google_processing");
-            const userData = d.user || {
-              id: payload.sub, email: payload.email,
-              name: payload.user_metadata?.full_name || payload.user_metadata?.name || payload.email?.split("@")[0],
-              plan: "free", credits: 3,
+            // Nom Google : priorité au token JWT, fallback sur la DB
+            const googleName = payload.user_metadata?.full_name
+              || payload.user_metadata?.name
+              || payload.given_name
+              || payload.name
+              || null;
+            const userData = {
+              id: d.user?.id || payload.sub,
+              email: d.user?.email || payload.email,
+              name: googleName || d.user?.name || payload.email?.split("@")[0],
+              plan: d.user?.plan || "free",
+              credits: d.user?.credits ?? 3,
             };
             // Email admin → panel admin direct
-            if((userData.email || payload.email) === "kevin.nedzvedsky@gmail.com") {
-              localStorage.setItem("sc_token", token);
-              nav("admin");
-              return;
-            }
+            if(emailFromToken === "kevin.nedzvedsky@gmail.com") { nav("admin"); return; }
             if(d.user) {
-              handleAuth({...d.user, isNew});
+              handleAuth({...userData, isNew});
             } else {
-              handleAuth({
-                id: payload.sub, email: payload.email,
-                name: payload.user_metadata?.full_name || payload.user_metadata?.name || payload.email?.split("@")[0],
-                plan: "free", credits: 3, isNew,
-              });
+              handleAuth({...userData, isNew});
             }
           }).catch(()=>{
             localStorage.removeItem("sc_google_processing");
             const emailFromToken = payload.email;
-            if(emailFromToken === "kevin.nedzvedsky@gmail.com") {
-              nav("admin");
-              return;
-            }
+            if(emailFromToken === "kevin.nedzvedsky@gmail.com") { nav("admin"); return; }
             const userId = payload.sub;
             const onboardingKey = `sc_onboarded_${userId}`;
             const isNew = !localStorage.getItem(onboardingKey);
             if(isNew) localStorage.setItem(onboardingKey, "1");
+            const googleName = payload.user_metadata?.full_name
+              || payload.user_metadata?.name
+              || payload.given_name
+              || payload.name
+              || emailFromToken?.split("@")[0];
             handleAuth({
               id: payload.sub, email: emailFromToken,
-              name: payload.user_metadata?.full_name || emailFromToken?.split("@")[0],
+              name: googleName,
               plan: "free", credits: 3, isNew,
             });
           });
