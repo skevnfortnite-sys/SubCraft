@@ -2,32 +2,37 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#05040c" />
-    <title>SubCraft — Sous-titres IA pour YouTube Shorts & TikTok</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- SEO -->
+    <title>SubCraft — Sous-titres IA pour YouTube Shorts, TikTok & Reels</title>
+    <meta name="description" content="Génère des sous-titres IA en 10 secondes. 28 styles viraux. Export MP4 HD. Gratuit pour commencer." />
+    <meta name="keywords" content="sous-titres automatiques, IA sous-titres, YouTube Shorts, TikTok, Instagram Reels, Whisper AI" />
+    <link rel="canonical" href="https://sub-craft-fxea.vercel.app" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://sub-craft-fxea.vercel.app" />
+    <meta property="og:title" content="SubCraft — Sous-titres IA pour créateurs" />
+    <meta property="og:description" content="Upload ta vidéo. L'IA génère tes sous-titres en 10 secondes. 28 styles viraux. Exporte en HD." />
+    <meta property="og:image" content="https://sub-craft-fxea.vercel.app/og-image.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SubCraft — Sous-titres IA" />
+    <meta name="twitter:description" content="Upload ta vidéo. L'IA génère tes sous-titres en 10 secondes." />
+    <meta name="twitter:image" content="https://sub-craft-fxea.vercel.app/og-image.png" />
+
+    <!-- Plausible Analytics — RGPD, sans cookies, léger -->
+    <script defer data-domain="sub-craft-fxea.vercel.app" src="https://plausible.io/js/script.js"></script>
+
+    <!-- Fonts préchargées -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Anton&family=Bebas+Neue&family=Montserrat:wght@700;800;900&family=Oswald:wght@600;700&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet" />
-    <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { background: #05040c; color: #f8fafc; font-family: 'DM Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-      #root { min-height: 100vh; }
-      /* Loading screen */
-      #loading { display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; gap: 14px; background: #05040c; }
-      .ldr { width: 44px; height: 44px; border-radius: 13px; background: linear-gradient(135deg, #7c3aed, #a855f7); display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 0 40px rgba(124,58,237,.5); }
-      @keyframes spin { to { transform: rotate(360deg); } }
-      .ldr-ring { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,.2); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
-      .ldr-txt { font-size: 12px; color: rgba(255,255,255,.3); letter-spacing: .1em; font-family: sans-serif; }
-    </style>
   </head>
   <body>
-    <div id="root">
-      <div id="loading">
-        <div class="ldr">✦</div>
-        <div class="ldr-ring"></div>
-        <div class="ldr-txt">SUBCRAFT</div>
-      </div>
-    </div>
+    <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

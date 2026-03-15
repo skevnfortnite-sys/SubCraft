@@ -29,6 +29,29 @@ export default async function handler(req, res) {
 
   const action = req.query.action;
 
+  // ── GET-SETTINGS — public, pas d'auth ────────────────
+  if (action === "get-settings" && req.method === "GET") {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/settings?select=key,value`,
+      { headers: supabaseHeaders() }
+    );
+    const rows = await r.json();
+    if (!Array.isArray(rows)) return res.status(200).json({ banner: null, maintenance: null });
+
+    const get = (key) => rows.find(r => r.key === key)?.value;
+    return res.status(200).json({
+      banner: {
+        active: get("banner_active") === "true",
+        text: get("banner_text") || "",
+        color: get("banner_color") || "#7c3aed",
+      },
+      maintenance: {
+        active: get("maintenance_active") === "true",
+        message: get("maintenance_message") || "",
+      },
+    });
+  }
+
   // ── AUTH : actions publiques cron (pas de token requis) ──
   const CRON_ACTIONS = ["reset-credits", "trigger-j3"];
   const isCron = CRON_ACTIONS.includes(action);
@@ -140,6 +163,52 @@ export default async function handler(req, res) {
     });
 
     return res.status(200).json({ deleted: true });
+  }
+
+  // ── EMAIL LOGS ───────────────────────────────────────
+  if (action === "email-logs" && req.method === "GET") {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/email_logs?select=*&order=created_at.desc&limit=100`,
+      { headers: supabaseHeaders() }
+    );
+    const rows = await r.json();
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.status(200).json({ logs: [] });
+    }
+    const logs = rows.map(l => ({
+      id: l.id,
+      type: l.type || "unknown",
+      to: l.to_email || "",
+      name: l.to_name || "",
+      subject: l.subject || "",
+      status: l.status || "delivered",
+      time: l.created_at ? new Date(l.created_at).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) : "—",
+      trigger: l.trigger || "",
+      opened: l.opened || false,
+      clicked: l.clicked || false,
+    }));
+    return res.status(200).json({ logs });
+  }
+
+  // ── REFERRALS — parrainages d'un user ───────────────
+  if (action === "referrals" && req.method === "GET") {
+    const { userId } = req.query;
+    if (!userId) return res.status(400).json({ error: "userId requis" });
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/users?referred_by=eq.${userId}&select=id,email,name,plan,created_at&order=created_at.desc`,
+      { headers: supabaseHeaders() }
+    );
+    const refs = await r.json();
+    if (!Array.isArray(refs)) return res.status(200).json({ referrals: [] });
+    const referrals = refs.map(u => ({
+      name: u.name || u.email?.split("@")[0] || "Utilisateur",
+      email: u.email ? u.email.replace(/(.{2}).*(@.*)/, "$1***$2") : "***",
+      date: u.created_at ? new Date(u.created_at).toLocaleDateString("fr-FR") : "—",
+      status: u.plan || "free",
+      paid: u.plan && u.plan !== "free",
+      created_at: u.created_at,
+    }));
+    return res.status(200).json({ referrals, total: referrals.length });
   }
 
   // ── RESET CRÉDITS — remet les crédits selon le plan ──

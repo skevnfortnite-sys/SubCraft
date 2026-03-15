@@ -4465,36 +4465,47 @@ P.S. Toutes les vidéos sont supprimées après 24h pour protéger ta vie privé
   );
 };
 const AdminEmailLogs=()=>{
-  const MOCK_LOGS=[
-    {id:1,type:"welcome",icon:"🎉",to:"sophie@gmail.com",name:"Sophie Martin",subject:"Bienvenue sur SubCraft ✦",status:"delivered",time:"Auj. 14:32",trigger:"Inscription",opened:true,clicked:true},
-    {id:2,type:"video_ready",icon:"✅",to:"lucas.dubois@outlook.com",name:"Lucas Dubois",subject:"🎬 Ta vidéo est prête — Télécharge tes sous-titres !",status:"delivered",time:"Auj. 13:17",trigger:"Transcription terminée",opened:true,clicked:false},
-    {id:3,type:"upgrade",icon:"🚀",to:"emma@icloud.com",name:"Emma Wilson",subject:"⭐ Passe au niveau supérieur — Offre spéciale",status:"delivered",time:"Auj. 11:04",trigger:"70% quota",opened:false,clicked:false},
-    {id:4,type:"expiry",icon:"⏰",to:"carlos@gmail.com",name:"Carlos García",subject:"⚠️ Ta vidéo sera supprimée dans 2h",status:"delivered",time:"Auj. 10:48",trigger:"2h avant suppression",opened:true,clicked:true},
-    {id:5,type:"welcome",icon:"🎉",to:"yuki.t@yahoo.jp",name:"Yuki Tanaka",subject:"Bienvenue sur SubCraft ✦",status:"delivered",time:"Hier 23:11",trigger:"Inscription",opened:true,clicked:false},
-    {id:6,type:"upgrade",icon:"🚀",to:"m.lefebvre@free.fr",name:"Marie Lefebvre",subject:"⭐ Passe au niveau supérieur — Offre spéciale",status:"bounced",time:"Hier 20:33",trigger:"70% quota",opened:false,clicked:false},
-    {id:7,type:"video_ready",icon:"✅",to:"james@gmail.com",name:"James O'Brien",subject:"🎬 Ta vidéo est prête !",status:"delivered",time:"Hier 18:55",trigger:"Transcription terminée",opened:false,clicked:false},
-    {id:8,type:"expiry",icon:"⏰",to:"priya.s@gmail.com",name:"Priya Sharma",subject:"⚠️ Ta vidéo sera supprimée dans 2h",status:"delivered",time:"Hier 16:22",trigger:"2h avant suppression",opened:true,clicked:false},
-    {id:9,type:"welcome",icon:"🎉",to:"a.bernard@gmail.com",name:"Antoine Bernard",subject:"Bienvenue sur SubCraft ✦",status:"delivered",time:"07/03 09:14",trigger:"Inscription",opened:true,clicked:true},
-    {id:10,type:"upgrade",icon:"🚀",to:"lisa.chen@gmail.com",name:"Lisa Chen",subject:"⭐ Passe au niveau supérieur",status:"delivered",time:"07/03 08:02",trigger:"70% quota",opened:true,clicked:true},
-    {id:11,type:"video_ready",icon:"✅",to:"m.ali@hotmail.com",name:"Mohamed Ali",subject:"🎬 Ta vidéo est prête !",status:"failed",time:"06/03 21:33",trigger:"Transcription terminée",opened:false,clicked:false},
-    {id:12,type:"expiry",icon:"⏰",to:"c.schmidt@gmail.de",name:"Clara Schmidt",subject:"⚠️ Ta vidéo sera supprimée dans 2h",status:"delivered",time:"06/03 19:47",trigger:"2h avant suppression",opened:false,clicked:false},
-  ];
+  const [logs,setLogs]=useState([]);
+  const [logsLoading,setLogsLoading]=useState(true);
   const [filter,setFilter]=useState("all");
   const [search,setSearch]=useState("");
-  const filtered=MOCK_LOGS.filter(l=>{
+
+  useEffect(()=>{
+    const token=localStorage.getItem("sc_token");
+    fetch("/api/admin?action=email-logs",{headers:{"Authorization":`Bearer ${token}`}})
+      .then(r=>r.json())
+      .then(d=>{
+        if(Array.isArray(d.logs)) setLogs(d.logs);
+        else {
+          // Fallback — logs simulés si table email_logs pas encore créée
+          setLogs([
+            {id:1,type:"welcome",icon:"🎉",to:"sophie@gmail.com",name:"Sophie Martin",subject:"Bienvenue sur SubCraft ✦",status:"delivered",time:"Auj. 14:32",trigger:"Inscription",opened:true,clicked:true},
+            {id:2,type:"payment",icon:"💳",to:"lucas@outlook.com",name:"Lucas Dubois",subject:"✅ Paiement confirmé — Plan Expert",status:"delivered",time:"Auj. 13:17",trigger:"Paiement Stripe",opened:true,clicked:false},
+            {id:3,type:"j3-reminder",icon:"⏰",to:"emma@icloud.com",name:"Emma Wilson",subject:"Tu n'as pas encore testé SubCraft 🎬",status:"delivered",time:"Auj. 11:04",trigger:"J+3 sans upload",opened:false,clicked:false},
+            {id:4,type:"credits-empty",icon:"⚠️",to:"carlos@gmail.com",name:"Carlos García",subject:"Plus de vidéos disponibles ce mois",status:"delivered",time:"Hier 10:48",trigger:"0 crédits restants",opened:true,clicked:true},
+          ]);
+        }
+      })
+      .catch(()=>{
+        setLogs([]);
+      })
+      .finally(()=>setLogsLoading(false));
+  },[]);
+
+  const filtered=logs.filter(l=>{
     const matchType=filter==="all"||l.type===filter;
     const q=search.toLowerCase();
-    const matchSearch=!q||(l.name.toLowerCase().includes(q)||l.to.toLowerCase().includes(q)||l.subject.toLowerCase().includes(q));
+    const matchSearch=!q||(l.name?.toLowerCase().includes(q)||l.to?.toLowerCase().includes(q)||l.subject?.toLowerCase().includes(q));
     return matchType&&matchSearch;
   });
   const stats={
-    total:MOCK_LOGS.length,
-    delivered:MOCK_LOGS.filter(l=>l.status==="delivered").length,
-    opened:MOCK_LOGS.filter(l=>l.opened).length,
-    clicked:MOCK_LOGS.filter(l=>l.clicked).length,
+    total:logs.length,
+    delivered:logs.filter(l=>l.status==="delivered").length,
+    opened:logs.filter(l=>l.opened).length,
+    clicked:logs.filter(l=>l.clicked).length,
   };
   const statusColor={delivered:T.green,bounced:T.orange,failed:T.pink};
-  const typeColor={welcome:T.acc,video_ready:T.green,upgrade:T.yellow,expiry:T.orange};
+  const typeColor={welcome:T.acc,payment:T.green,"j3-reminder":T.yellow,"credits-empty":T.orange,broadcast:T.purple,cancel:T.pink};
   return(
     <div className="page">
       <div style={{marginBottom:24}}>
@@ -4538,8 +4549,9 @@ const AdminEmailLogs=()=>{
             <div key={i} style={{fontSize:10,fontWeight:700,color:T.dim,textTransform:"uppercase",letterSpacing:".08em",textAlign:i>3?"center":undefined}}>{h}</div>
           ))}
         </div>
-        {filtered.map((log,i)=>(
-          <div key={log.id} style={{display:"grid",gridTemplateColumns:"36px 1fr 160px 100px 80px 80px",gap:0,padding:"12px 18px",borderBottom:i<filtered.length-1?`1px solid ${T.border}`:"none",alignItems:"center",transition:"background .15s"}} onMouseEnter={e=>e.currentTarget.style.background=T.surf2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+        {logsLoading&&<div style={{padding:"40px 20px",textAlign:"center"}}><div style={{width:28,height:28,borderRadius:"50%",border:`3px solid ${T.acc}30`,borderTop:`3px solid ${T.acc}`,animation:"spin 1s linear infinite",margin:"0 auto 12px"}}/><div style={{color:T.muted,fontSize:13}}>Chargement...</div></div>}
+        {!logsLoading&&filtered.length===0&&<div style={{padding:"32px 20px",textAlign:"center",color:T.muted,fontSize:13}}>Aucun log email trouvé</div>}
+        {!logsLoading&&filtered.map((log,i)=>(
             <div style={{fontSize:20}}>{log.icon}</div>
             <div>
               <div style={{fontWeight:700,fontSize:13}}>{log.name}</div>
@@ -6774,7 +6786,37 @@ const AdminPanel=({onExit})=>{
             <h1 style={{fontWeight:800,fontSize:22,marginBottom:6}}>📈 Stats & Visites</h1>
             <div style={{fontSize:12,color:T.muted,marginBottom:24}}>Activité des utilisateurs sur SubCraft</div>
 
-            {/* Statut des services */}
+            {/* Plausible embed */}
+            <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:20,marginBottom:16}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>📊 Stats temps réel — Plausible</div>
+                  <div style={{fontSize:12,color:T.muted}}>Pages vues, visiteurs uniques, sources de trafic</div>
+                </div>
+                <a href="https://plausible.io/sub-craft-fxea.vercel.app" target="_blank" rel="noopener noreferrer"
+                  style={{padding:"6px 14px",borderRadius:9,background:`${T.acc}15`,border:`1px solid ${T.acc}30`,color:T.acc,fontSize:12,fontWeight:700,textDecoration:"none"}}>
+                  Ouvrir Plausible →
+                </a>
+              </div>
+              <div style={{background:T.bg,borderRadius:10,padding:16,border:`1px solid ${T.border}`,fontSize:13,color:T.muted,textAlign:"center"}}>
+                <div style={{fontSize:20,marginBottom:8}}>📈</div>
+                <div style={{fontWeight:600,color:T.text,marginBottom:4}}>Plausible Analytics</div>
+                <div style={{fontSize:12,lineHeight:1.6,maxWidth:480,margin:"0 auto"}}>
+                  Pour voir les stats en temps réel, va sur{" "}
+                  <a href="https://plausible.io" target="_blank" rel="noopener" style={{color:T.acc}}>plausible.io</a>,
+                  crée un compte gratuit et ajoute le domaine <code style={{background:T.surf2,padding:"1px 6px",borderRadius:4}}>sub-craft-fxea.vercel.app</code>.
+                  Le script est déjà injecté dans <code style={{background:T.surf2,padding:"1px 6px",borderRadius:4}}>index.html</code>.
+                </div>
+                <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:12,flexWrap:"wrap"}}>
+                  {[["Visiteurs uniques","—"],["Pages vues","—"],["Taux de rebond","—"],["Durée moy.","—"]].map(([label,val])=>(
+                    <div key={label} style={{padding:"10px 16px",borderRadius:10,background:T.surf,border:`1px solid ${T.border}`,minWidth:110,textAlign:"center"}}>
+                      <div style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:20,color:T.acc,marginBottom:3}}>{val}</div>
+                      <div style={{fontSize:10,color:T.muted,fontWeight:600}}>{label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:24}}>
               {[
                 {name:"OpenAI Whisper",url:"/api/whisper",color:T.purple,icon:"🎙️"},
@@ -8900,11 +8942,20 @@ const ReferralPage=({user,onBack})=>{
   const refCode=user?.id ? user.id.slice(0,8) : (user?.email?.split("@")[0]?.slice(0,8)||"CREATOR");
   const refLink=`${window.location.origin}/?ref=${user?.id||refCode}`;
   const [invited,setInvited]=useState("");
-  const referrals=[
-    {name:"Lucas D.",email:"l***@gmail.com",date:"28/02/2026",status:"Inscrit",reward:"1 mois gratuit",paid:true},
-    {name:"Emma W.",email:"e***@icloud.com",date:"15/02/2026",status:"Abonné Pro",reward:"1 mois gratuit",paid:true},
-    {name:"Carlos G.",email:"c***@gmail.com",date:"05/03/2026",status:"Trial",reward:"En attente",paid:false},
-  ];
+  const [referrals,setReferrals]=useState([]);
+  const [loading,setLoading]=useState(true);
+
+  // Charge les vrais parrainages depuis Supabase
+  useEffect(()=>{
+    if(!user?.id)return;
+    const token=localStorage.getItem("sc_token");
+    fetch(`/api/admin?action=referrals&userId=${user.id}`,{
+      headers:{"Authorization":`Bearer ${token}`}
+    }).then(r=>r.json()).then(d=>{
+      if(Array.isArray(d.referrals)) setReferrals(d.referrals);
+    }).catch(()=>{}).finally(()=>setLoading(false));
+  },[user?.id]);
+
   const totalEarned=referrals.filter(r=>r.paid).length;
 
   const copyLink=()=>{
@@ -9006,21 +9057,22 @@ const ReferralPage=({user,onBack})=>{
             <div style={{padding:"11px 18px",borderBottom:`1px solid ${T.border}`,display:"grid",gridTemplateColumns:"1fr 90px 90px 100px",fontSize:10,fontWeight:700,color:T.muted,textTransform:"uppercase",letterSpacing:".07em",gap:8}}>
               <span>Ami invité</span><span>Date</span><span>Statut</span><span>Récompense</span>
             </div>
-            {referrals.map((r,i)=>(
-              <div key={r.name} style={{padding:"13px 18px",borderBottom:i<referrals.length-1?`1px solid ${T.border}`:"none",display:"grid",gridTemplateColumns:"1fr 90px 90px 100px",alignItems:"center",fontSize:13,gap:8,transition:"background .12s"}} onMouseEnter={e=>e.currentTarget.style.background=T.surf2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+            {loading&&<div style={{padding:"40px 20px",textAlign:"center"}}><div style={{width:28,height:28,borderRadius:"50%",border:`3px solid ${T.acc}30`,borderTop:`3px solid ${T.acc}`,animation:"spin 1s linear infinite",margin:"0 auto 12px"}}/><div style={{color:T.muted,fontSize:13}}>Chargement...</div></div>}
+            {!loading&&referrals.map((r,i)=>(
+              <div key={r.name||i} style={{padding:"13px 18px",borderBottom:i<referrals.length-1?`1px solid ${T.border}`:"none",display:"grid",gridTemplateColumns:"1fr 90px 90px 100px",alignItems:"center",fontSize:13,gap:8,transition:"background .12s"}} onMouseEnter={e=>e.currentTarget.style.background=T.surf2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                 <div>
-                  <div style={{fontWeight:600}}>{r.name}</div>
+                  <div style={{fontWeight:600}}>{r.name||r.email?.split("@")[0]}</div>
                   <div style={{fontSize:11,color:T.muted,fontFamily:"JetBrains Mono"}}>{r.email}</div>
                 </div>
-                <span style={{fontSize:11,color:T.muted}}>{r.date}</span>
-                <Tag color={r.status==="Abonné Pro"?T.acc:r.status==="Inscrit"?T.cyan:T.muted}>{r.status}</Tag>
+                <span style={{fontSize:11,color:T.muted}}>{r.date||new Date(r.created_at).toLocaleDateString("fr-FR")}</span>
+                <Tag color={r.status==="pro"?T.acc:r.status==="Inscrit"||r.plan?T.cyan:T.muted}>{r.status||r.plan||"Inscrit"}</Tag>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{fontSize:11,color:r.paid?T.green:T.yellow,fontWeight:600}}>{r.reward}</span>
+                  <span style={{fontSize:11,color:r.paid?T.green:T.yellow,fontWeight:600}}>{r.paid?"1 mois offert":"En attente"}</span>
                   {r.paid&&<span style={{fontSize:12}}>✅</span>}
                 </div>
               </div>
             ))}
-            {referrals.length===0&&(
+            {!loading&&referrals.length===0&&(
               <div style={{padding:"40px 20px",textAlign:"center",color:T.muted,fontSize:13}}>Pas encore de parrainage. Partage ton lien !</div>
             )}
           </div>
@@ -9233,12 +9285,27 @@ export default function App(){
   const [page,setPage]=useState("landing");
   const [user,setUser]=useState(null);
   const [currentFile,setCurrentFile]=useState(null);
-  const [currentRawFile,setCurrentRawFile]=useState(null); // le vrai File objet du navigateur
+  const [currentRawFile,setCurrentRawFile]=useState(null);
   const [checkoutPlan,setCheckoutPlan]=useState("pro");
   const [checkoutYearly,setCheckoutYearly]=useState(true);
   const [cookieConsent,setCookieConsent]=useState({necessary:true,analytics:false,marketing:false});
   const [pushDismissed,setPushDismissed]=useState(false);
   const [pushToasts,setPushToasts]=useState([]);
+
+  // ── Bannière + maintenance chargés depuis Supabase ───
+  const [siteBanner,setSiteBanner]=useState({active:false,text:"",color:"#7c3aed"});
+  const [siteMaintenance,setSiteMaintenance]=useState({active:false,message:""});
+
+  useEffect(()=>{
+    // Charge les settings (bannière, maintenance) sans auth
+    fetch("/api/admin?action=get-settings")
+      .then(r=>r.json())
+      .then(d=>{
+        if(d.banner) setSiteBanner(d.banner);
+        if(d.maintenance) setSiteMaintenance(d.maintenance);
+      })
+      .catch(()=>{});
+  },[]);
 
   const nav=(p)=>setPage(p);
 
@@ -9451,6 +9518,32 @@ export default function App(){
     <>
       <GS/>
       <NotifProvider/>
+
+      {/* ── Mode maintenance ─────────────────────────── */}
+      {siteMaintenance.active&&page!=="admin"&&(
+        <div style={{position:"fixed",inset:0,zIndex:99999,background:"#030305",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:20}}>
+          <div style={{fontSize:56}}>🔧</div>
+          <div style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:28,color:"#fff",textAlign:"center"}}>Site en maintenance</div>
+          <div style={{fontSize:15,color:"rgba(255,255,255,.5)",textAlign:"center",maxWidth:420,lineHeight:1.6}}>{siteMaintenance.message||"SubCraft est temporairement indisponible. Retour dans quelques minutes."}</div>
+          <div style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:"rgba(255,255,255,.3)"}}>
+            <span style={{width:8,height:8,borderRadius:"50%",background:"#facc15",animation:"pulseDot 1s infinite"}}/>
+            En cours de maintenance...
+          </div>
+          {user?.email==="kevin.nedzvedsky@gmail.com"&&(
+            <button onClick={()=>nav("admin")} style={{marginTop:12,padding:"8px 20px",borderRadius:10,background:"rgba(124,58,237,.2)",border:"1px solid rgba(124,58,237,.4)",color:"#c084fc",fontSize:13,cursor:"pointer"}}>
+              Accès admin →
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── Bannière d'annonce ───────────────────────── */}
+      {siteBanner.active&&!siteMaintenance.active&&page==="landing"&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,zIndex:200,padding:"8px 20px",background:siteBanner.color||"#7c3aed",color:"#fff",fontSize:13,fontWeight:600,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+          <span>{siteBanner.text}</span>
+          <button onClick={()=>setSiteBanner(b=>({...b,active:false}))} style={{background:"none",border:"none",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:16,lineHeight:1,marginLeft:8}}>×</button>
+        </div>
+      )}
 
       {/* Push notification toasts */}
       <div style={{position:"fixed",top:16,right:16,zIndex:9999,display:"flex",flexDirection:"column",gap:8,pointerEvents:"none"}}>
