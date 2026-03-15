@@ -1863,17 +1863,41 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
 
 
 const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
-  const userFiles=useMemo(()=>MOCK_FILES.filter(f=>f.status!=="deleted").map(f=>({...f,ownerId:user?.email})),[user?.email]);
-  const [files,setFiles]=useState(userFiles);
+  const [files,setFiles]=useState([]);
+  const [filesLoading,setFilesLoading]=useState(true);
   const [showUpload,setShowUpload]=useState(false);
   const [search,setSearch]=useState("");
   const [confirmDelete,setConfirmDelete]=useState(null);
   const [notifPanel,setNotifPanel]=useState(false);
-  const [notifications,setNotifications]=useState(()=>{
-    const notifs=[];
-    notifs.push({id:"welcome",icon:"🎉",text:"Bienvenue sur SubCraft ! Tu as 3 vidéos gratuites ce mois-ci.",time:"Maintenant",read:false});
-    return notifs;
-  });
+  const [notifications,setNotifications]=useState(()=>[
+    {id:"welcome",icon:"🎉",text:"Bienvenue sur SubCraft ! Tu as 3 vidéos gratuites ce mois-ci.",time:"Maintenant",read:false}
+  ]);
+
+  // ── Charge les vraies vidéos depuis Supabase ──────────
+  useEffect(()=>{
+    const token=localStorage.getItem("sc_token");
+    if(!token||!user?.id){setFilesLoading(false);return;}
+    fetch("/api/videos?action=list",{
+      headers:{"Authorization":`Bearer ${token}`}
+    }).then(r=>r.json()).then(d=>{
+      if(Array.isArray(d.videos)){
+        setFiles(d.videos.map(v=>({
+          id:v.id,
+          name:v.name||"Vidéo sans nom",
+          date:new Date(v.created_at).toLocaleDateString("fr-FR"),
+          dur:"00:00",
+          thumb:"🎬",
+          exported:v.exported||false,
+          deleteIn:v.delete_at?Math.max(0,Math.round((new Date(v.delete_at)-Date.now())/3600000)):24,
+          status:v.status||"ready",
+          views:0,
+          style:v.style||"yellow-bold",
+          subs:v.subs||null,
+          dbId:v.id, // id Supabase pour suppression
+        })));
+      }
+    }).catch(()=>{}).finally(()=>setFilesLoading(false));
+  },[user?.id]);
 
   // 🔒 Recharge TOUJOURS les crédits depuis la DB au montage — jamais de fallback
   useEffect(()=>{
@@ -1935,7 +1959,20 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
       setPage("pricing");
       return;
     }
-    const newF={id:Date.now(),name:file?.name||"Nouvelle vidéo.mp4",date:new Date().toLocaleDateString("fr-FR"),dur:"00:00",thumb:"🎬",exported:false,deleteIn:24,status:"processing",views:0,style:"yellow-bold",subs:realSubs||null};
+    const token=localStorage.getItem("sc_token");
+    // Crée la vidéo en DB
+    let dbId=null;
+    try{
+      const r=await fetch("/api/videos?action=create",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+        body:JSON.stringify({name:file?.name||"Nouvelle vidéo.mp4"}),
+      });
+      const d=await r.json();
+      dbId=d.video?.id||null;
+    }catch(e){console.warn("Erreur création vidéo en DB",e);}
+
+    const newF={id:dbId||Date.now(),dbId,name:file?.name||"Nouvelle vidéo.mp4",date:new Date().toLocaleDateString("fr-FR"),dur:"00:00",thumb:"🎬",exported:false,deleteIn:24,status:"processing",views:0,style:"yellow-bold",subs:realSubs||null};
     setFiles(p=>[newF,...p]);
     setShowUpload(false);
     notify("Vidéo uploadée ! Transcription en cours...","info");
@@ -2174,7 +2211,12 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
           </div>
 
           {/* Files */}
-          {tabFiles.length===0?(
+          {filesLoading?(
+            <div style={{textAlign:"center",padding:"56px 28px"}}>
+              <div style={{width:40,height:40,borderRadius:"50%",border:`3px solid ${T.acc}30`,borderTop:`3px solid ${T.acc}`,animation:"spin 1s linear infinite",margin:"0 auto 16px"}}/>
+              <div style={{fontSize:13,color:T.muted}}>Chargement de tes vidéos...</div>
+            </div>
+          ):tabFiles.length===0?(
             <div style={{textAlign:"center",padding:"56px 28px"}}>
               {/* Animated phone with glow */}
               <div style={{position:"relative",display:"inline-block",marginBottom:28}}>
@@ -2330,7 +2372,20 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
         open={!!confirmDelete}
         title="Supprimer cette vidéo ?"
         desc={confirmDelete?`"${confirmDelete.name}" sera définitivement supprimée. Cette action est irréversible.`:undefined}
-        onConfirm={()=>{setFiles(p=>p.filter(x=>x.id!==confirmDelete.id));setConfirmDelete(null);notify("Vidéo supprimée","warning");}}
+        onConfirm={async()=>{
+          setFiles(p=>p.filter(x=>x.id!==confirmDelete.id));
+          setConfirmDelete(null);
+          notify("Vidéo supprimée","warning");
+          // Supprime en DB
+          try{
+            const token=localStorage.getItem("sc_token");
+            await fetch("/api/videos?action=delete",{
+              method:"POST",
+              headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+              body:JSON.stringify({videoId:confirmDelete.id}),
+            });
+          }catch(e){console.warn("Erreur suppression DB",e);}
+        }}
         onCancel={()=>setConfirmDelete(null)}
       />
       {notifPanel&&<div style={{position:"fixed",inset:0,zIndex:149}} onClick={()=>setNotifPanel(false)}/>}
