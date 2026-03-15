@@ -3089,142 +3089,190 @@ const EditorPage=({onBack,file,rawFile})=>{
   const [exportStatus,setExportStatus]=useState("");
 
   const exportMP4=async()=>{
-    if(!rawFile&&!videoUrl){notify("Aucune vidéo chargée","error");return;}
+    if(!rawFile&&!videoUrl){notify("Aucune vidéo chargée — ouvre une vidéo d'abord","error");return;}
     if(!subs.length){notify("Aucun sous-titre à incruster","error");return;}
-    setExporting(true);setExportProgress(0);setExportStatus("Préparation de la vidéo...");
+    setExporting(true);setExportProgress(2);setExportStatus("Chargement de la vidéo...");
 
     try{
-      // Utilise l'URL stable déjà créée, ou en crée une temporaire
       const srcUrl=videoUrl||(rawFile?URL.createObjectURL(rawFile):null);
-      if(!srcUrl){notify("Vidéo introuvable","error");setExporting(false);return;}
+
+      // ── 1. Vidéo source ──────────────────────────────
       const vid=document.createElement("video");
       vid.src=srcUrl;
-      vid.muted=true;
+      vid.muted=false;
       vid.playsInline=true;
-      await new Promise(r=>{vid.onloadedmetadata=r;vid.load();});
+      vid.crossOrigin="anonymous";
+      await new Promise((res,rej)=>{
+        vid.onloadedmetadata=res;
+        vid.onerror=()=>rej(new Error("Impossible de charger la vidéo"));
+        vid.load();
+      });
 
       const W=vid.videoWidth||720;
       const H=vid.videoHeight||1280;
       const duration=vid.duration;
-      const fps=30;
+      if(!duration||!isFinite(duration)){throw new Error("Durée vidéo invalide");}
 
-      setExportStatus("Initialisation du canvas...");
-      setExportProgress(5);
+      setExportStatus("Préparation...");setExportProgress(5);
 
-      // 2. Canvas pour le rendu
+      // ── 2. Canvas ────────────────────────────────────
       const canvas=document.createElement("canvas");
       canvas.width=W; canvas.height=H;
-      const ctx=canvas.getContext("2d");
+      const ctx=canvas.getContext("2d",{willReadFrequently:false});
 
-      // 3. MediaRecorder pour capter le canvas
-      const stream=canvas.captureStream(fps);
-
-      // Ajouter la piste audio de la vidéo originale
+      // ── 3. Stream audio depuis la vidéo originale ────
+      // captureStream() donne accès direct aux tracks audio/vidéo
+      let audioTracks=[];
       try{
-        const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-        const src=audioCtx.createMediaElementSource(vid);
-        const dest=audioCtx.createMediaStreamDestination();
-        src.connect(dest);
-        src.connect(audioCtx.destination);
-        dest.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
-      }catch(e){console.warn("Audio track non disponible",e);}
+        const vidStream=vid.captureStream?.();
+        if(vidStream) audioTracks=vidStream.getAudioTracks();
+      }catch(e){
+        // Fallback AudioContext si captureStream indisponible
+        try{
+          const aCtx=new (window.AudioContext||window.webkitAudioContext)();
+          const src2=aCtx.createMediaElementSource(vid);
+          const dest=aCtx.createMediaStreamDestination();
+          src2.connect(dest);
+          audioTracks=dest.stream.getAudioTracks();
+        }catch{}
+      }
 
-      const mimeType=MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")?"video/webm;codecs=vp9,opus":
-                     MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")?"video/webm;codecs=vp8,opus":
-                     "video/webm";
-      const rec=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:8_000_000});
+      // ── 4. Stream final = canvas vidéo + audio vidéo ─
+      const canvasStream=canvas.captureStream(30);
+      audioTracks.forEach(t=>canvasStream.addTrack(t));
+
+      // Choisir le meilleur format supporté
+      const formats=[
+        "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+        "video/mp4",
+        "video/webm;codecs=vp9,opus",
+        "video/webm;codecs=vp8,opus",
+        "video/webm",
+      ];
+      const mimeType=formats.find(f=>MediaRecorder.isTypeSupported(f))||"video/webm";
+      const isMP4=mimeType.startsWith("video/mp4");
+
+      const rec=new MediaRecorder(canvasStream,{
+        mimeType,
+        videoBitsPerSecond:8_000_000,
+        audioBitsPerSecond:128_000,
+      });
       const chunks=[];
-      rec.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
+      rec.ondataavailable=e=>{if(e.data?.size>0)chunks.push(e.data);};
 
-      // Style sous-titres calculé pour la résolution réelle
-      const subFontSize=Math.round(H*0.055*(fontSize/68));
+      // ── 5. Style sous-titres pour export HD ──────────
+      const subFontSize=Math.round(H*0.058*(fontSize/68));
+      const subPosY=subYPos/100;
       const subFont=`${activeStyle.preview.weight} ${subFontSize}px ${fontFam||activeStyle.preview.font||"Impact"}, sans-serif`;
-      const subColor=activeStyle.preview.color||"#fff";
-      const subBg=activeStyle.preview.bg!=="transparent"||hasEff("Background");
-      const subPosY=subYPos/100; // 0=bottom, 1=top — inversé pour canvas
+      const subColor=activeStyle.preview.color||"#ffffff";
+      const hasBg=activeStyle.preview.bg!=="transparent"||hasEff("Background");
+      const shadow=activeStyle.preview.shadow||"";
 
-      const drawSubtitle=(ctx,text,W,H)=>{
+      const drawSub=(text)=>{
+        ctx.save();
         ctx.font=subFont;
         ctx.textAlign="center";
         ctx.textBaseline="middle";
-        const lines=text.split("\n");
-        const lineH=subFontSize*1.3;
-        const totalH=lines.length*lineH;
-        const y=H*(1-subPosY)-(totalH/2);
+        const words=text.trim().split("\n");
+        const lh=subFontSize*1.35;
+        const totalH=words.length*lh;
+        const baseY=H*(1-subPosY)-(totalH/2)+lh/2;
 
-        lines.forEach((line,i)=>{
-          const ly=y+i*lineH;
-          if(subBg){
-            const tw=ctx.measureText(line).width;
-            ctx.fillStyle="rgba(0,0,0,0.82)";
+        words.forEach((line,i)=>{
+          const ly=baseY+i*lh;
+          if(hasBg){
+            const m=ctx.measureText(line);
+            const pw=12,ph=subFontSize*0.55;
+            ctx.fillStyle="rgba(0,0,0,.82)";
             ctx.beginPath();
-            ctx.roundRect(W/2-tw/2-12,ly-subFontSize*0.6,tw+24,subFontSize*1.2,7);
+            if(ctx.roundRect){ctx.roundRect(W/2-m.width/2-pw,ly-ph,m.width+pw*2,ph*2,8);}
+            else{ctx.rect(W/2-m.width/2-pw,ly-ph,m.width+pw*2,ph*2);}
             ctx.fill();
           }
-          // Shadow/stroke
-          ctx.strokeStyle="rgba(0,0,0,0.9)";
-          ctx.lineWidth=subFontSize*0.08;
+          // Ombre portée
+          if(shadow){
+            ctx.shadowColor="rgba(0,0,0,.9)";
+            ctx.shadowBlur=subFontSize*0.12;
+            ctx.shadowOffsetX=2;ctx.shadowOffsetY=2;
+          }
+          // Contour
+          ctx.strokeStyle="rgba(0,0,0,.95)";
+          ctx.lineWidth=Math.max(2,subFontSize*0.07);
           ctx.strokeText(line,W/2,ly);
+          // Texte
           ctx.fillStyle=subColor;
           ctx.fillText(line,W/2,ly);
+          ctx.shadowColor="transparent";
         });
+        ctx.restore();
       };
 
-      // 4. Lancer l'enregistrement
-      rec.start(100);
+      // ── 6. Enregistrement ────────────────────────────
+      rec.start(250); // chunk toutes les 250ms
       vid.currentTime=0;
-      await new Promise(r=>setTimeout(r,50));
-      vid.play();
+      await new Promise(r=>setTimeout(r,100));
+      vid.muted=false;
+      await vid.play();
 
+      setExportStatus(`Export en cours...`);
+
+      // Boucle frame par frame synchronisée sur la vidéo
       await new Promise((resolve,reject)=>{
-        const loop=()=>{
-          if(vid.ended||vid.currentTime>=duration){
-            resolve();return;
+        let rafId;
+        const step=()=>{
+          if(vid.ended||vid.currentTime>=duration-0.05){
+            cancelAnimationFrame(rafId);
+            resolve();
+            return;
           }
-          const pct=Math.round((vid.currentTime/duration)*90)+5;
+          const pct=Math.min(93,Math.round((vid.currentTime/duration)*88)+5);
           setExportProgress(pct);
-          setExportStatus(`Export en cours... ${Math.floor(vid.currentTime)}s / ${Math.floor(duration)}s`);
+          setExportStatus(`Export... ${Math.floor(vid.currentTime)}s / ${Math.floor(duration)}s`);
 
-          // Dessiner la frame vidéo
           ctx.drawImage(vid,0,0,W,H);
-
-          // Trouver le sous-titre actif
           const t=vid.currentTime;
           const active=subs.find(s=>t>=s.start&&t<=s.end);
           if(active){
-            const txt=_stripEmoji(active.text);
-            if(txt.trim()) drawSubtitle(ctx,txt,W,H);
+            const txt=noEmoji?active.text.replace(/[\u{1F300}-\u{1FFFF}\u{2600}-\u{27FF}]/gu,"").trim():active.text;
+            if(txt.trim()) drawSub(txt);
           }
-          requestAnimationFrame(loop);
+          rafId=requestAnimationFrame(step);
         };
-        vid.onended=resolve;
+        vid.onended=()=>{cancelAnimationFrame(rafId);resolve();};
         vid.onerror=reject;
-        loop();
+        step();
       });
 
+      // Dernière frame
+      ctx.drawImage(vid,0,0,W,H);
+      await new Promise(r=>setTimeout(r,300));
+
+      setExportStatus("Finalisation...");setExportProgress(95);
       vid.pause();
-      setExportStatus("Finalisation...");
-      setExportProgress(95);
       rec.stop();
-
       await new Promise(r=>{rec.onstop=r;});
-      setExportProgress(100);
-      setExportStatus("Téléchargement...");
 
-      // 5. Télécharger
+      setExportProgress(100);setExportStatus("Téléchargement...");
+
+      // ── 7. Téléchargement ────────────────────────────
       const blob=new Blob(chunks,{type:mimeType});
-      const url=URL.createObjectURL(blob);
+      const ext=isMP4?"mp4":"webm";
+      const baseName=(rawFile?.name||"subcraft-export").replace(/\.[^.]+$/,"");
+      const dlUrl=URL.createObjectURL(blob);
       const a=document.createElement("a");
-      const ext=mimeType.includes("mp4")?"mp4":"webm";
-      a.href=url;a.download=`subcraft-export.${ext}`;a.click();
-      URL.revokeObjectURL(url);
-      // Ne pas révoquer videoUrl ici — c'est l'URL stable gérée par useMemo dans EditorPage
-      if(!videoUrl && srcUrl) URL.revokeObjectURL(srcUrl); // révoquer seulement si on en a créé une temporaire
+      a.href=dlUrl;
+      a.download=`${baseName}-subtitles.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(dlUrl);
+      if(!videoUrl&&srcUrl)URL.revokeObjectURL(srcUrl);
 
-      notify("✅ Vidéo exportée !","success");
+      notify(`✅ Vidéo exportée en ${ext.toUpperCase()} !`,"success");
       setShowExport(false);
+
     }catch(e){
-      console.error("[export]",e);
+      console.error("[exportMP4]",e);
       notify("Erreur export : "+e.message,"error");
     }
     setExporting(false);setExportProgress(0);setExportStatus("");
@@ -3694,7 +3742,7 @@ const EditorPage=({onBack,file,rawFile})=>{
           ):(
             <>
               {[
-                {icon:"🎬",title:"Vidéo MP4/WebM avec sous-titres",desc:rawFile?"Sous-titres incrustés en temps réel dans le navigateur":"Charge d'abord une vidéo",badge:rawFile?"HD":"",action:rawFile?exportMP4:()=>notify("Charge une vidéo d'abord","warning"),disabled:!rawFile},
+                {icon:"🎬",title:"Vidéo avec sous-titres incrustés",desc:rawFile?`MP4 si supporté par ton navigateur, sinon WebM — qualité identique`:"Charge d'abord une vidéo",badge:rawFile?"HD":"",action:rawFile?exportMP4:()=>notify("Charge une vidéo d'abord","warning"),disabled:!rawFile},
                 {icon:"📄",title:"Fichier SRT",desc:"Format universel — compatible DaVinci, Premiere, CapCut",action:exportSRT},
                 {icon:"📋",title:"Copier le texte brut",desc:"Juste le texte sans timing",action:()=>{navigator.clipboard?.writeText(subs.map(s=>s.text).join("\n"));notify("Texte copié !","success");}},
               ].map(e=>(
