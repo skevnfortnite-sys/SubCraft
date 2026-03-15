@@ -941,9 +941,9 @@ const Cursor=()=>{
 const AuroraBg=({subtle=false})=>(
   <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden"}}>
     <div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(rgba(91,108,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(91,108,255,.04) 1px,transparent 1px)",backgroundSize:"72px 72px",opacity:subtle?.4:.7}}/>
-    <div style={{position:"absolute",top:"-25%",left:"-10%",width:"65vw",height:"65vw",background:"radial-gradient(circle,rgba(91,108,255,.11) 0%,transparent 65%)",filter:"blur(64px)",animation:"aurora 20s ease-in-out infinite"}}/>
-    <div style={{position:"absolute",top:"35%",right:"-12%",width:"55vw",height:"55vw",background:"radial-gradient(circle,rgba(168,85,247,.09) 0%,transparent 65%)",filter:"blur(80px)",animation:"aurora2 26s ease-in-out infinite"}}/>
-    <div style={{position:"absolute",bottom:"-8%",left:"25%",width:"45vw",height:"45vw",background:"radial-gradient(circle,rgba(236,72,153,.07) 0%,transparent 65%)",filter:"blur(60px)",animation:"aurora 32s ease-in-out infinite reverse"}}/>
+    <div style={{position:"absolute",top:"-25%",left:"-10%",width:"65vw",height:"65vw",background:"radial-gradient(circle,rgba(91,108,255,.06) 0%,transparent 65%)",filter:"blur(64px)",animation:"aurora 20s ease-in-out infinite"}}/>
+    <div style={{position:"absolute",top:"35%",right:"-12%",width:"55vw",height:"55vw",background:"radial-gradient(circle,rgba(168,85,247,.05) 0%,transparent 65%)",filter:"blur(80px)",animation:"aurora2 26s ease-in-out infinite"}}/>
+    <div style={{position:"absolute",bottom:"-8%",left:"25%",width:"45vw",height:"45vw",background:"radial-gradient(circle,rgba(236,72,153,.04) 0%,transparent 65%)",filter:"blur(60px)",animation:"aurora 32s ease-in-out infinite reverse"}}/>
     <div style={{position:"absolute",left:0,right:0,height:"1.5px",background:"linear-gradient(90deg,transparent,rgba(91,108,255,.18),rgba(168,85,247,.12),transparent)",animation:"scanline 9s linear infinite",opacity:.5}}/>
   </div>
 );
@@ -1372,6 +1372,7 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
             <div style={{marginBottom:24}}>
               <div style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(46px,5.5vw,84px)",lineHeight:.85,letterSpacing:"-.06em",color:"#fff",display:"block",marginBottom:4}}>Tes sous-titres</div>
               <div style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(46px,5.5vw,84px)",lineHeight:.85,letterSpacing:"-.06em",display:"block",marginBottom:4}}>
+                <span style={{color:"rgba(255,255,255,.35)",fontStyle:"italic",marginRight:"0.18em"}}>enfin</span>
                 <span style={{background:"linear-gradient(90deg,#a78bfa 0%,#c084fc 35%,#f0abfc 65%,#fb7185 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",filter:"drop-shadow(0 0 50px rgba(167,139,250,.4))"}}>qui cartonnent.</span>
               </div>
             </div>
@@ -1404,59 +1405,21 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
             </div>
           </div>
 
-          {/* RIGHT — Phone premium */}
+          {/* RIGHT — Phone3D avec vidéo */}
           <div style={{display:"flex",justifyContent:"center",alignItems:"center",animation:"fadeUp .6s .1s ease both"}}>
             <div style={{position:"relative"}}>
               {/* Glow halo */}
               <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:320,height:400,background:"radial-gradient(circle,rgba(124,58,237,.3) 0%,rgba(168,85,247,.1) 40%,transparent 70%)",filter:"blur(50px)",pointerEvents:"none",animation:"glowPulse 4s ease infinite"}}/>
-
-              {/* Phone frame */}
-              <div style={{width:264,height:496,borderRadius:46,background:"linear-gradient(160deg,#1c1035 0%,#0e0820 45%,#040212 100%)",border:"2px solid rgba(255,255,255,.12)",boxShadow:"0 40px 100px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.04),inset 0 1px 0 rgba(255,255,255,.08)",overflow:"hidden",position:"relative",zIndex:1}}>
-                {/* Notch */}
-                <div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:84,height:26,background:"rgba(0,0,0,.9)",borderRadius:"0 0 18px 18px",zIndex:20}}/>
-                {/* Shimmer top edge */}
-                <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent)",zIndex:19}}/>
-                {/* Content */}
-                <div style={{position:"absolute",inset:0}}>
-                  {/* Avatar creator */}
-                  <div style={{position:"absolute",top:"16%",left:"50%",transform:"translateX(-50%)",width:74,height:74,borderRadius:"50%",background:"linear-gradient(135deg,#7c3aed,#ec4899,#f97316)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,boxShadow:"0 0 40px rgba(124,58,237,.5),0 8px 32px rgba(0,0,0,.5)"}}>😎</div>
-                  <div style={{position:"absolute",top:"44%",left:0,right:0,textAlign:"center",fontSize:11,color:"rgba(255,255,255,.4)",fontWeight:600,letterSpacing:".04em"}}>@subcraftcreator</div>
-                  {/* Gradient bottom */}
-                  <div style={{position:"absolute",bottom:0,left:0,right:0,height:"55%",background:"linear-gradient(transparent,rgba(0,0,0,.95)"}}/>
-                </div>
-                {/* Animated subtitle */}
-                <HeroSubtitle style={S}/>
-                {/* Social buttons */}
-                <div style={{position:"absolute",right:10,top:"32%",display:"flex",flexDirection:"column",gap:18,alignItems:"center",zIndex:5}}>
-                  {[["❤️","12k"],["💬","489"],["↗","1.2k"]].map(([ic,n])=>(
-                    <div key={n} style={{textAlign:"center"}}>
-                      <div style={{fontSize:22}}>{ic}</div>
-                      <div style={{fontSize:8,color:"rgba(255,255,255,.7)",fontWeight:700}}>{n}</div>
-                    </div>
-                  ))}
-                </div>
-                {/* Username + music */}
-                <div style={{position:"absolute",bottom:18,left:12,right:40,zIndex:5}}>
-                  <div style={{fontSize:11,fontWeight:700,color:"#fff",marginBottom:2}}>@subcraftcreator</div>
-                  <div style={{fontSize:10,color:"rgba(255,255,255,.45)"}}>🎵 Son original - SubCraft</div>
-                </div>
-                {/* Progress */}
-                <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"4px 8px 8px",zIndex:5}}>
-                  <div style={{height:2,background:"rgba(255,255,255,.1)",borderRadius:2,overflow:"hidden"}}>
-                    <div style={{height:"100%",width:"38%",background:"linear-gradient(90deg,#7c3aed,#c084fc)",borderRadius:2}}/>
-                  </div>
-                </div>
-              </div>
+              <Phone3D size="large"/>
               {/* Home bar */}
               <div style={{width:88,height:3,background:"rgba(255,255,255,.18)",borderRadius:2,margin:"10px auto 0"}}/>
-
               {/* Floating chips */}
               <div style={{position:"absolute",top:24,right:-58,padding:"10px 14px",borderRadius:14,background:"rgba(5,4,12,.97)",border:"1px solid rgba(124,58,237,.25)",boxShadow:"0 8px 32px rgba(0,0,0,.8)",animation:"float 4s ease infinite",whiteSpace:"nowrap",zIndex:10}}>
                 <div style={{fontSize:12,fontWeight:800,color:"#34d399"}}>⚡ 10 sec</div>
                 <div style={{fontSize:9,color:"rgba(255,255,255,.3)"}}>Transcription IA</div>
               </div>
               <div style={{position:"absolute",top:"46%",right:-62,padding:"10px 14px",borderRadius:14,background:"rgba(5,4,12,.97)",border:"1px solid rgba(52,211,153,.22)",boxShadow:"0 8px 32px rgba(0,0,0,.8)",animation:"float 5.5s ease infinite 1.2s",whiteSpace:"nowrap",zIndex:10}}>
-                <div style={{fontSize:12,fontWeight:800,color:"#34d399"}}>99% precision</div>
+                <div style={{fontSize:12,fontWeight:800,color:"#34d399"}}>99% précision</div>
                 <div style={{fontSize:9,color:"rgba(255,255,255,.3)"}}>Whisper AI</div>
               </div>
               <div style={{position:"absolute",bottom:80,left:-58,padding:"10px 14px",borderRadius:14,background:"rgba(5,4,12,.97)",border:"1px solid rgba(168,85,247,.25)",boxShadow:"0 8px 32px rgba(0,0,0,.8)",animation:"float 5s ease infinite .8s",whiteSpace:"nowrap",zIndex:10}}>
@@ -1784,7 +1747,7 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
             {/* Produit */}
             <div>
               <div style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.35)",letterSpacing:".1em",textTransform:"uppercase",marginBottom:14}}>Produit</div>
-              {[["Fonctionnalites","feats"],["Styles","styles"],["Tarifs","pricing"],["FAQ","faq"],["Changelog","changelog"],["Statut","status"]].map(([label,id])=>(
+              {[["Styles","styles"],["Tarifs","pricing"],["Changelog","changelog"],["Statut","status"]].map(([label,id])=>(
                 <div key={label} style={{marginBottom:10}}>
                   <button onClick={()=>["changelog","status"].includes(id)?setPage(id):document.getElementById(id)?.scrollIntoView({behavior:"smooth"})}
                     style={{background:"none",border:"none",color:"rgba(255,255,255,.38)",fontSize:13,cursor:"pointer",padding:0,textAlign:"left",transition:"color .15s"}}
@@ -8337,7 +8300,8 @@ export default function App(){
 
       {/* Push permission banner */}
 
-      {page==="landing"&&<><LandingPage user={user} onCTA={()=>nav(user?"dashboard":"signup")} setPage={nav} goCheckout={goCheckout}/><ChatBubble setPage={nav} user={user}/></>}
+      {page==="landing"&&<><LandingPage user={user} onCTA={()=>nav(user?"dashboard":"signup")} setPage={nav} goCheckout={goCheckout}/></>}
+      <ChatBubble setPage={nav} user={user}/>
       {page==="login"&&<LoginPage onAuth={handleAuth} onAdmin={()=>nav("admin")} goSignup={()=>nav("signup")}/>}
       {page==="signup"&&<SignupPage onAuth={handleAuth} goLogin={()=>nav("login")}/>}
       {page==="auth"&&<LoginPage onAuth={handleAuth} onAdmin={()=>nav("admin")} goSignup={()=>nav("signup")}/>}
