@@ -7,6 +7,7 @@
  * Actions :
  *   list    GET  → liste les vidéos de l'utilisateur connecté
  *   create  POST → crée une nouvelle vidéo
+ *   update  POST → met à jour le statut/nom d'une vidéo (vérifie ownership)
  *   delete  POST → supprime une vidéo (vérifie ownership)
  *   cleanup POST → supprime les vidéos expirées (appelé par cron)
  */
@@ -98,6 +99,35 @@ export default async function handler(req, res) {
 
     const video = await response.json();
     return res.status(201).json({ video: video[0] || video });
+  }
+
+  // ── UPDATE — met à jour statut/nom d'une vidéo ────
+  if (action === "update" && req.method === "POST") {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) return res.status(401).json({ error: "Non authentifié" });
+
+    const user = await getUserFromToken(token);
+    if (!user) return res.status(401).json({ error: "Token invalide" });
+
+    const { videoId, status, name, exported } = req.body || {};
+    if (!videoId) return res.status(400).json({ error: "videoId requis" });
+
+    const updateData = {};
+    if (status !== undefined) updateData.status = status;
+    if (name !== undefined) updateData.name = name;
+    if (exported !== undefined) updateData.exported = exported;
+
+    // 🔒 Filtre par user_id — impossible de modifier la vidéo d'un autre
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/videos?id=eq.${videoId}&user_id=eq.${user.id}`,
+      {
+        method: "PATCH",
+        headers: { ...supabaseHeaders(token), "Prefer": "return=minimal" },
+        body: JSON.stringify(updateData),
+      }
+    );
+
+    return res.status(200).json({ updated: true });
   }
 
   // ── DELETE — supprime une vidéo ────────────────────

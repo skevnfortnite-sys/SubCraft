@@ -550,12 +550,23 @@ const WordByWord=({text, style, startTime, currentTime, dur})=>{
   );
 };
 
-const PhoneMockup=({subs,currentTime,styleId,fontSize,fontFamily,playing,onToggle,liveStyle,subYPos=20,onSubYChange,stripEmoji,displayMode='word',videoFile,videoRef,onTimeUpdate})=>{
+const PhoneMockup=({subs,currentTime,styleId,fontSize,fontFamily,playing,onToggle,liveStyle,subYPos=20,onSubYChange,stripEmoji,displayMode='word',videoUrl,videoRef,onTimeUpdate})=>{
   const st=SUBTITLE_STYLES.find(s=>s.id===styleId)||SUBTITLE_STYLES[0];
   const active=subs.find(s=>currentTime>=s.start&&currentTime<=s.end);
   const totalDur=subs.length>0?subs[subs.length-1].end+2:18;
   const W=270; const H=500;
   const phoneRef=useRef(null);
+  const [muted,setMuted]=useState(false);
+  const [volume,setVolume]=useState(1);
+  const [showVol,setShowVol]=useState(false);
+
+  // Applique volume/mute à la vraie vidéo
+  useEffect(()=>{
+    const vid=videoRef?.current;
+    if(!vid)return;
+    vid.muted=muted;
+    vid.volume=volume;
+  },[muted,volume,videoRef]);
 
   // Drag to reposition subtitle vertically
   const handleDragMove=(clientY)=>{
@@ -576,6 +587,13 @@ const PhoneMockup=({subs,currentTime,styleId,fontSize,fontFamily,playing,onToggl
   };
 
   const _applyText=(t)=>stripEmoji?stripEmoji(t):t;
+  // Ferme le panneau volume si clic en dehors
+  useEffect(()=>{
+    if(!showVol)return;
+    const handler=()=>setShowVol(false);
+    document.addEventListener("click",handler);
+    return()=>document.removeEventListener("click",handler);
+  },[showVol]);
   // Font size: much smaller to avoid double-line
   const scaledSize=Math.round(st.preview.size*(W/380)*(fontSize/68)*0.52);
   const clampedSize=Math.max(9,Math.min(scaledSize,16));
@@ -616,13 +634,13 @@ const PhoneMockup=({subs,currentTime,styleId,fontSize,fontFamily,playing,onToggl
         <div style={{position:'absolute',top:0,left:0,right:0,height:'45%',background:'linear-gradient(180deg,rgba(255,255,255,.04),transparent)',borderRadius:'42px 42px 0 0',pointerEvents:'none',zIndex:15}}/>
         <div style={{width:'100%',height:'100%',background:'#000',position:'relative',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
           {/* Vraie vidéo si disponible */}
-          {videoFile && videoFile instanceof File ? (
+          {videoUrl ? (
             <video
               ref={videoRef}
-              src={URL.createObjectURL(videoFile)}
+              src={videoUrl}
               style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}
-              muted={false}
               playsInline
+              preload="auto"
               onTimeUpdate={e=>onTimeUpdate&&onTimeUpdate(+(e.target.currentTime.toFixed(1)))}
               onEnded={()=>{}}
             />
@@ -666,6 +684,26 @@ const PhoneMockup=({subs,currentTime,styleId,fontSize,fontFamily,playing,onToggl
             <div style={{display:'flex',alignItems:'center',gap:8}}>
               <button onClick={e=>{e.stopPropagation();onToggle();}} style={{width:28,height:28,borderRadius:'50%',background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.1)',color:'#fff',fontSize:11,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',backdropFilter:'blur(4px)'}}>{playing?'⏸':'▶'}</button>
               <span style={{fontSize:8,color:'rgba(255,255,255,.4)',fontFamily:'JetBrains Mono'}}>{currentTime.toFixed(1)}s / {totalDur.toFixed(0)}s</span>
+              {/* Volume */}
+              {videoUrl&&(
+                <div style={{marginLeft:'auto',position:'relative',display:'flex',alignItems:'center',gap:4}}>
+                  <button onClick={e=>{e.stopPropagation();if(showVol){setShowVol(false);}else{setShowVol(true);}}} style={{width:24,height:24,borderRadius:'50%',background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.1)',color:'#fff',fontSize:10,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}
+                    title={muted?"Son coupé":"Volume"}>
+                    {muted||volume===0?'🔇':volume<0.5?'🔉':'🔊'}
+                  </button>
+                  {showVol&&(
+                    <div onClick={e=>e.stopPropagation()} style={{position:'absolute',bottom:'calc(100% + 8px)',right:0,background:'rgba(10,10,20,.95)',border:'1px solid rgba(255,255,255,.12)',borderRadius:10,padding:'10px 8px',display:'flex',flexDirection:'column',alignItems:'center',gap:6,zIndex:50,backdropFilter:'blur(12px)',boxShadow:'0 8px 24px rgba(0,0,0,.6)'}}>
+                      <input type='range' min={0} max={1} step={0.05} value={muted?0:volume}
+                        onChange={e=>{const v=+e.target.value;setVolume(v);setMuted(v===0);if(videoRef?.current){videoRef.current.volume=v;videoRef.current.muted=v===0;}}}
+                        style={{writingMode:'vertical-lr',direction:'rtl',width:4,height:70,accentColor:'#7c3aed',cursor:'pointer'}}/>
+                      <span style={{fontSize:8,color:'rgba(255,255,255,.5)',fontFamily:'JetBrains Mono'}}>{muted?'0':Math.round(volume*100)}%</span>
+                      <button onClick={()=>{setMuted(m=>{const next=!m;if(videoRef?.current)videoRef.current.muted=next;return next;});}} style={{fontSize:9,background:'rgba(255,255,255,.08)',border:'none',color:'rgba(255,255,255,.5)',cursor:'pointer',borderRadius:4,padding:'2px 5px'}}>
+                        {muted?'Activer':'Couper'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2033,7 +2071,10 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
       dbId=d.video?.id||null;
     }catch(e){console.warn("Erreur création vidéo en DB",e);}
 
-    const newF={id:dbId||Date.now(),dbId,name:file?.name||"Nouvelle vidéo.mp4",date:new Date().toLocaleDateString("fr-FR"),dur:"00:00",thumb:"🎬",exported:false,deleteIn:24,status:"processing",views:0,style:"yellow-bold",subs:realSubs||null};
+    // Nom propre — enlève les caractères bizarres
+    const cleanName = (file?.name||"Nouvelle vidéo.mp4").replace(/[^a-zA-Z0-9.\-_àâäéèêëîïôùûüç ]/g,"").slice(0,80);
+
+    const newF={id:dbId||Date.now(),dbId,name:cleanName,date:new Date().toLocaleDateString("fr-FR"),dur:"00:00",thumb:"🎬",exported:false,deleteIn:24,status:"processing",views:0,style:"yellow-bold",subs:realSubs||null};
     setFiles(p=>[newF,...p]);
     setShowUpload(false);
     notify("Vidéo uploadée ! Transcription en cours...","info");
@@ -2064,12 +2105,24 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
         }
       } catch(e){ console.error("Erreur déduction crédits",e); }
     }
-    setTimeout(()=>{
+    setTimeout(async()=>{
       setFiles(p=>p.map(f=>f.id===newF.id?{...f,status:"ready"}:f));
       notify("✅ Transcription terminée — Ta vidéo est prête !","success");
       setNotifications(p=>[{id:Date.now(),icon:"✅",text:`${newF.name} — Sous-titres prêts`,time:"À l'instant",read:false},...p]);
+      // Met à jour le statut en DB
+      if(dbId){
+        try{
+          const t=localStorage.getItem("sc_token");
+          await fetch("/api/videos?action=update",{
+            method:"POST",
+            headers:{"Content-Type":"application/json","Authorization":`Bearer ${t}`},
+            body:JSON.stringify({videoId:dbId,status:"ready",name:cleanName}),
+          });
+        }catch(e){console.warn("Erreur update statut vidéo",e);}
+      }
     },3500);
-    onOpen(newF);
+    // Passe le vrai File objet pour que l'éditeur puisse lire la vidéo
+    onOpen(newF, file instanceof File ? file : null);
   };
 
   // Stats réelles depuis user + files
@@ -2923,7 +2976,7 @@ const ProfilePage=({user,setUser,onBack,setPage})=>{
 /* ══════════════════════════════════════════════
    PAGE: EDITOR
 ══════════════════════════════════════════════ */
-const EditorPage=({onBack,file})=>{
+const EditorPage=({onBack,file,rawFile})=>{
   const [tab,setTab]=useState("captions");
   const [subs,setSubs]=useState(file?.subs?.length>0 ? file.subs : genSubs());
   const [ct,setCt]=useState(0);
@@ -2937,11 +2990,15 @@ const EditorPage=({onBack,file})=>{
   const [activeEff,setActiveEff]=useState([]);
   const [activeLineEff,setActiveLineEff]=useState([]);
   const [activeWordEff,setActiveWordEff]=useState([]);
-  const [subYPos,setSubYPos]=useState(50); // % from bottom — centré par défaut
+  const [subYPos,setSubYPos]=useState(50);
   const [noEmoji,setNoEmoji]=useState(false);
   const [singleLine,setSingleLine]=useState(false);
-  const [displayMode,setDisplayMode]=useState("word"); // "word" | "phrase"
+  const [displayMode,setDisplayMode]=useState("word");
   const videoRef=useRef(null);
+  // URL stable pour la vidéo — recréée seulement si rawFile change
+  const videoUrl=useMemo(()=>rawFile instanceof File ? URL.createObjectURL(rawFile) : null,[rawFile]);
+  useEffect(()=>()=>{if(videoUrl)URL.revokeObjectURL(videoUrl);},[videoUrl]);
+
   const [showTrans,setShowTrans]=useState(false);
   const [transLang,setTransLang]=useState("en");
   const [translating,setTranslating]=useState(false);
@@ -2966,7 +3023,23 @@ const EditorPage=({onBack,file})=>{
   },[]);
 
   useEffect(()=>{if(shortcut){const t=setTimeout(()=>setShortcut(null),1500);return()=>clearTimeout(t);};},[shortcut]);
-  useEffect(()=>{if(!playing)return;const iv=setInterval(()=>setCt(t=>{if(t>=totalDur){setPlaying(false);return 0;}return+(t+.1).toFixed(1);}),100);return()=>clearInterval(iv);},[playing,totalDur]);
+
+  // Synchro play/pause avec la vraie vidéo HTML
+  useEffect(()=>{
+    const vid=videoRef.current;
+    if(vid){
+      if(playing){vid.play().catch(()=>{});}
+      else{vid.pause();}
+    } else {
+      // Pas de vidéo réelle — timer JS
+      if(!playing) return;
+      const iv=setInterval(()=>setCt(t=>{
+        if(t>=totalDur){setPlaying(false);return 0;}
+        return+(t+.1).toFixed(1);
+      }),100);
+      return()=>clearInterval(iv);
+    }
+  },[playing,totalDur]);
 
   const saveSubs=(newSubs)=>{setUndoStack(p=>[...p.slice(-19),subs]);setRedoStack([]);setSubs(newSubs);};
   const undo=()=>{if(!undoStack.length)return;setRedoStack(p=>[subs,...p]);setSubs(undoStack[undoStack.length-1]);setUndoStack(p=>p.slice(0,-1));};
@@ -3016,15 +3089,16 @@ const EditorPage=({onBack,file})=>{
   const [exportStatus,setExportStatus]=useState("");
 
   const exportMP4=async()=>{
-    if(!file){notify("Aucune vidéo chargée","error");return;}
+    if(!rawFile&&!videoUrl){notify("Aucune vidéo chargée","error");return;}
     if(!subs.length){notify("Aucun sous-titre à incruster","error");return;}
     setExporting(true);setExportProgress(0);setExportStatus("Préparation de la vidéo...");
 
     try{
-      // 1. Créer un élément vidéo source
-      const videoUrl=URL.createObjectURL(file);
+      // Utilise l'URL stable déjà créée, ou en crée une temporaire
+      const srcUrl=videoUrl||(rawFile?URL.createObjectURL(rawFile):null);
+      if(!srcUrl){notify("Vidéo introuvable","error");setExporting(false);return;}
       const vid=document.createElement("video");
-      vid.src=videoUrl;
+      vid.src=srcUrl;
       vid.muted=true;
       vid.playsInline=true;
       await new Promise(r=>{vid.onloadedmetadata=r;vid.load();});
@@ -3143,7 +3217,9 @@ const EditorPage=({onBack,file})=>{
       const a=document.createElement("a");
       const ext=mimeType.includes("mp4")?"mp4":"webm";
       a.href=url;a.download=`subcraft-export.${ext}`;a.click();
-      URL.revokeObjectURL(url);URL.revokeObjectURL(videoUrl);
+      URL.revokeObjectURL(url);
+      // Ne pas révoquer videoUrl ici — c'est l'URL stable gérée par useMemo dans EditorPage
+      if(!videoUrl && srcUrl) URL.revokeObjectURL(srcUrl); // révoquer seulement si on en a créé une temporaire
 
       notify("✅ Vidéo exportée !","success");
       setShowExport(false);
@@ -3238,7 +3314,7 @@ const EditorPage=({onBack,file})=>{
               onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}
               style={{transition:"transform .25s ease",position:"relative"}}>
               <div style={{position:"absolute",inset:-16,background:`radial-gradient(${T.acc}14,${T.purple}06 50%,transparent 70%)`,filter:"blur(28px)",animation:"glowPulse 3s ease infinite",pointerEvents:"none"}}/>
-              <PhoneMockup subs={subs} currentTime={ct} styleId={styleId} fontSize={fontSize} fontFamily={fontFam} playing={playing} onToggle={()=>{setPlaying(p=>{const next=!p;if(videoRef.current){next?videoRef.current.play():videoRef.current.pause();}return next;});}} liveStyle={liveSubStyle} subYPos={subYPos} onSubYChange={setSubYPos} stripEmoji={_stripEmoji} displayMode={displayMode} videoFile={file} videoRef={videoRef} onTimeUpdate={(t)=>setCt(t)}/>
+              <PhoneMockup subs={subs} currentTime={ct} styleId={styleId} fontSize={fontSize} fontFamily={fontFam} playing={playing} onToggle={()=>setPlaying(p=>!p)} liveStyle={liveSubStyle} subYPos={subYPos} onSubYChange={setSubYPos} stripEmoji={_stripEmoji} displayMode={displayMode} videoUrl={videoUrl} videoRef={videoRef} onTimeUpdate={(t)=>setCt(t)}/>
             </div>
           </div>
           {/* Controls — fixed compact strip at bottom */}
@@ -3618,7 +3694,7 @@ const EditorPage=({onBack,file})=>{
           ):(
             <>
               {[
-                {icon:"🎬",title:"Vidéo MP4/WebM avec sous-titres",desc:file?"Sous-titres incrustés en temps réel dans le navigateur":"Charge d'abord une vidéo",badge:file?"HD":"",action:file?exportMP4:()=>notify("Charge une vidéo d'abord","warning"),disabled:!file},
+                {icon:"🎬",title:"Vidéo MP4/WebM avec sous-titres",desc:rawFile?"Sous-titres incrustés en temps réel dans le navigateur":"Charge d'abord une vidéo",badge:rawFile?"HD":"",action:rawFile?exportMP4:()=>notify("Charge une vidéo d'abord","warning"),disabled:!rawFile},
                 {icon:"📄",title:"Fichier SRT",desc:"Format universel — compatible DaVinci, Premiere, CapCut",action:exportSRT},
                 {icon:"📋",title:"Copier le texte brut",desc:"Juste le texte sans timing",action:()=>{navigator.clipboard?.writeText(subs.map(s=>s.text).join("\n"));notify("Texte copié !","success");}},
               ].map(e=>(
@@ -8572,6 +8648,7 @@ export default function App(){
   const [page,setPage]=useState("landing");
   const [user,setUser]=useState(null);
   const [currentFile,setCurrentFile]=useState(null);
+  const [currentRawFile,setCurrentRawFile]=useState(null); // le vrai File objet du navigateur
   const [checkoutPlan,setCheckoutPlan]=useState("pro");
   const [checkoutYearly,setCheckoutYearly]=useState(true);
   const [cookieConsent,setCookieConsent]=useState({necessary:true,analytics:false,marketing:false});
@@ -8810,8 +8887,8 @@ export default function App(){
       {page==="signup-success"&&<SignupSuccessPage user={user} onContinue={()=>nav("onboarding")}/>}
       {page==="onboarding"&&<OnboardingPage user={user} onComplete={()=>nav("dashboard")}/>}
       {page==="dashboard"&&(user?.status==="suspended"?nav("banned"):null)||null}
-      {page==="dashboard"&&user?.status!=="suspended"&&<Dashboard user={user} setUser={setUser} onOpen={f=>{setCurrentFile(f);nav("editor");}} onLogout={()=>{setUser(null);nav("landing");}} setPage={nav}/>}
-      {page==="editor"&&<EditorPage onBack={()=>nav("dashboard")} file={currentFile}/>}
+      {page==="dashboard"&&user?.status!=="suspended"&&<Dashboard user={user} setUser={setUser} onOpen={(f,rawFile)=>{setCurrentFile(f);setCurrentRawFile(rawFile||null);nav("editor");}} onLogout={()=>{setUser(null);nav("landing");}} setPage={nav}/>}
+      {page==="editor"&&<EditorPage onBack={()=>nav("dashboard")} file={currentFile} rawFile={currentRawFile}/>}
       {page==="pricing"&&<PricingPage onBack={()=>nav(user?"dashboard":"landing")} onSelect={(planId,yearly)=>goCheckout(planId,yearly)}/>}
       {page==="checkout"&&<CheckoutPage plan={checkoutPlan} yearly={checkoutYearly} onBack={()=>nav("pricing")} user={user} onSuccess={(planId)=>{setUser(u=>({...u,plan:PLANS.find(p=>p.id===planId)?.name||"Pro"}));nav("dashboard");notify("🎉 Bienvenue dans le plan Pro !","success");}}/>}
       {page==="payment-failed"&&<PaymentFailed onRetry={()=>nav("checkout")} onBack={()=>nav("pricing")}/>}
