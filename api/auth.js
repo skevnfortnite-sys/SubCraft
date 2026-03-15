@@ -171,16 +171,42 @@ export default async function handler(req, res) {
 
     const profileRes = await fetch(
       `${SUPABASE_URL}/rest/v1/users?id=eq.${userData.id}&select=*`,
-      { headers: { ...headers, Authorization: `Bearer ${token}` } }
+      { headers: { ...headers, Authorization: `Bearer ${SERVICE_KEY}` } }
     );
     const profiles = await profileRes.json();
-    const profile = profiles[0] || {};
+    let profile = profiles[0] || null;
+
+    // Création automatique du profil pour les users Google OAuth
+    if (!profile) {
+      const googleName = userData.user_metadata?.full_name
+        || userData.user_metadata?.name
+        || userData.email?.split("@")[0]
+        || "Créateur";
+      await fetch(`${SUPABASE_URL}/rest/v1/users`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SERVICE_KEY,
+          "Authorization": `Bearer ${SERVICE_KEY}`,
+          "Prefer": "return=minimal",
+        },
+        body: JSON.stringify({
+          id: userData.id,
+          email: userData.email,
+          name: googleName,
+          plan: "free",
+          credits: 3,
+          status: "active",
+        }),
+      });
+      profile = { name: googleName, plan: "free", credits: 3, status: "active" };
+    }
 
     return res.status(200).json({
       user: {
         id: userData.id,
         email: userData.email,
-        name: profile.name,
+        name: profile.name || userData.user_metadata?.full_name || userData.email?.split("@")[0],
         plan: profile.plan || "free",
         credits: profile.credits ?? 3,
         status: profile.status || "active",

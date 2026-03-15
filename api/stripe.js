@@ -13,7 +13,6 @@
 
 import Stripe from 'stripe';
 
-// IDs de tes produits Stripe (mis à jour le 11/03/2026)
 const PRICE_IDS = {
   basic_monthly:  process.env.STRIPE_PRICE_BASIC_MONTHLY  || "price_1T9rqoEPK1a79r1P48fndZcd",
   basic_yearly:   process.env.STRIPE_PRICE_BASIC_YEARLY   || "price_1T9s2GEPK1a79r1PUei8TZk4",
@@ -23,32 +22,31 @@ const PRICE_IDS = {
   pro_yearly:     process.env.STRIPE_PRICE_PRO_YEARLY     || "price_1T9s0GEPK1a79r1PM9hkWc5Y",
 };
 
-export const config = {
-  api: { bodyParser: false }, // nécessaire pour webhook signature
-};
+// Lit le body brut depuis la requête (compatible Vercel serverless)
+async function getRawBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on("data", chunk => chunks.push(chunk));
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", reject);
+  });
+}
 
-import { buffer } from 'micro';
+export const config = { api: { bodyParser: false } };
 
 async function createCheckout(req, res, stripe) {
-  // body parsé manuellement pour cette route
   let body;
   try {
-    const raw = await buffer(req);
+    const raw = await getRawBody(req);
     body = JSON.parse(raw.toString());
-  } catch {
-    return res.status(400).json({ error: "Body invalide" });
-  }
+  } catch { return res.status(400).json({ error: "Body invalide" }); }
 
   const { planId, yearly, email, userId, successUrl, cancelUrl } = body;
   const priceKey = `${planId}_${yearly ? "yearly" : "monthly"}`;
   const priceId = PRICE_IDS[priceKey];
+  if (!priceId) return res.status(400).json({ error: `Plan inconnu : ${priceKey}` });
 
-  if (!priceId) {
-    return res.status(400).json({ error: `Plan inconnu : ${priceKey}` });
-  }
-
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://sub-craft-fxea.vercel.app";
-
+  const baseUrl = "https://sub-craft-fxea.vercel.app";
   try {
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
@@ -58,15 +56,9 @@ async function createCheckout(req, res, stripe) {
       metadata: { userId: userId || "guest", planId, yearly: String(yearly) },
       success_url: successUrl || `${baseUrl}/?payment=success&plan=${planId}`,
       cancel_url: cancelUrl || `${baseUrl}/?payment=cancel`,
-      subscription_data: {
-        metadata: { userId: userId || "guest", planId },
-      },
     });
-
     return res.status(200).json({ url: session.url, sessionId: session.id });
-
   } catch (err) {
-    console.error("[stripe checkout]", err.message);
     return res.status(500).json({ error: err.message });
   }
 }
@@ -74,92 +66,57 @@ async function createCheckout(req, res, stripe) {
 async function handleWebhook(req, res, stripe) {
   const sig = req.headers["stripe-signature"];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
   if (!webhookSecret) return res.status(500).json({ error: "STRIPE_WEBHOOK_SECRET manquant" });
 
   let event;
   try {
-    const raw = await buffer(req);
+    const raw = await getRawBody(req);
     event = stripe.webhooks.constructEvent(raw, sig, webhookSecret);
   } catch (err) {
-    console.error("[stripe webhook] Signature invalide:", err.message);
     return res.status(400).json({ error: `Webhook invalide: ${err.message}` });
   }
 
-  // Helper pour mettre à jour Supabase
-  const updateUserPlan = async (userId, plan, credits) => {
-    const creditsMap = { free: 3, basic: 30, expert: 100, pro: Infinity };
-    await fetch(
-      `${process.env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": process.env.SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${process.env.SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          plan,
-          credits: credits ?? creditsMap[plan] ?? 3,
-        }),
-      }
-    );
-    console.log(`✅ Supabase mis à jour — user:${userId} plan:${plan}`);
+  const updateUserPlan = async (userId, plan) => {
+    const creditsMap = { free: 3, basic: 30, expert: 100, pro: 999999 };
+    await fetch(`${process.env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": process.env.SUPABASE_SERVICE_KEY,
+        "Authorization": `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
+      },
+      body: JSON.stringify({ plan, credits: creditsMap[plan] ?? 3 }),
+    });
   };
 
-  // Traitement des événements
   switch (event.type) {
     case "checkout.session.completed": {
-      const session = event.data.object;
-      const { userId, planId } = session.metadata;
-      console.log(`✅ Paiement réussi — user:${userId} plan:${planId}`);
+      const { userId, planId } = event.data.object.metadata;
       await updateUserPlan(userId, planId);
-      // Envoie email de confirmation
-      await fetch(`${process.env.VERCEL_URL ? "https://"+process.env.VERCEL_URL : "https://sub-craft-fxea.vercel.app"}/api/email?action=payment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: session.customer_email, plan: planId }),
-      });
       break;
     }
     case "customer.subscription.deleted": {
-      const sub = event.data.object;
-      const userId = sub.metadata?.userId;
-      console.log(`⚠️ Abonnement annulé — user:${userId}`);
-      await updateUserPlan(userId, "free", 3);
+      const userId = event.data.object.metadata?.userId;
+      if (userId) await updateUserPlan(userId, "free");
       break;
     }
-    case "invoice.payment_failed": {
-      const invoice = event.data.object;
-      console.log(`❌ Paiement échoué — customer:${invoice.customer}`);
-      // TODO: envoyer email de relance via Brevo
-      break;
-    }
-    default:
-      break;
   }
-
   return res.status(200).json({ received: true });
 }
 
 async function createPortal(req, res, stripe) {
   let body;
   try {
-    const raw = await buffer(req);
+    const raw = await getRawBody(req);
     body = JSON.parse(raw.toString());
-  } catch {
-    return res.status(400).json({ error: "Body invalide" });
-  }
+  } catch { return res.status(400).json({ error: "Body invalide" }); }
 
-  const { customerId, returnUrl } = body;
+  const { customerId } = body;
   if (!customerId) return res.status(400).json({ error: "customerId requis" });
-
-  const baseUrl = returnUrl || process.env.NEXT_PUBLIC_BASE_URL || "https://sub-craft-fxea.vercel.app";
-
   try {
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: baseUrl,
+      return_url: "https://sub-craft-fxea.vercel.app",
     });
     return res.status(200).json({ url: session.url });
   } catch (err) {

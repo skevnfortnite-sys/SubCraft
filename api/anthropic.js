@@ -36,18 +36,12 @@ function checkRateLimit(ip) {
 
 export default async function handler(req, res) {
   // ── CORS ──────────────────────────────────────────────
-  const allowedOrigins = [
-    "https://subcraftai.com",
-    "https://www.subcraftai.com",
-    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
-    // Décommente en dev local :
-    // "http://localhost:3000",
-  ].filter(Boolean);
-
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  }
+  const origin = req.headers.origin || "";
+  const isAllowed = !origin ||
+    origin.includes("subcraftai.com") ||
+    origin.includes("vercel.app") ||
+    origin.includes("localhost");
+  res.setHeader("Access-Control-Allow-Origin", isAllowed ? origin || "*" : "https://subcraftai.com");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Vary", "Origin");

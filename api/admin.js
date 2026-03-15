@@ -27,6 +27,19 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(204).end();
 
+  // 🔒 Vérification admin — seul kevin.nedzvedsky@gmail.com peut accéder
+  const token = req.headers.authorization?.replace("Bearer ", "");
+  if (!token) return res.status(401).json({ error: "Non authentifié" });
+
+  const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: { "apikey": process.env.SUPABASE_ANON_KEY, "Authorization": `Bearer ${token}` },
+  });
+  const userData = await userRes.json();
+  const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "kevin.nedzvedsky@gmail.com";
+  if (!userData?.email || userData.email !== ADMIN_EMAIL) {
+    return res.status(403).json({ error: "Accès refusé" });
+  }
+
   const action = req.query.action;
 
   // ── USERS — liste tous les utilisateurs ────────────

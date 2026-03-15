@@ -8,7 +8,7 @@
  */
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
-const FROM_EMAIL = "skevn.fortnite@gmail.com";
+const FROM_EMAIL = process.env.BREVO_FROM_EMAIL || "noreply@subcraftai.com";
 const FROM_NAME = "SubCraft";
 
 async function sendEmail({ to, subject, html }) {
