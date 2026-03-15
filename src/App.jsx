@@ -267,17 +267,43 @@ const ChatBubble=({setPage,user})=>{
   const endRef=useRef(null);
   useEffect(()=>{endRef.current?.scrollIntoView({behavior:"smooth"});},[msgs]);
 
+  // Sauvegarde les conversations dans localStorage pour l'admin
+  const saveToAdmin=(allMsgs)=>{
+    try{
+      const sessionId="chat_"+(user?.email||"anonymous")+"_"+Date.now().toString(36).slice(-6);
+      const existing=JSON.parse(localStorage.getItem("sc_chat_tickets")||"[]");
+      const ticketIdx=existing.findIndex(t=>t.sessionId===sessionId);
+      const ticket={
+        sessionId,
+        user:user?.name||"Visiteur",
+        email:user?.email||"anonyme",
+        plan:user?.plan||"Free",
+        time:new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}),
+        date:new Date().toLocaleDateString("fr-FR"),
+        msgs:allMsgs,
+        status:"open",
+      };
+      if(ticketIdx>=0) existing[ticketIdx]=ticket;
+      else existing.unshift(ticket);
+      localStorage.setItem("sc_chat_tickets",JSON.stringify(existing.slice(0,50)));
+    }catch{}
+  };
+
   const send=async()=>{
     if(!msg.trim())return;
     const txt=msg.trim();
     setMsg("");
-    setMsgs(m=>[...m,{from:"user",text:txt}]);
+    const newMsgs=[...msgs,{from:"user",text:txt}];
+    setMsgs(newMsgs);
+    saveToAdmin(newMsgs);
     setLoading(true);
     try{
       const r=await fetch("/api/anthropic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:500,system:"Tu es Sophie, l'assistante SubCraft. Reponds en francais, de facon concise (2-3 phrases max). Tu aides les createurs de contenu avec les sous-titres IA. Sois sympathique et utile.",messages:[...msgs.filter(m=>m.from!=="bot"||msgs.indexOf(m)===0).map(m=>({role:m.from==="user"?"user":"assistant",content:m.text})),{role:"user",content:txt}]})});
       const d=await r.json();
       const reply=d.content?.[0]?.text||"Je suis la pour t'aider !";
-      setMsgs(m=>[...m,{from:"bot",text:reply}]);
+      const updated=[...newMsgs,{from:"bot",text:reply}];
+      setMsgs(updated);
+      saveToAdmin(updated);
     }catch{
       setMsgs(m=>[...m,{from:"bot",text:"Desolee, je suis momentanement indisponible. Reessaie ! 🔄"}]);
     }
@@ -959,7 +985,8 @@ const ParticleField=({count=50,color="#5b6cff",style={}})=>{
 };
 // Global phone content config — modifiable from admin
 const PHONE_CONFIG={
-  videoId:"dQw4w9WgXcQ", // YouTube video ID (default: Rick Astley as placeholder)
+  videoFile:"/1.mp4", // Vidéo locale depuis /public/1.mp4
+  videoId:"", // YouTube video ID (laissé vide si videoFile est utilisé)
   bgText:"REGARDE ÇA 😱",
   bgColor:"#FFE600",
   subs:[
@@ -973,11 +1000,11 @@ const Phone3D=({config=PHONE_CONFIG,size="normal"})=>{
   const ref=useRef(null);
   const W=size==="large"?274:size==="small"?180:234;
   const H=size==="large"?546:size==="small"?360:480;
-  const R=Math.round(W*.16); // border-radius proportional
+  const R=Math.round(W*.16);
   const cfg=config||PHONE_CONFIG;
   const [vidPlaying,setVidPlaying]=useState(false);
-  const ytId=cfg.videoId||"dQw4w9WgXcQ";
-  // Mouse-parallax from parent wrapper — auto-float otherwise
+  const videoFile=cfg.videoFile||null;
+  const ytId=cfg.videoId||null;
   useEffect(()=>{
     const el=ref.current;if(!el)return;
     let af,t=0;
@@ -993,33 +1020,39 @@ const Phone3D=({config=PHONE_CONFIG,size="normal"})=>{
       width:W,height:H,borderRadius:R,
       background:"#000",
       border:"2px solid rgba(255,255,255,.10)",
-      boxShadow:`0 70px 140px rgba(0,0,0,.85),
-                 0 0 0 1px rgba(91,108,255,.18),
-                 0 0 100px rgba(91,108,255,.12)`,
+      boxShadow:`0 70px 140px rgba(0,0,0,.85), 0 0 0 1px rgba(91,108,255,.18), 0 0 100px rgba(91,108,255,.12)`,
       position:"relative",overflow:"hidden",
       transformStyle:"preserve-3d",flexShrink:0,
       cursor:vidPlaying?"default":"pointer",
     }}>
-      {/* ── VIDEO LAYER: fills 100% of screen ── */}
-      {vidPlaying?(
+      {/* ── VIDEO LAYER ── */}
+      {videoFile?(
+        <video
+          src={videoFile}
+          autoPlay
+          loop
+          muted
+          playsInline
+          style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:1}}
+        />
+      ):vidPlaying&&ytId?(
         <iframe
           src={`https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&playsinline=1`}
           style={{position:"absolute",inset:0,width:"100%",height:"100%",border:"none",zIndex:1}}
           allow="autoplay; encrypted-media; fullscreen"
         />
-      ):(
+      ):ytId?(
         <img
           src={`https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`}
           alt=""
           style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:1}}
-          onError={e=>{
-            e.target.src=`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
-            e.target.onerror=()=>{e.target.style.display="none";};
-          }}
+          onError={e=>{e.target.src=`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;e.target.onerror=()=>{e.target.style.display="none";};}}
         />
+      ):(
+        <div style={{position:"absolute",inset:0,background:"linear-gradient(160deg,#1c1035,#040212)",zIndex:1}}/>
       )}
-      {/* ── Tap to play (only when paused) ── */}
-      {!vidPlaying&&(
+      {/* ── Tap to play (only for YouTube, not local video) ── */}
+      {!videoFile&&!vidPlaying&&ytId&&(
         <div onClick={()=>setVidPlaying(true)}
           style={{position:"absolute",inset:0,zIndex:2,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,.28)",backdropFilter:"blur(1px)"}}>
           <div style={{
@@ -1034,8 +1067,8 @@ const Phone3D=({config=PHONE_CONFIG,size="normal"})=>{
           }}>▶</div>
         </div>
       )}
-      {/* ── Stop button (only when playing) ── */}
-      {vidPlaying&&(
+      {/* ── Stop button (only for YouTube) ── */}
+      {!videoFile&&vidPlaying&&(
         <button onClick={()=>setVidPlaying(false)}
           style={{position:"absolute",top:14,right:12,zIndex:10,
             width:24,height:24,borderRadius:7,
@@ -1398,10 +1431,38 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
             </div>
 
             {/* Trust pills */}
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:28}}>
               {[["✓ Gratuit","rgba(52,211,153,.1)","rgba(52,211,153,.2)","#34d399"],["✓ Sans CB","rgba(255,255,255,.05)","rgba(255,255,255,.1)","rgba(255,255,255,.5)"],["✓ RGPD","rgba(255,255,255,.05)","rgba(255,255,255,.1)","rgba(255,255,255,.5)"],["✓ Annulation libre","rgba(255,255,255,.05)","rgba(255,255,255,.1)","rgba(255,255,255,.5)"]].map(([t,bg,bdr,c])=>(
                 <div key={t} style={{padding:"5px 12px",borderRadius:100,background:bg,border:"1px solid "+bdr,fontSize:11,color:c,fontWeight:600}}>{t}</div>
               ))}
+            </div>
+
+            {/* Social proof — avatars + étoiles */}
+            <div style={{display:"flex",alignItems:"center",gap:14,padding:"14px 18px",borderRadius:16,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.07)",width:"fit-content"}}>
+              {/* Stack d'avatars */}
+              <div style={{display:"flex"}}>
+                {[
+                  {initials:"ML",color:"#7c3aed"},
+                  {initials:"SB",color:"#ec4899"},
+                  {initials:"YK",color:"#f97316"},
+                  {initials:"AC",color:"#06b6d4"},
+                  {initials:"RD",color:"#34d399"},
+                ].map((a,i)=>(
+                  <div key={i} style={{width:32,height:32,borderRadius:"50%",background:`linear-gradient(135deg,${a.color},${a.color}88)`,border:"2px solid #05040c",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,color:"#fff",marginLeft:i===0?0:-10,zIndex:5-i,boxShadow:"0 2px 8px rgba(0,0,0,.4)"}}>
+                    {a.initials}
+                  </div>
+                ))}
+                <div style={{width:32,height:32,borderRadius:"50%",background:"rgba(124,58,237,.2)",border:"2px solid #05040c",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,color:"#c084fc",marginLeft:-10,zIndex:0}}>+9k</div>
+              </div>
+              {/* Stars + texte */}
+              <div>
+                <div style={{display:"flex",gap:2,marginBottom:3}}>
+                  {[1,2,3,4,5].map(s=><span key={s} style={{fontSize:12,color:"#fbbf24"}}>★</span>)}
+                </div>
+                <div style={{fontSize:12,color:"rgba(255,255,255,.55)",lineHeight:1.3}}>
+                  <span style={{color:"#fff",fontWeight:700}}>+10 000 créateurs</span> nous font confiance
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1469,8 +1530,47 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
         </div>
       </div>
 
-      {/* ── STYLES ── */}
-      <section id="styles" data-reveal="styles" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",maxWidth:1100,margin:"0 auto",transition:"opacity .6s, transform .6s",opacity:1}}>
+      {/* ── TÉMOIGNAGES ── */}
+      <section style={{padding:"clamp(60px,8vh,90px) max(32px,5vw)",maxWidth:1200,margin:"0 auto"}}>
+        <div style={{textAlign:"center",marginBottom:48}}>
+          <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 14px",borderRadius:100,background:"rgba(251,191,36,.08)",border:"1px solid rgba(251,191,36,.2)",marginBottom:14}}>
+            <span style={{fontSize:12}}>★★★★★</span>
+            <span style={{fontSize:11,color:"#fbbf24",fontWeight:700,letterSpacing:".1em"}}>+10 000 CRÉATEURS SATISFAITS</span>
+          </div>
+          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(26px,3.5vw,48px)",letterSpacing:"-.05em",lineHeight:.9}}>
+            Ils cartonnent.<br/><span style={{color:"rgba(255,255,255,.18)"}}>Maintenant c'est ton tour.</span>
+          </h2>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16}} className="mobile-grid1">
+          {[
+            {name:"Marie L.",handle:"@mariecreates",avatar:"ML",color:"#7c3aed",stars:5,text:"SubCraft a littéralement changé ma façon de créer. Mes Shorts passent de 2k à 80k vues depuis que j'utilise les sous-titres Bold Yellow. L'IA transcrit en 10 secondes, c'est dingue.",platform:"YouTube Shorts",followers:"124k"},
+            {name:"Yassine K.",handle:"@yassinefitness",avatar:"YK",color:"#f97316",stars:5,text:"J'ai testé 5 outils de sous-titres. SubCraft est le seul qui comprend l'arabe et le français en même temps. Mon taux de complétion a grimpé de 40% en 2 semaines.",platform:"TikTok",followers:"89k"},
+            {name:"Sophie B.",handle:"@sophiebusiness",avatar:"SB",color:"#ec4899",stars:5,text:"En tant que créatrice business, les sous-titres propres sont non-négociables. SubCraft me sauve 3h par semaine. Le style Captions est exactement ce que je cherchais.",platform:"Instagram Reels",followers:"56k"},
+          ].map((t,i)=>(
+            <div key={i} style={{padding:"22px",borderRadius:20,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.07)",display:"flex",flexDirection:"column",gap:16,transition:"all .25s"}}
+              onMouseEnter={e=>{e.currentTarget.style.background="rgba(124,58,237,.06)";e.currentTarget.style.borderColor="rgba(124,58,237,.2)";}}
+              onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.03)";e.currentTarget.style.borderColor="rgba(255,255,255,.07)";}}>
+              {/* Header */}
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                <div style={{width:44,height:44,borderRadius:"50%",background:`linear-gradient(135deg,${t.color},${t.color}66)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff",flexShrink:0}}>{t.avatar}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:14,color:"#fff"}}>{t.name}</div>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,.35)"}}>{t.handle} · {t.followers}</div>
+                </div>
+                <div style={{padding:"4px 10px",borderRadius:8,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)",fontSize:9,color:"rgba(255,255,255,.35)",fontWeight:600}}>{t.platform}</div>
+              </div>
+              {/* Stars */}
+              <div style={{display:"flex",gap:2}}>
+                {Array(t.stars).fill(0).map((_,s)=><span key={s} style={{fontSize:13,color:"#fbbf24"}}>★</span>)}
+              </div>
+              {/* Quote */}
+              <p style={{fontSize:13,color:"rgba(255,255,255,.6)",lineHeight:1.75,margin:0,flex:1}}>"{t.text}"</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── STYLES ── */}      <section id="styles" data-reveal="styles" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",maxWidth:1100,margin:"0 auto",transition:"opacity .6s, transform .6s",opacity:1}}>
         <div style={{textAlign:"center",marginBottom:40}}>
           <div style={{display:"inline-block",fontSize:10,padding:"3px 12px",borderRadius:100,background:"rgba(168,85,247,.08)",border:"1px solid rgba(168,85,247,.2)",color:"#c084fc",fontWeight:700,letterSpacing:".12em",marginBottom:14}}>28 STYLES VIRAUX</div>
           <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(30px,4vw,56px)",letterSpacing:"-.05em",lineHeight:.88,marginBottom:10}}>
@@ -3475,9 +3575,49 @@ const AdminTickets=({planColor})=>{
   const [active,setActive]=useState(null);
   const [reply,setReply]=useState("");
   const [filter,setFilter]=useState("all");
+  const [aiLoading,setAiLoading]=useState(false);
   const statusColor={open:T.pink,pending:T.yellow,resolved:T.green};
   const priColor={high:T.pink,medium:T.yellow,low:T.cyan};
+
+  // Charge les vrais chats depuis localStorage
+  useEffect(()=>{
+    try{
+      const chatTickets=JSON.parse(localStorage.getItem("sc_chat_tickets")||"[]");
+      const formatted=chatTickets.map((ct,i)=>({
+        id:`CH-${String(i+1).padStart(3,"0")}`,
+        user:ct.user,
+        email:ct.email,
+        plan:ct.plan||"Free",
+        sujet:ct.msgs?.find(m=>m.from==="user")?.text?.slice(0,50)||"Chat en direct",
+        time:`${ct.date} ${ct.time}`,
+        status:ct.status||"open",
+        priority:"medium",
+        source:"chat",
+        log:ct.msgs?.map(m=>({from:m.from==="user"?"user":"admin",text:m.text,time:ct.time}))||[],
+      }));
+      setTickets([...formatted,...INIT_TICKETS]);
+    }catch{}
+  },[]);
+
   const shown=tickets.filter(t=>filter==="all"||t.status===filter);
+
+  // Suggestion IA via Claude
+  const suggestAI=async()=>{
+    if(!active)return;
+    setAiLoading(true);
+    try{
+      const lastUserMsg=active.log.filter(m=>m.from==="user").slice(-1)[0]?.text||"";
+      const r=await fetch("/api/anthropic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+        model:"claude-sonnet-4-20250514",max_tokens:300,
+        system:"Tu es un agent support SubCraft. Génère une réponse professionnelle et concise (2-3 phrases) en français pour ce ticket utilisateur. SubCraft est un SaaS de sous-titres IA pour YouTube Shorts/TikTok/Reels.",
+        messages:[{role:"user",content:`Message utilisateur : "${lastUserMsg}"\n\nRédige une réponse support appropriée.`}]
+      })});
+      const d=await r.json();
+      setReply(d.content?.[0]?.text||"");
+    }catch{notify("Erreur IA","error");}
+    setAiLoading(false);
+  };
+
   const send=()=>{
     if(!reply.trim()||!active)return;
     const msg={from:"admin",text:reply,time:"À l'instant"};
@@ -3489,7 +3629,7 @@ const AdminTickets=({planColor})=>{
   return(
     <div className="page" style={{display:"flex",flexDirection:"column",height:"calc(100vh - 60px)",overflow:"hidden"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexShrink:0,flexWrap:"wrap",gap:8}}>
-        <h1 style={{fontWeight:800,fontSize:22}}>🎫 Tickets Support</h1>
+        <h1 style={{fontWeight:800,fontSize:22}}>🎫 Tickets & Chats Support</h1>
         <div style={{display:"flex",gap:5}}>
           {[["all","Tous"],["open","Ouverts"],["pending","En attente"],["resolved","Résolus"]].map(([id,label])=>(
             <button key={id} onClick={()=>setFilter(id)} style={{padding:"4px 11px",borderRadius:7,background:filter===id?T.acc+"20":"transparent",border:`1px solid ${filter===id?T.acc:T.border}`,color:filter===id?T.acc:T.muted,fontSize:11,fontWeight:filter===id?700:400,cursor:"pointer"}}>{label}</button>
@@ -3503,6 +3643,7 @@ const AdminTickets=({planColor})=>{
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
                 <div style={{display:"flex",gap:5,alignItems:"center"}}>
                   <span style={{fontSize:9,fontFamily:"JetBrains Mono",color:T.dim}}>{t.id}</span>
+                  {t.source==="chat"&&<span style={{fontSize:8,padding:"1px 5px",borderRadius:4,background:`${T.acc}20`,color:T.acc,fontWeight:700}}>LIVE</span>}
                   <div style={{width:6,height:6,borderRadius:"50%",background:priColor[t.priority]}}/>
                 </div>
                 <span style={{fontSize:9,padding:"2px 6px",borderRadius:100,background:statusColor[t.status]+"18",color:statusColor[t.status],fontWeight:700}}>{t.status==="open"?"Ouvert":t.status==="pending"?"Attente":"Résolu"}</span>
@@ -3545,16 +3686,21 @@ const AdminTickets=({planColor})=>{
                 </div>
               ))}
             </div>
-            <div style={{padding:"10px 13px",borderTop:`1px solid ${T.border}`,flexShrink:0,display:"flex",gap:7}}>
-              <textarea value={reply} onChange={e=>setReply(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&e.ctrlKey)send();}} placeholder="Répondre... (Ctrl+Entrée)" style={{flex:1,padding:"7px 11px",borderRadius:9,fontSize:12,background:T.bg,border:`1px solid ${T.border}`,color:T.text,resize:"none",height:48,lineHeight:1.5,fontFamily:"Outfit,sans-serif"}} onFocus={e=>e.target.style.borderColor=T.acc} onBlur={e=>e.target.style.borderColor=T.border}/>
-              <button onClick={send} style={{width:36,borderRadius:9,background:reply.trim()?T.acc:T.border,border:"none",color:"#fff",cursor:reply.trim()?"pointer":"default",fontSize:15,flexShrink:0,transition:"background .2s"}}>↑</button>
+            <div style={{padding:"10px 13px",borderTop:`1px solid ${T.border}`,flexShrink:0,display:"flex",flexDirection:"column",gap:7}}>
+              <div style={{display:"flex",gap:7}}>
+                <textarea value={reply} onChange={e=>setReply(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&e.ctrlKey)send();}} placeholder="Répondre... (Ctrl+Entrée)" style={{flex:1,padding:"7px 11px",borderRadius:9,fontSize:12,background:T.bg,border:`1px solid ${T.border}`,color:T.text,resize:"none",height:48,lineHeight:1.5,fontFamily:"Outfit,sans-serif"}} onFocus={e=>e.target.style.borderColor=T.acc} onBlur={e=>e.target.style.borderColor=T.border}/>
+                <button onClick={send} style={{width:36,borderRadius:9,background:reply.trim()?T.acc:T.border,border:"none",color:"#fff",cursor:reply.trim()?"pointer":"default",fontSize:15,flexShrink:0,transition:"background .2s"}}>↑</button>
+              </div>
+              <button onClick={suggestAI} disabled={aiLoading} style={{padding:"6px 12px",borderRadius:8,background:`${T.purple}18`,border:`1px solid ${T.purple}30`,color:T.purple,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6,alignSelf:"flex-start"}}>
+                {aiLoading?<span style={{animation:"spin 1s linear infinite",display:"inline-block"}}>⟳</span>:"🤖"} {aiLoading?"Génération...":"Suggérer une réponse IA"}
+              </button>
             </div>
           </div>
         ):(
           <div style={{background:T.surf,borderRadius:13,border:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10,color:T.muted}}>
             <div style={{fontSize:38}}>💬</div>
             <div style={{fontWeight:600,fontSize:14,color:T.text}}>Sélectionne un ticket</div>
-            <div style={{fontSize:12}}>Clique pour voir la conversation</div>
+            <div style={{fontSize:12}}>Chats live + tickets email</div>
           </div>
         )}
       </div>
@@ -5799,19 +5945,12 @@ const AdminPanel=({onExit})=>{
 
   const NAV=[
     {id:"dashboard",icon:"📊",label:"Dashboard"},
-    {id:"landing-editor",icon:"🖥️",label:"Éditeur du site"},
     {id:"users",icon:"👥",label:"Utilisateurs"},
     {id:"revenue",icon:"💰",label:"Revenus"},
-    {id:"analytics",icon:"📈",label:"Statistiques"},
-    {id:"security",icon:"🔒",label:"Sécurité"},
-    {id:"tickets",icon:"🎫",label:"Support"},
-    {id:"coupons",icon:"🎟️",label:"Coupons"},
-    {id:"email-templates",icon:"📧",label:"Emails"},
+    {id:"tickets",icon:"🎫",label:"Support & Chats"},
     {id:"api-keys",icon:"🔑",label:"Clés API"},
-    {id:"customize",icon:"🎨",label:"Personnalisation"},
-    {id:"seo",icon:"🌍",label:"SEO"},
-    {id:"storage",icon:"💾",label:"Stockage"},
-    {id:"system-logs",icon:"🖥️",label:"Logs Système"},
+    {id:"coupons",icon:"🎟️",label:"Coupons"},
+    {id:"security",icon:"🔒",label:"Sécurité"},
     {id:"settings",icon:"⚙️",label:"Paramètres"},
   ];
 
@@ -5833,9 +5972,8 @@ const AdminPanel=({onExit})=>{
         {/* Nav groups */}
         <div style={{flex:1,overflowY:"auto",padding:"10px 10px",scrollbarWidth:"none"}}>
           {[
-            {group:"Principal",items:NAV.slice(0,5)},
-            {group:"Outils",items:NAV.slice(5,9)},
-            {group:"Système",items:NAV.slice(9)},
+            {group:"Principal",items:NAV.slice(0,4)},
+            {group:"Système",items:NAV.slice(4)},
           ].map(g=>(
             <div key={g.group} style={{marginBottom:16}}>
               <div style={{fontSize:9,fontWeight:700,color:T.dim,letterSpacing:".1em",padding:"0 8px 6px",textTransform:"uppercase"}}>{g.group}</div>
