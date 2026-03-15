@@ -2831,24 +2831,87 @@ const TemplatesPage=({onBack,onSelect})=>(
 ══════════════════════════════════════════════ */
 const ProfilePage=({user,setUser,onBack,setPage})=>{
   const [name,setName]=useState(user?.name||"");
-  const [email,setEmail]=useState(user?.email||"");
-  const [bio,setBio]=useState("Créateur de contenu passionné 🎬");
+  const [bio,setBio]=useState(user?.bio||"");
   const [saved,setSaved]=useState(false);
+  const [saving,setSaving]=useState(false);
   const [tab,setTab]=useState("profile");
-  const planColor={Free:T.muted,Basic:T.cyan,Expert:T.green,Pro:T.acc};
+  const [pwCurrent,setPwCurrent]=useState("");
+  const [pwNew,setPwNew]=useState("");
+  const [pwNew2,setPwNew2]=useState("");
+  const [pwLoading,setPwLoading]=useState(false);
+  const [pwErr,setPwErr]=useState("");
+  const [pwOk,setPwOk]=useState(false);
+  const [deleteConfirm,setDeleteConfirm]=useState("");
+  const [deleteLoading,setDeleteLoading]=useState(false);
+  const planColor={Free:T.muted,Basic:T.cyan,Expert:T.green,Pro:T.acc,free:T.muted,basic:T.cyan,expert:T.green,pro:T.acc};
+  const joinedDate=user?.created_at?new Date(user.created_at).toLocaleDateString("fr-FR",{month:"long",year:"numeric"}):"—";
 
-  const save=()=>{
-    setUser(u=>({...u,name,email}));
-    setSaved(true);
-    notify("Profil mis à jour !","success");
-    setTimeout(()=>setSaved(false),2500);
+  // Sauvegarde le nom en DB
+  const save=async()=>{
+    if(!name.trim()){notify("Le nom ne peut pas être vide","error");return;}
+    setSaving(true);
+    try{
+      const token=localStorage.getItem("sc_token");
+      const r=await fetch("/api/admin?action=update",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+        body:JSON.stringify({userId:user.id,name:name.trim()}),
+      });
+      if(r.ok){
+        setUser(u=>({...u,name:name.trim(),bio}));
+        setSaved(true);
+        notify("Profil mis à jour !","success");
+        setTimeout(()=>setSaved(false),2500);
+      } else {
+        notify("Erreur lors de la sauvegarde","error");
+      }
+    }catch{notify("Erreur réseau","error");}
+    setSaving(false);
   };
 
-  const invoices=[
-    {id:"INV-001",date:"01/03/2026",plan:"Pro",amount:"€21.00",status:"Payée"},
-    {id:"INV-002",date:"01/02/2026",plan:"Pro",amount:"€21.00",status:"Payée"},
-    {id:"INV-003",date:"01/01/2026",plan:"Expert",amount:"€13.00",status:"Payée"},
-  ];
+  // Change le mot de passe via Supabase
+  const changePassword=async()=>{
+    setPwErr("");
+    if(pwNew.length<8){setPwErr("Minimum 8 caractères");return;}
+    if(pwNew!==pwNew2){setPwErr("Les mots de passe ne correspondent pas");return;}
+    setPwLoading(true);
+    try{
+      const token=localStorage.getItem("sc_token");
+      const r=await fetch("/api/auth?action=update-password",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+        body:JSON.stringify({password:pwNew}),
+      });
+      const d=await r.json();
+      if(r.ok){
+        setPwOk(true);setPwCurrent("");setPwNew("");setPwNew2("");
+        notify("Mot de passe mis à jour !","success");
+        setTimeout(()=>setPwOk(false),3000);
+      } else {
+        setPwErr(d.error||"Erreur lors du changement");
+      }
+    }catch{setPwErr("Erreur réseau");}
+    setPwLoading(false);
+  };
+
+  // Supprime le compte
+  const deleteAccount=async()=>{
+    if(deleteConfirm!=="SUPPRIMER"){notify("Tape SUPPRIMER pour confirmer","warning");return;}
+    setDeleteLoading(true);
+    try{
+      const token=localStorage.getItem("sc_token");
+      await fetch("/api/admin?action=delete",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+        body:JSON.stringify({userId:user.id}),
+      });
+      localStorage.removeItem("sc_token");
+      setUser(null);
+      notify("Compte supprimé","warning");
+      setPage("landing");
+    }catch{notify("Erreur lors de la suppression","error");}
+    setDeleteLoading(false);
+  };
 
   return(
     <div style={{minHeight:"100vh",background:T.bg,padding:"0 24px 80px"}} className="page">
@@ -2859,7 +2922,7 @@ const ProfilePage=({user,setUser,onBack,setPage})=>{
         </div>
         {/* Tabs */}
         <div style={{display:"flex",borderBottom:`1px solid ${T.border}`,marginBottom:28,gap:0,overflowX:"auto"}}>
-          {[["profile","👤 Profil"],["security","🔒 Sécurité"],["billing","💳 Abonnement"],["invoices","🧾 Factures"]].map(([id,label])=>(
+          {[["profile","👤 Profil"],["security","🔒 Sécurité"],["billing","💳 Abonnement"]].map(([id,label])=>(
             <button key={id} onClick={()=>setTab(id)} style={{padding:"11px 18px",background:"transparent",border:"none",borderBottom:`2px solid ${tab===id?T.acc:"transparent"}`,color:tab===id?T.text:T.muted,fontWeight:tab===id?700:400,fontSize:13,cursor:"pointer",whiteSpace:"nowrap",transition:"all .15s"}}>
               {label}
             </button>
@@ -2870,28 +2933,23 @@ const ProfilePage=({user,setUser,onBack,setPage})=>{
           <div style={{display:"grid",gridTemplateColumns:"200px 1fr",gap:28}} className="mobile-col">
             {/* Avatar */}
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14}}>
-              <div style={{position:"relative"}}>
-                <Avatar name={user?.name||"U"} size={100}/>
-                <button style={{position:"absolute",bottom:0,right:0,width:28,height:28,borderRadius:"50%",background:T.acc,border:"none",color:"#fff",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>✏</button>
-              </div>
+              <Avatar name={user?.name||"U"} size={100}/>
               <Tag color={planColor[user?.plan]||T.muted} size="md">{user?.plan}</Tag>
-              <div style={{fontSize:12,color:T.muted,textAlign:"center"}}>Membre depuis<br/><span style={{color:T.text}}>Mars 2026</span></div>
+              <div style={{fontSize:12,color:T.muted,textAlign:"center"}}>Membre depuis<br/><span style={{color:T.text}}>{joinedDate}</span></div>
+              <div style={{fontSize:11,color:T.dim,textAlign:"center",wordBreak:"break-all"}}>{user?.email}</div>
             </div>
             {/* Form */}
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <Input label="Nom complet" value={name} onChange={setName} placeholder="Ton nom"/>
-              <Input label="Email" value={email} onChange={setEmail} placeholder="ton@email.com" type="email"/>
               <div>
                 <label style={{fontSize:12,color:T.muted,display:"block",marginBottom:6,fontWeight:600}}>Bio</label>
-                <textarea value={bio} onChange={e=>setBio(e.target.value)} style={{width:"100%",padding:"10px 14px",borderRadius:10,fontSize:14,background:T.surf,border:`1px solid ${T.border}`,color:T.text,resize:"vertical",minHeight:80,lineHeight:1.5}} onFocus={e=>e.target.style.borderColor=T.acc} onBlur={e=>e.target.style.borderColor=T.border}/>
+                <textarea value={bio} onChange={e=>setBio(e.target.value)} placeholder="Créateur de contenu passionné 🎬" style={{width:"100%",padding:"10px 14px",borderRadius:10,fontSize:14,background:T.surf,border:`1px solid ${T.border}`,color:T.text,resize:"vertical",minHeight:80,lineHeight:1.5,fontFamily:"inherit"}} onFocus={e=>e.target.style.borderColor=T.acc} onBlur={e=>e.target.style.borderColor=T.border}/>
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                {[{label:"TikTok",icon:"📱",ph:"@tontiktok"},{label:"Instagram",icon:"📸",ph:"@toninstagram"},{label:"YouTube",icon:"▶",ph:"Ta chaîne"},{label:"Site web",icon:"🌐",ph:"https://..."}].map(f=>(
-                  <Input key={f.label} label={f.label} value="" onChange={()=>{}} placeholder={f.ph} icon={f.icon}/>
-                ))}
+              <div style={{padding:"12px 16px",borderRadius:10,background:`${T.acc}08`,border:`1px solid ${T.acc}15`,fontSize:12,color:T.muted}}>
+                📧 Email : <strong style={{color:T.text}}>{user?.email}</strong> — pour changer d'email, contacte le support.
               </div>
-              <Btn onClick={save} v={saved?"success":"primary"} style={{alignSelf:"flex-start"}}>
-                {saved?"✓ Sauvegardé !":"Sauvegarder les modifications"}
+              <Btn onClick={save} disabled={saving} v={saved?"success":"primary"} style={{alignSelf:"flex-start"}}>
+                {saving?"Sauvegarde...":saved?"✓ Sauvegardé !":"Sauvegarder les modifications"}
               </Btn>
             </div>
           </div>
@@ -2902,21 +2960,25 @@ const ProfilePage=({user,setUser,onBack,setPage})=>{
             <div style={{padding:20,borderRadius:14,background:T.surf,border:`1px solid ${T.border}`}}>
               <div style={{fontWeight:700,fontSize:15,marginBottom:16}}>🔒 Changer le mot de passe</div>
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                <Input label="Mot de passe actuel" value="" onChange={()=>{}} type="password" placeholder="••••••••"/>
-                <Input label="Nouveau mot de passe" value="" onChange={()=>{}} type="password" placeholder="••••••••" hint="Minimum 8 caractères, 1 majuscule, 1 chiffre"/>
-                <Input label="Confirmer le nouveau mot de passe" value="" onChange={()=>{}} type="password" placeholder="••••••••"/>
-                <Btn onClick={()=>notify("Mot de passe mis à jour !","success")} style={{alignSelf:"flex-start"}}>Changer le mot de passe</Btn>
+                <Input label="Nouveau mot de passe" value={pwNew} onChange={setPwNew} type="password" placeholder="Minimum 8 caractères"/>
+                <Input label="Confirmer le mot de passe" value={pwNew2} onChange={setPwNew2} type="password" placeholder="Répète le mot de passe"/>
+                {pwErr&&<div style={{fontSize:12,color:T.pink,padding:"8px 12px",borderRadius:8,background:`${T.pink}10`,border:`1px solid ${T.pink}20`}}>{pwErr}</div>}
+                {pwOk&&<div style={{fontSize:12,color:T.green,padding:"8px 12px",borderRadius:8,background:`${T.green}10`,border:`1px solid ${T.green}20`}}>✓ Mot de passe mis à jour !</div>}
+                <Btn onClick={changePassword} disabled={pwLoading||!pwNew||!pwNew2} style={{alignSelf:"flex-start"}}>
+                  {pwLoading?"Mise à jour...":"Changer le mot de passe"}
+                </Btn>
               </div>
             </div>
-            <div style={{padding:20,borderRadius:14,background:T.surf,border:`1px solid ${T.border}`}}>
-              <div style={{fontWeight:700,fontSize:15,marginBottom:6}}>🛡️ Authentification à 2 facteurs</div>
-              <div style={{color:T.muted,fontSize:13,marginBottom:14}}>Ajoute une couche de sécurité supplémentaire à ton compte.</div>
-              <Tog value={false} onChange={()=>notify("2FA activé !","success")} label="Activer la 2FA"/>
-            </div>
             <div style={{padding:20,borderRadius:14,background:`${T.pink}08`,border:`1px solid ${T.pink}22`}}>
-              <div style={{fontWeight:700,fontSize:15,marginBottom:6,color:T.pink}}>⚠️ Zone dangereuse</div>
-              <div style={{color:T.muted,fontSize:13,marginBottom:14}}>La suppression de compte est irréversible.</div>
-              <Btn v="danger" onClick={()=>notify("Fonctionnalité désactivée en démo","warning")}>Supprimer mon compte</Btn>
+              <div style={{fontWeight:700,fontSize:15,marginBottom:6,color:T.pink}}>⚠️ Supprimer mon compte</div>
+              <div style={{color:T.muted,fontSize:13,marginBottom:14,lineHeight:1.6}}>
+                Cette action est <strong style={{color:T.pink}}>irréversible</strong>. Ton compte, tes vidéos et tes données seront supprimés définitivement.
+              </div>
+              <input value={deleteConfirm} onChange={e=>setDeleteConfirm(e.target.value)} placeholder='Tape "SUPPRIMER" pour confirmer'
+                style={{width:"100%",padding:"10px 14px",borderRadius:10,background:T.bg,border:`1px solid ${T.pink}40`,color:T.text,fontSize:13,marginBottom:12,fontFamily:"inherit",outline:"none"}}/>
+              <Btn v="danger" disabled={deleteConfirm!=="SUPPRIMER"||deleteLoading} onClick={deleteAccount}>
+                {deleteLoading?"Suppression...":"Supprimer définitivement mon compte"}
+              </Btn>
             </div>
           </div>
         )}
@@ -2927,15 +2989,18 @@ const ProfilePage=({user,setUser,onBack,setPage})=>{
               <div style={{width:52,height:52,borderRadius:14,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>⭐</div>
               <div style={{flex:1}}>
                 <div style={{fontWeight:800,fontSize:18,marginBottom:2}}>Plan {user?.plan}</div>
-                <div style={{color:T.muted,fontSize:13}}>Prochain renouvellement le 1er avril 2026</div>
+                <div style={{color:T.muted,fontSize:13}}>
+                  {user?.plan==="free"||user?.plan==="Free"
+                    ?"Plan gratuit — passe à un plan supérieur pour plus de vidéos"
+                    :"Abonnement actif — géré via Stripe"}
+                </div>
               </div>
               <div style={{display:"flex",gap:8}}>
                 <Btn v="secondary" size="sm" onClick={()=>setPage("pricing")}>Changer de plan</Btn>
-                <Btn v="danger" size="sm" onClick={()=>notify("Abonnement annulé","warning")}>Annuler</Btn>
               </div>
             </div>
             {PLANS.map(p=>{
-              const active=p.name===user?.plan;
+              const active=p.name?.toLowerCase()===user?.plan?.toLowerCase();
               return(
                 <div key={p.id} style={{padding:"14px 18px",borderRadius:12,background:active?`${T.acc}08`:T.surf,border:`1px solid ${active?T.acc:T.border}`,display:"flex",alignItems:"center",gap:14,cursor:active?undefined:"pointer",transition:"all .15s"}}
                   onClick={()=>!active&&setPage("pricing")}
@@ -2949,23 +3014,6 @@ const ProfilePage=({user,setUser,onBack,setPage})=>{
                 </div>
               );
             })}
-          </div>
-        )}
-
-        {tab==="invoices"&&(
-          <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,overflow:"hidden"}}>
-            <div style={{padding:"11px 18px",borderBottom:`1px solid ${T.border}`,display:"grid",gridTemplateColumns:"100px 1fr 100px 100px 80px",fontSize:11,fontWeight:700,color:T.muted,textTransform:"uppercase",letterSpacing:".06em"}}>
-              <span>N°</span><span>Plan</span><span>Date</span><span>Montant</span><span>Statut</span>
-            </div>
-            {invoices.map((inv,i)=>(
-              <div key={inv.id} style={{padding:"12px 18px",borderBottom:i<invoices.length-1?`1px solid ${T.border}`:"none",display:"grid",gridTemplateColumns:"100px 1fr 100px 100px 80px",alignItems:"center",fontSize:13,transition:"background .15s"}} onMouseEnter={e=>e.currentTarget.style.background=T.surf2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                <span style={{fontFamily:"JetBrains Mono",color:T.muted}}>{inv.id}</span>
-                <span style={{fontWeight:600}}>{inv.plan}</span>
-                <span style={{color:T.muted}}>{inv.date}</span>
-                <span style={{fontFamily:"JetBrains Mono",fontWeight:600,color:T.green}}>{inv.amount}</span>
-                <Tag color={T.green}>{inv.status}</Tag>
-              </div>
-            ))}
           </div>
         )}
       </div>

@@ -1,18 +1,15 @@
 {
+  "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "framework": "vite",
-  "functions": {
-    "api/anthropic.js": { "maxDuration": 30 },
-    "api/whisper.js":   { "maxDuration": 60 },
-    "api/stripe.js":    { "maxDuration": 15 },
-    "api/auth.js":      { "maxDuration": 10 },
-    "api/videos.js":    { "maxDuration": 10 },
-    "api/admin.js":     { "maxDuration": 10 },
-    "api/coupons.js":   { "maxDuration": 10 }
-  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "crons": [
+    {
+      "path": "/api/videos?action=cleanup",
+      "schedule": "0 * * * *"
+    }
   ]
 }
