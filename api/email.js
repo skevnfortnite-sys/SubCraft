@@ -8,7 +8,7 @@
  */
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
-const FROM_EMAIL = process.env.BREVO_FROM_EMAIL || "noreply@subcraftai.com";
+const FROM_EMAIL = "skevn.fortnite@gmail.com";
 const FROM_NAME = "SubCraft";
 
 async function sendEmail({ to, subject, html }) {
@@ -168,6 +168,51 @@ export default async function handler(req, res) {
           <p style="color:#505070;font-size:12px;text-align:center;margin-top:32px">SubCraft · KEVININDUSTRIE SAS · SIRET 932 737 992 00010</p>
         </div>
       `,
+    });
+    return res.status(200).json({ sent: true, result });
+  }
+
+  // ── BROADCAST ─────────────────────────────────────
+  if (action === "broadcast") {
+    const { subject, body: content } = req.body || {};
+    if (!subject || !content) return res.status(400).json({ error: "subject et body requis" });
+    const html = content
+      .replace(/{name}/g, name || "Créateur")
+      .replace(/{email}/g, email)
+      .replace(/{plan}/g, req.body?.plan || "Free");
+
+    const result = await sendEmail({
+      to: email,
+      subject,
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#02030a;color:#fff;padding:40px;border-radius:16px">
+        <div style="text-align:center;margin-bottom:24px">
+          <div style="width:48px;height:48px;background:linear-gradient(135deg,#5b6cff,#e83970);border-radius:12px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:12px">✦</div>
+          <div style="font-weight:800;font-size:18px">${subject}</div>
+        </div>
+        <div style="color:#c0c0d8;font-size:15px;line-height:1.7">${html}</div>
+        <p style="color:#505070;font-size:11px;text-align:center;margin-top:32px">SubCraft · <a href="https://sub-craft-fxea.vercel.app" style="color:#5b6cff">subcraftai.com</a></p>
+      </div>`,
+    });
+    return res.status(200).json({ sent: true, result });
+  }
+
+  // ── J+3 REMINDER ──────────────────────────────────
+  if (action === "j3-reminder") {
+    const result = await sendEmail({
+      to: email,
+      subject: "Tu n'as pas encore testé SubCraft 🎬",
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#02030a;color:#fff;padding:40px;border-radius:16px">
+        <div style="text-align:center;margin-bottom:32px">
+          <div style="font-size:48px;margin-bottom:16px">🎬</div>
+          <h1 style="font-size:22px;margin:0;color:#fff">Tu as 3 vidéos gratuites qui t'attendent !</h1>
+        </div>
+        <p style="color:#a0a0c0;font-size:15px;line-height:1.7">Bonjour <strong style="color:#fff">${name || "Créateur"}</strong>,</p>
+        <p style="color:#a0a0c0;font-size:15px;line-height:1.7">Tu t'es inscrit sur SubCraft mais n'as pas encore uploadé de vidéo. Tes <strong style="color:#5b6cff">3 vidéos gratuites</strong> sont toujours disponibles.</p>
+        <div style="text-align:center;margin:32px 0">
+          <a href="https://sub-craft-fxea.vercel.app" style="background:linear-gradient(135deg,#5b6cff,#e83970);color:#fff;padding:14px 32px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px">Créer ma première vidéo →</a>
+        </div>
+        <p style="color:#505070;font-size:11px;text-align:center;margin-top:32px">SubCraft · <a href="https://sub-craft-fxea.vercel.app" style="color:#5b6cff">subcraftai.com</a></p>
+      </div>`,
     });
     return res.status(200).json({ sent: true, result });
   }
