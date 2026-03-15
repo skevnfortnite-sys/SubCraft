@@ -6418,7 +6418,7 @@ const AdminPanel=({onExit})=>{
             <div style={{width:34,height:34,borderRadius:10,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,boxShadow:`0 0 20px ${T.accGlow}`}}>✦</div>
             <div>
               <div className="syne" style={{fontWeight:800,fontSize:14,letterSpacing:"-.02em"}}>SubCraft</div>
-              <div style={{fontSize:9,color:T.green,fontWeight:700,letterSpacing:".06em"}}>ADMIN · v4.6</div>
+              <div style={{fontSize:9,color:T.green,fontWeight:700,letterSpacing:".06em"}}>ADMIN · v5.0 ✦ NEW</div>
             </div>
           </div>
         </div>
