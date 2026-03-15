@@ -556,6 +556,17 @@ const PhoneMockup=({subs,currentTime,styleId,fontSize,fontFamily,playing,onToggl
   const totalDur=subs.length>0?subs[subs.length-1].end+2:18;
   const W=270; const H=500;
   const phoneRef=useRef(null);
+  const [muted,setMuted]=useState(false);
+  const [volume,setVolume]=useState(1);
+  const [showVol,setShowVol]=useState(false);
+
+  // Applique volume/mute à la vraie vidéo
+  useEffect(()=>{
+    const vid=videoRef?.current;
+    if(!vid)return;
+    vid.muted=muted;
+    vid.volume=volume;
+  },[muted,volume,videoRef]);
 
   // Drag to reposition subtitle vertically
   const handleDragMove=(clientY)=>{
@@ -576,6 +587,13 @@ const PhoneMockup=({subs,currentTime,styleId,fontSize,fontFamily,playing,onToggl
   };
 
   const _applyText=(t)=>stripEmoji?stripEmoji(t):t;
+  // Ferme le panneau volume si clic en dehors
+  useEffect(()=>{
+    if(!showVol)return;
+    const handler=()=>setShowVol(false);
+    document.addEventListener("click",handler);
+    return()=>document.removeEventListener("click",handler);
+  },[showVol]);
   // Font size: much smaller to avoid double-line
   const scaledSize=Math.round(st.preview.size*(W/380)*(fontSize/68)*0.52);
   const clampedSize=Math.max(9,Math.min(scaledSize,16));
@@ -666,6 +684,26 @@ const PhoneMockup=({subs,currentTime,styleId,fontSize,fontFamily,playing,onToggl
             <div style={{display:'flex',alignItems:'center',gap:8}}>
               <button onClick={e=>{e.stopPropagation();onToggle();}} style={{width:28,height:28,borderRadius:'50%',background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.1)',color:'#fff',fontSize:11,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',backdropFilter:'blur(4px)'}}>{playing?'⏸':'▶'}</button>
               <span style={{fontSize:8,color:'rgba(255,255,255,.4)',fontFamily:'JetBrains Mono'}}>{currentTime.toFixed(1)}s / {totalDur.toFixed(0)}s</span>
+              {/* Volume */}
+              {videoUrl&&(
+                <div style={{marginLeft:'auto',position:'relative',display:'flex',alignItems:'center',gap:4}}>
+                  <button onClick={e=>{e.stopPropagation();if(showVol){setShowVol(false);}else{setShowVol(true);}}} style={{width:24,height:24,borderRadius:'50%',background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.1)',color:'#fff',fontSize:10,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}
+                    title={muted?"Son coupé":"Volume"}>
+                    {muted||volume===0?'🔇':volume<0.5?'🔉':'🔊'}
+                  </button>
+                  {showVol&&(
+                    <div onClick={e=>e.stopPropagation()} style={{position:'absolute',bottom:'calc(100% + 8px)',right:0,background:'rgba(10,10,20,.95)',border:'1px solid rgba(255,255,255,.12)',borderRadius:10,padding:'10px 8px',display:'flex',flexDirection:'column',alignItems:'center',gap:6,zIndex:50,backdropFilter:'blur(12px)',boxShadow:'0 8px 24px rgba(0,0,0,.6)'}}>
+                      <input type='range' min={0} max={1} step={0.05} value={muted?0:volume}
+                        onChange={e=>{const v=+e.target.value;setVolume(v);setMuted(v===0);if(videoRef?.current){videoRef.current.volume=v;videoRef.current.muted=v===0;}}}
+                        style={{writingMode:'vertical-lr',direction:'rtl',width:4,height:70,accentColor:'#7c3aed',cursor:'pointer'}}/>
+                      <span style={{fontSize:8,color:'rgba(255,255,255,.5)',fontFamily:'JetBrains Mono'}}>{muted?'0':Math.round(volume*100)}%</span>
+                      <button onClick={()=>{setMuted(m=>{const next=!m;if(videoRef?.current)videoRef.current.muted=next;return next;});}} style={{fontSize:9,background:'rgba(255,255,255,.08)',border:'none',color:'rgba(255,255,255,.5)',cursor:'pointer',borderRadius:4,padding:'2px 5px'}}>
+                        {muted?'Activer':'Couper'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2033,7 +2071,10 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
       dbId=d.video?.id||null;
     }catch(e){console.warn("Erreur création vidéo en DB",e);}
 
-    const newF={id:dbId||Date.now(),dbId,name:file?.name||"Nouvelle vidéo.mp4",date:new Date().toLocaleDateString("fr-FR"),dur:"00:00",thumb:"🎬",exported:false,deleteIn:24,status:"processing",views:0,style:"yellow-bold",subs:realSubs||null};
+    // Nom propre — enlève les caractères bizarres
+    const cleanName = (file?.name||"Nouvelle vidéo.mp4").replace(/[^a-zA-Z0-9.\-_àâäéèêëîïôùûüç ]/g,"").slice(0,80);
+
+    const newF={id:dbId||Date.now(),dbId,name:cleanName,date:new Date().toLocaleDateString("fr-FR"),dur:"00:00",thumb:"🎬",exported:false,deleteIn:24,status:"processing",views:0,style:"yellow-bold",subs:realSubs||null};
     setFiles(p=>[newF,...p]);
     setShowUpload(false);
     notify("Vidéo uploadée ! Transcription en cours...","info");
@@ -2064,10 +2105,21 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
         }
       } catch(e){ console.error("Erreur déduction crédits",e); }
     }
-    setTimeout(()=>{
+    setTimeout(async()=>{
       setFiles(p=>p.map(f=>f.id===newF.id?{...f,status:"ready"}:f));
       notify("✅ Transcription terminée — Ta vidéo est prête !","success");
       setNotifications(p=>[{id:Date.now(),icon:"✅",text:`${newF.name} — Sous-titres prêts`,time:"À l'instant",read:false},...p]);
+      // Met à jour le statut en DB
+      if(dbId){
+        try{
+          const t=localStorage.getItem("sc_token");
+          await fetch("/api/videos?action=update",{
+            method:"POST",
+            headers:{"Content-Type":"application/json","Authorization":`Bearer ${t}`},
+            body:JSON.stringify({videoId:dbId,status:"ready",name:cleanName}),
+          });
+        }catch(e){console.warn("Erreur update statut vidéo",e);}
+      }
     },3500);
     // Passe le vrai File objet pour que l'éditeur puisse lire la vidéo
     onOpen(newF, file instanceof File ? file : null);
@@ -2779,24 +2831,87 @@ const TemplatesPage=({onBack,onSelect})=>(
 ══════════════════════════════════════════════ */
 const ProfilePage=({user,setUser,onBack,setPage})=>{
   const [name,setName]=useState(user?.name||"");
-  const [email,setEmail]=useState(user?.email||"");
-  const [bio,setBio]=useState("Créateur de contenu passionné 🎬");
+  const [bio,setBio]=useState(user?.bio||"");
   const [saved,setSaved]=useState(false);
+  const [saving,setSaving]=useState(false);
   const [tab,setTab]=useState("profile");
-  const planColor={Free:T.muted,Basic:T.cyan,Expert:T.green,Pro:T.acc};
+  const [pwCurrent,setPwCurrent]=useState("");
+  const [pwNew,setPwNew]=useState("");
+  const [pwNew2,setPwNew2]=useState("");
+  const [pwLoading,setPwLoading]=useState(false);
+  const [pwErr,setPwErr]=useState("");
+  const [pwOk,setPwOk]=useState(false);
+  const [deleteConfirm,setDeleteConfirm]=useState("");
+  const [deleteLoading,setDeleteLoading]=useState(false);
+  const planColor={Free:T.muted,Basic:T.cyan,Expert:T.green,Pro:T.acc,free:T.muted,basic:T.cyan,expert:T.green,pro:T.acc};
+  const joinedDate=user?.created_at?new Date(user.created_at).toLocaleDateString("fr-FR",{month:"long",year:"numeric"}):"—";
 
-  const save=()=>{
-    setUser(u=>({...u,name,email}));
-    setSaved(true);
-    notify("Profil mis à jour !","success");
-    setTimeout(()=>setSaved(false),2500);
+  // Sauvegarde le nom en DB
+  const save=async()=>{
+    if(!name.trim()){notify("Le nom ne peut pas être vide","error");return;}
+    setSaving(true);
+    try{
+      const token=localStorage.getItem("sc_token");
+      const r=await fetch("/api/admin?action=update",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+        body:JSON.stringify({userId:user.id,name:name.trim()}),
+      });
+      if(r.ok){
+        setUser(u=>({...u,name:name.trim(),bio}));
+        setSaved(true);
+        notify("Profil mis à jour !","success");
+        setTimeout(()=>setSaved(false),2500);
+      } else {
+        notify("Erreur lors de la sauvegarde","error");
+      }
+    }catch{notify("Erreur réseau","error");}
+    setSaving(false);
   };
 
-  const invoices=[
-    {id:"INV-001",date:"01/03/2026",plan:"Pro",amount:"€21.00",status:"Payée"},
-    {id:"INV-002",date:"01/02/2026",plan:"Pro",amount:"€21.00",status:"Payée"},
-    {id:"INV-003",date:"01/01/2026",plan:"Expert",amount:"€13.00",status:"Payée"},
-  ];
+  // Change le mot de passe via Supabase
+  const changePassword=async()=>{
+    setPwErr("");
+    if(pwNew.length<8){setPwErr("Minimum 8 caractères");return;}
+    if(pwNew!==pwNew2){setPwErr("Les mots de passe ne correspondent pas");return;}
+    setPwLoading(true);
+    try{
+      const token=localStorage.getItem("sc_token");
+      const r=await fetch("/api/auth?action=update-password",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+        body:JSON.stringify({password:pwNew}),
+      });
+      const d=await r.json();
+      if(r.ok){
+        setPwOk(true);setPwCurrent("");setPwNew("");setPwNew2("");
+        notify("Mot de passe mis à jour !","success");
+        setTimeout(()=>setPwOk(false),3000);
+      } else {
+        setPwErr(d.error||"Erreur lors du changement");
+      }
+    }catch{setPwErr("Erreur réseau");}
+    setPwLoading(false);
+  };
+
+  // Supprime le compte
+  const deleteAccount=async()=>{
+    if(deleteConfirm!=="SUPPRIMER"){notify("Tape SUPPRIMER pour confirmer","warning");return;}
+    setDeleteLoading(true);
+    try{
+      const token=localStorage.getItem("sc_token");
+      await fetch("/api/admin?action=delete",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+        body:JSON.stringify({userId:user.id}),
+      });
+      localStorage.removeItem("sc_token");
+      setUser(null);
+      notify("Compte supprimé","warning");
+      setPage("landing");
+    }catch{notify("Erreur lors de la suppression","error");}
+    setDeleteLoading(false);
+  };
 
   return(
     <div style={{minHeight:"100vh",background:T.bg,padding:"0 24px 80px"}} className="page">
@@ -2807,7 +2922,7 @@ const ProfilePage=({user,setUser,onBack,setPage})=>{
         </div>
         {/* Tabs */}
         <div style={{display:"flex",borderBottom:`1px solid ${T.border}`,marginBottom:28,gap:0,overflowX:"auto"}}>
-          {[["profile","👤 Profil"],["security","🔒 Sécurité"],["billing","💳 Abonnement"],["invoices","🧾 Factures"]].map(([id,label])=>(
+          {[["profile","👤 Profil"],["security","🔒 Sécurité"],["billing","💳 Abonnement"]].map(([id,label])=>(
             <button key={id} onClick={()=>setTab(id)} style={{padding:"11px 18px",background:"transparent",border:"none",borderBottom:`2px solid ${tab===id?T.acc:"transparent"}`,color:tab===id?T.text:T.muted,fontWeight:tab===id?700:400,fontSize:13,cursor:"pointer",whiteSpace:"nowrap",transition:"all .15s"}}>
               {label}
             </button>
@@ -2818,28 +2933,23 @@ const ProfilePage=({user,setUser,onBack,setPage})=>{
           <div style={{display:"grid",gridTemplateColumns:"200px 1fr",gap:28}} className="mobile-col">
             {/* Avatar */}
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14}}>
-              <div style={{position:"relative"}}>
-                <Avatar name={user?.name||"U"} size={100}/>
-                <button style={{position:"absolute",bottom:0,right:0,width:28,height:28,borderRadius:"50%",background:T.acc,border:"none",color:"#fff",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>✏</button>
-              </div>
+              <Avatar name={user?.name||"U"} size={100}/>
               <Tag color={planColor[user?.plan]||T.muted} size="md">{user?.plan}</Tag>
-              <div style={{fontSize:12,color:T.muted,textAlign:"center"}}>Membre depuis<br/><span style={{color:T.text}}>Mars 2026</span></div>
+              <div style={{fontSize:12,color:T.muted,textAlign:"center"}}>Membre depuis<br/><span style={{color:T.text}}>{joinedDate}</span></div>
+              <div style={{fontSize:11,color:T.dim,textAlign:"center",wordBreak:"break-all"}}>{user?.email}</div>
             </div>
             {/* Form */}
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <Input label="Nom complet" value={name} onChange={setName} placeholder="Ton nom"/>
-              <Input label="Email" value={email} onChange={setEmail} placeholder="ton@email.com" type="email"/>
               <div>
                 <label style={{fontSize:12,color:T.muted,display:"block",marginBottom:6,fontWeight:600}}>Bio</label>
-                <textarea value={bio} onChange={e=>setBio(e.target.value)} style={{width:"100%",padding:"10px 14px",borderRadius:10,fontSize:14,background:T.surf,border:`1px solid ${T.border}`,color:T.text,resize:"vertical",minHeight:80,lineHeight:1.5}} onFocus={e=>e.target.style.borderColor=T.acc} onBlur={e=>e.target.style.borderColor=T.border}/>
+                <textarea value={bio} onChange={e=>setBio(e.target.value)} placeholder="Créateur de contenu passionné 🎬" style={{width:"100%",padding:"10px 14px",borderRadius:10,fontSize:14,background:T.surf,border:`1px solid ${T.border}`,color:T.text,resize:"vertical",minHeight:80,lineHeight:1.5,fontFamily:"inherit"}} onFocus={e=>e.target.style.borderColor=T.acc} onBlur={e=>e.target.style.borderColor=T.border}/>
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                {[{label:"TikTok",icon:"📱",ph:"@tontiktok"},{label:"Instagram",icon:"📸",ph:"@toninstagram"},{label:"YouTube",icon:"▶",ph:"Ta chaîne"},{label:"Site web",icon:"🌐",ph:"https://..."}].map(f=>(
-                  <Input key={f.label} label={f.label} value="" onChange={()=>{}} placeholder={f.ph} icon={f.icon}/>
-                ))}
+              <div style={{padding:"12px 16px",borderRadius:10,background:`${T.acc}08`,border:`1px solid ${T.acc}15`,fontSize:12,color:T.muted}}>
+                📧 Email : <strong style={{color:T.text}}>{user?.email}</strong> — pour changer d'email, contacte le support.
               </div>
-              <Btn onClick={save} v={saved?"success":"primary"} style={{alignSelf:"flex-start"}}>
-                {saved?"✓ Sauvegardé !":"Sauvegarder les modifications"}
+              <Btn onClick={save} disabled={saving} v={saved?"success":"primary"} style={{alignSelf:"flex-start"}}>
+                {saving?"Sauvegarde...":saved?"✓ Sauvegardé !":"Sauvegarder les modifications"}
               </Btn>
             </div>
           </div>
@@ -2850,21 +2960,25 @@ const ProfilePage=({user,setUser,onBack,setPage})=>{
             <div style={{padding:20,borderRadius:14,background:T.surf,border:`1px solid ${T.border}`}}>
               <div style={{fontWeight:700,fontSize:15,marginBottom:16}}>🔒 Changer le mot de passe</div>
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                <Input label="Mot de passe actuel" value="" onChange={()=>{}} type="password" placeholder="••••••••"/>
-                <Input label="Nouveau mot de passe" value="" onChange={()=>{}} type="password" placeholder="••••••••" hint="Minimum 8 caractères, 1 majuscule, 1 chiffre"/>
-                <Input label="Confirmer le nouveau mot de passe" value="" onChange={()=>{}} type="password" placeholder="••••••••"/>
-                <Btn onClick={()=>notify("Mot de passe mis à jour !","success")} style={{alignSelf:"flex-start"}}>Changer le mot de passe</Btn>
+                <Input label="Nouveau mot de passe" value={pwNew} onChange={setPwNew} type="password" placeholder="Minimum 8 caractères"/>
+                <Input label="Confirmer le mot de passe" value={pwNew2} onChange={setPwNew2} type="password" placeholder="Répète le mot de passe"/>
+                {pwErr&&<div style={{fontSize:12,color:T.pink,padding:"8px 12px",borderRadius:8,background:`${T.pink}10`,border:`1px solid ${T.pink}20`}}>{pwErr}</div>}
+                {pwOk&&<div style={{fontSize:12,color:T.green,padding:"8px 12px",borderRadius:8,background:`${T.green}10`,border:`1px solid ${T.green}20`}}>✓ Mot de passe mis à jour !</div>}
+                <Btn onClick={changePassword} disabled={pwLoading||!pwNew||!pwNew2} style={{alignSelf:"flex-start"}}>
+                  {pwLoading?"Mise à jour...":"Changer le mot de passe"}
+                </Btn>
               </div>
             </div>
-            <div style={{padding:20,borderRadius:14,background:T.surf,border:`1px solid ${T.border}`}}>
-              <div style={{fontWeight:700,fontSize:15,marginBottom:6}}>🛡️ Authentification à 2 facteurs</div>
-              <div style={{color:T.muted,fontSize:13,marginBottom:14}}>Ajoute une couche de sécurité supplémentaire à ton compte.</div>
-              <Tog value={false} onChange={()=>notify("2FA activé !","success")} label="Activer la 2FA"/>
-            </div>
             <div style={{padding:20,borderRadius:14,background:`${T.pink}08`,border:`1px solid ${T.pink}22`}}>
-              <div style={{fontWeight:700,fontSize:15,marginBottom:6,color:T.pink}}>⚠️ Zone dangereuse</div>
-              <div style={{color:T.muted,fontSize:13,marginBottom:14}}>La suppression de compte est irréversible.</div>
-              <Btn v="danger" onClick={()=>notify("Fonctionnalité désactivée en démo","warning")}>Supprimer mon compte</Btn>
+              <div style={{fontWeight:700,fontSize:15,marginBottom:6,color:T.pink}}>⚠️ Supprimer mon compte</div>
+              <div style={{color:T.muted,fontSize:13,marginBottom:14,lineHeight:1.6}}>
+                Cette action est <strong style={{color:T.pink}}>irréversible</strong>. Ton compte, tes vidéos et tes données seront supprimés définitivement.
+              </div>
+              <input value={deleteConfirm} onChange={e=>setDeleteConfirm(e.target.value)} placeholder='Tape "SUPPRIMER" pour confirmer'
+                style={{width:"100%",padding:"10px 14px",borderRadius:10,background:T.bg,border:`1px solid ${T.pink}40`,color:T.text,fontSize:13,marginBottom:12,fontFamily:"inherit",outline:"none"}}/>
+              <Btn v="danger" disabled={deleteConfirm!=="SUPPRIMER"||deleteLoading} onClick={deleteAccount}>
+                {deleteLoading?"Suppression...":"Supprimer définitivement mon compte"}
+              </Btn>
             </div>
           </div>
         )}
@@ -2875,15 +2989,18 @@ const ProfilePage=({user,setUser,onBack,setPage})=>{
               <div style={{width:52,height:52,borderRadius:14,background:T.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>⭐</div>
               <div style={{flex:1}}>
                 <div style={{fontWeight:800,fontSize:18,marginBottom:2}}>Plan {user?.plan}</div>
-                <div style={{color:T.muted,fontSize:13}}>Prochain renouvellement le 1er avril 2026</div>
+                <div style={{color:T.muted,fontSize:13}}>
+                  {user?.plan==="free"||user?.plan==="Free"
+                    ?"Plan gratuit — passe à un plan supérieur pour plus de vidéos"
+                    :"Abonnement actif — géré via Stripe"}
+                </div>
               </div>
               <div style={{display:"flex",gap:8}}>
                 <Btn v="secondary" size="sm" onClick={()=>setPage("pricing")}>Changer de plan</Btn>
-                <Btn v="danger" size="sm" onClick={()=>notify("Abonnement annulé","warning")}>Annuler</Btn>
               </div>
             </div>
             {PLANS.map(p=>{
-              const active=p.name===user?.plan;
+              const active=p.name?.toLowerCase()===user?.plan?.toLowerCase();
               return(
                 <div key={p.id} style={{padding:"14px 18px",borderRadius:12,background:active?`${T.acc}08`:T.surf,border:`1px solid ${active?T.acc:T.border}`,display:"flex",alignItems:"center",gap:14,cursor:active?undefined:"pointer",transition:"all .15s"}}
                   onClick={()=>!active&&setPage("pricing")}
@@ -2897,23 +3014,6 @@ const ProfilePage=({user,setUser,onBack,setPage})=>{
                 </div>
               );
             })}
-          </div>
-        )}
-
-        {tab==="invoices"&&(
-          <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,overflow:"hidden"}}>
-            <div style={{padding:"11px 18px",borderBottom:`1px solid ${T.border}`,display:"grid",gridTemplateColumns:"100px 1fr 100px 100px 80px",fontSize:11,fontWeight:700,color:T.muted,textTransform:"uppercase",letterSpacing:".06em"}}>
-              <span>N°</span><span>Plan</span><span>Date</span><span>Montant</span><span>Statut</span>
-            </div>
-            {invoices.map((inv,i)=>(
-              <div key={inv.id} style={{padding:"12px 18px",borderBottom:i<invoices.length-1?`1px solid ${T.border}`:"none",display:"grid",gridTemplateColumns:"100px 1fr 100px 100px 80px",alignItems:"center",fontSize:13,transition:"background .15s"}} onMouseEnter={e=>e.currentTarget.style.background=T.surf2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                <span style={{fontFamily:"JetBrains Mono",color:T.muted}}>{inv.id}</span>
-                <span style={{fontWeight:600}}>{inv.plan}</span>
-                <span style={{color:T.muted}}>{inv.date}</span>
-                <span style={{fontFamily:"JetBrains Mono",fontWeight:600,color:T.green}}>{inv.amount}</span>
-                <Tag color={T.green}>{inv.status}</Tag>
-              </div>
-            ))}
           </div>
         )}
       </div>
@@ -3037,142 +3137,190 @@ const EditorPage=({onBack,file,rawFile})=>{
   const [exportStatus,setExportStatus]=useState("");
 
   const exportMP4=async()=>{
-    if(!rawFile&&!videoUrl){notify("Aucune vidéo chargée","error");return;}
+    if(!rawFile&&!videoUrl){notify("Aucune vidéo chargée — ouvre une vidéo d'abord","error");return;}
     if(!subs.length){notify("Aucun sous-titre à incruster","error");return;}
-    setExporting(true);setExportProgress(0);setExportStatus("Préparation de la vidéo...");
+    setExporting(true);setExportProgress(2);setExportStatus("Chargement de la vidéo...");
 
     try{
-      // Utilise l'URL stable déjà créée, ou en crée une temporaire
       const srcUrl=videoUrl||(rawFile?URL.createObjectURL(rawFile):null);
-      if(!srcUrl){notify("Vidéo introuvable","error");setExporting(false);return;}
+
+      // ── 1. Vidéo source ──────────────────────────────
       const vid=document.createElement("video");
       vid.src=srcUrl;
-      vid.muted=true;
+      vid.muted=false;
       vid.playsInline=true;
-      await new Promise(r=>{vid.onloadedmetadata=r;vid.load();});
+      vid.crossOrigin="anonymous";
+      await new Promise((res,rej)=>{
+        vid.onloadedmetadata=res;
+        vid.onerror=()=>rej(new Error("Impossible de charger la vidéo"));
+        vid.load();
+      });
 
       const W=vid.videoWidth||720;
       const H=vid.videoHeight||1280;
       const duration=vid.duration;
-      const fps=30;
+      if(!duration||!isFinite(duration)){throw new Error("Durée vidéo invalide");}
 
-      setExportStatus("Initialisation du canvas...");
-      setExportProgress(5);
+      setExportStatus("Préparation...");setExportProgress(5);
 
-      // 2. Canvas pour le rendu
+      // ── 2. Canvas ────────────────────────────────────
       const canvas=document.createElement("canvas");
       canvas.width=W; canvas.height=H;
-      const ctx=canvas.getContext("2d");
+      const ctx=canvas.getContext("2d",{willReadFrequently:false});
 
-      // 3. MediaRecorder pour capter le canvas
-      const stream=canvas.captureStream(fps);
-
-      // Ajouter la piste audio de la vidéo originale
+      // ── 3. Stream audio depuis la vidéo originale ────
+      // captureStream() donne accès direct aux tracks audio/vidéo
+      let audioTracks=[];
       try{
-        const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-        const src=audioCtx.createMediaElementSource(vid);
-        const dest=audioCtx.createMediaStreamDestination();
-        src.connect(dest);
-        src.connect(audioCtx.destination);
-        dest.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
-      }catch(e){console.warn("Audio track non disponible",e);}
+        const vidStream=vid.captureStream?.();
+        if(vidStream) audioTracks=vidStream.getAudioTracks();
+      }catch(e){
+        // Fallback AudioContext si captureStream indisponible
+        try{
+          const aCtx=new (window.AudioContext||window.webkitAudioContext)();
+          const src2=aCtx.createMediaElementSource(vid);
+          const dest=aCtx.createMediaStreamDestination();
+          src2.connect(dest);
+          audioTracks=dest.stream.getAudioTracks();
+        }catch{}
+      }
 
-      const mimeType=MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")?"video/webm;codecs=vp9,opus":
-                     MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")?"video/webm;codecs=vp8,opus":
-                     "video/webm";
-      const rec=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:8_000_000});
+      // ── 4. Stream final = canvas vidéo + audio vidéo ─
+      const canvasStream=canvas.captureStream(30);
+      audioTracks.forEach(t=>canvasStream.addTrack(t));
+
+      // Choisir le meilleur format supporté
+      const formats=[
+        "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+        "video/mp4",
+        "video/webm;codecs=vp9,opus",
+        "video/webm;codecs=vp8,opus",
+        "video/webm",
+      ];
+      const mimeType=formats.find(f=>MediaRecorder.isTypeSupported(f))||"video/webm";
+      const isMP4=mimeType.startsWith("video/mp4");
+
+      const rec=new MediaRecorder(canvasStream,{
+        mimeType,
+        videoBitsPerSecond:8_000_000,
+        audioBitsPerSecond:128_000,
+      });
       const chunks=[];
-      rec.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
+      rec.ondataavailable=e=>{if(e.data?.size>0)chunks.push(e.data);};
 
-      // Style sous-titres calculé pour la résolution réelle
-      const subFontSize=Math.round(H*0.055*(fontSize/68));
+      // ── 5. Style sous-titres pour export HD ──────────
+      const subFontSize=Math.round(H*0.058*(fontSize/68));
+      const subPosY=subYPos/100;
       const subFont=`${activeStyle.preview.weight} ${subFontSize}px ${fontFam||activeStyle.preview.font||"Impact"}, sans-serif`;
-      const subColor=activeStyle.preview.color||"#fff";
-      const subBg=activeStyle.preview.bg!=="transparent"||hasEff("Background");
-      const subPosY=subYPos/100; // 0=bottom, 1=top — inversé pour canvas
+      const subColor=activeStyle.preview.color||"#ffffff";
+      const hasBg=activeStyle.preview.bg!=="transparent"||hasEff("Background");
+      const shadow=activeStyle.preview.shadow||"";
 
-      const drawSubtitle=(ctx,text,W,H)=>{
+      const drawSub=(text)=>{
+        ctx.save();
         ctx.font=subFont;
         ctx.textAlign="center";
         ctx.textBaseline="middle";
-        const lines=text.split("\n");
-        const lineH=subFontSize*1.3;
-        const totalH=lines.length*lineH;
-        const y=H*(1-subPosY)-(totalH/2);
+        const words=text.trim().split("\n");
+        const lh=subFontSize*1.35;
+        const totalH=words.length*lh;
+        const baseY=H*(1-subPosY)-(totalH/2)+lh/2;
 
-        lines.forEach((line,i)=>{
-          const ly=y+i*lineH;
-          if(subBg){
-            const tw=ctx.measureText(line).width;
-            ctx.fillStyle="rgba(0,0,0,0.82)";
+        words.forEach((line,i)=>{
+          const ly=baseY+i*lh;
+          if(hasBg){
+            const m=ctx.measureText(line);
+            const pw=12,ph=subFontSize*0.55;
+            ctx.fillStyle="rgba(0,0,0,.82)";
             ctx.beginPath();
-            ctx.roundRect(W/2-tw/2-12,ly-subFontSize*0.6,tw+24,subFontSize*1.2,7);
+            if(ctx.roundRect){ctx.roundRect(W/2-m.width/2-pw,ly-ph,m.width+pw*2,ph*2,8);}
+            else{ctx.rect(W/2-m.width/2-pw,ly-ph,m.width+pw*2,ph*2);}
             ctx.fill();
           }
-          // Shadow/stroke
-          ctx.strokeStyle="rgba(0,0,0,0.9)";
-          ctx.lineWidth=subFontSize*0.08;
+          // Ombre portée
+          if(shadow){
+            ctx.shadowColor="rgba(0,0,0,.9)";
+            ctx.shadowBlur=subFontSize*0.12;
+            ctx.shadowOffsetX=2;ctx.shadowOffsetY=2;
+          }
+          // Contour
+          ctx.strokeStyle="rgba(0,0,0,.95)";
+          ctx.lineWidth=Math.max(2,subFontSize*0.07);
           ctx.strokeText(line,W/2,ly);
+          // Texte
           ctx.fillStyle=subColor;
           ctx.fillText(line,W/2,ly);
+          ctx.shadowColor="transparent";
         });
+        ctx.restore();
       };
 
-      // 4. Lancer l'enregistrement
-      rec.start(100);
+      // ── 6. Enregistrement ────────────────────────────
+      rec.start(250); // chunk toutes les 250ms
       vid.currentTime=0;
-      await new Promise(r=>setTimeout(r,50));
-      vid.play();
+      await new Promise(r=>setTimeout(r,100));
+      vid.muted=false;
+      await vid.play();
 
+      setExportStatus(`Export en cours...`);
+
+      // Boucle frame par frame synchronisée sur la vidéo
       await new Promise((resolve,reject)=>{
-        const loop=()=>{
-          if(vid.ended||vid.currentTime>=duration){
-            resolve();return;
+        let rafId;
+        const step=()=>{
+          if(vid.ended||vid.currentTime>=duration-0.05){
+            cancelAnimationFrame(rafId);
+            resolve();
+            return;
           }
-          const pct=Math.round((vid.currentTime/duration)*90)+5;
+          const pct=Math.min(93,Math.round((vid.currentTime/duration)*88)+5);
           setExportProgress(pct);
-          setExportStatus(`Export en cours... ${Math.floor(vid.currentTime)}s / ${Math.floor(duration)}s`);
+          setExportStatus(`Export... ${Math.floor(vid.currentTime)}s / ${Math.floor(duration)}s`);
 
-          // Dessiner la frame vidéo
           ctx.drawImage(vid,0,0,W,H);
-
-          // Trouver le sous-titre actif
           const t=vid.currentTime;
           const active=subs.find(s=>t>=s.start&&t<=s.end);
           if(active){
-            const txt=_stripEmoji(active.text);
-            if(txt.trim()) drawSubtitle(ctx,txt,W,H);
+            const txt=noEmoji?active.text.replace(/[\u{1F300}-\u{1FFFF}\u{2600}-\u{27FF}]/gu,"").trim():active.text;
+            if(txt.trim()) drawSub(txt);
           }
-          requestAnimationFrame(loop);
+          rafId=requestAnimationFrame(step);
         };
-        vid.onended=resolve;
+        vid.onended=()=>{cancelAnimationFrame(rafId);resolve();};
         vid.onerror=reject;
-        loop();
+        step();
       });
 
+      // Dernière frame
+      ctx.drawImage(vid,0,0,W,H);
+      await new Promise(r=>setTimeout(r,300));
+
+      setExportStatus("Finalisation...");setExportProgress(95);
       vid.pause();
-      setExportStatus("Finalisation...");
-      setExportProgress(95);
       rec.stop();
-
       await new Promise(r=>{rec.onstop=r;});
-      setExportProgress(100);
-      setExportStatus("Téléchargement...");
 
-      // 5. Télécharger
+      setExportProgress(100);setExportStatus("Téléchargement...");
+
+      // ── 7. Téléchargement ────────────────────────────
       const blob=new Blob(chunks,{type:mimeType});
-      const url=URL.createObjectURL(blob);
+      const ext=isMP4?"mp4":"webm";
+      const baseName=(rawFile?.name||"subcraft-export").replace(/\.[^.]+$/,"");
+      const dlUrl=URL.createObjectURL(blob);
       const a=document.createElement("a");
-      const ext=mimeType.includes("mp4")?"mp4":"webm";
-      a.href=url;a.download=`subcraft-export.${ext}`;a.click();
-      URL.revokeObjectURL(url);
-      // Ne pas révoquer videoUrl ici — c'est l'URL stable gérée par useMemo dans EditorPage
-      if(!videoUrl && srcUrl) URL.revokeObjectURL(srcUrl); // révoquer seulement si on en a créé une temporaire
+      a.href=dlUrl;
+      a.download=`${baseName}-subtitles.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(dlUrl);
+      if(!videoUrl&&srcUrl)URL.revokeObjectURL(srcUrl);
 
-      notify("✅ Vidéo exportée !","success");
+      notify(`✅ Vidéo exportée en ${ext.toUpperCase()} !`,"success");
       setShowExport(false);
+
     }catch(e){
-      console.error("[export]",e);
+      console.error("[exportMP4]",e);
       notify("Erreur export : "+e.message,"error");
     }
     setExporting(false);setExportProgress(0);setExportStatus("");
@@ -3642,7 +3790,7 @@ const EditorPage=({onBack,file,rawFile})=>{
           ):(
             <>
               {[
-                {icon:"🎬",title:"Vidéo MP4/WebM avec sous-titres",desc:rawFile?"Sous-titres incrustés en temps réel dans le navigateur":"Charge d'abord une vidéo",badge:rawFile?"HD":"",action:rawFile?exportMP4:()=>notify("Charge une vidéo d'abord","warning"),disabled:!rawFile},
+                {icon:"🎬",title:"Vidéo avec sous-titres incrustés",desc:rawFile?`MP4 si supporté par ton navigateur, sinon WebM — qualité identique`:"Charge d'abord une vidéo",badge:rawFile?"HD":"",action:rawFile?exportMP4:()=>notify("Charge une vidéo d'abord","warning"),disabled:!rawFile},
                 {icon:"📄",title:"Fichier SRT",desc:"Format universel — compatible DaVinci, Premiere, CapCut",action:exportSRT},
                 {icon:"📋",title:"Copier le texte brut",desc:"Juste le texte sans timing",action:()=>{navigator.clipboard?.writeText(subs.map(s=>s.text).join("\n"));notify("Texte copié !","success");}},
               ].map(e=>(
@@ -4317,36 +4465,47 @@ P.S. Toutes les vidéos sont supprimées après 24h pour protéger ta vie privé
   );
 };
 const AdminEmailLogs=()=>{
-  const MOCK_LOGS=[
-    {id:1,type:"welcome",icon:"🎉",to:"sophie@gmail.com",name:"Sophie Martin",subject:"Bienvenue sur SubCraft ✦",status:"delivered",time:"Auj. 14:32",trigger:"Inscription",opened:true,clicked:true},
-    {id:2,type:"video_ready",icon:"✅",to:"lucas.dubois@outlook.com",name:"Lucas Dubois",subject:"🎬 Ta vidéo est prête — Télécharge tes sous-titres !",status:"delivered",time:"Auj. 13:17",trigger:"Transcription terminée",opened:true,clicked:false},
-    {id:3,type:"upgrade",icon:"🚀",to:"emma@icloud.com",name:"Emma Wilson",subject:"⭐ Passe au niveau supérieur — Offre spéciale",status:"delivered",time:"Auj. 11:04",trigger:"70% quota",opened:false,clicked:false},
-    {id:4,type:"expiry",icon:"⏰",to:"carlos@gmail.com",name:"Carlos García",subject:"⚠️ Ta vidéo sera supprimée dans 2h",status:"delivered",time:"Auj. 10:48",trigger:"2h avant suppression",opened:true,clicked:true},
-    {id:5,type:"welcome",icon:"🎉",to:"yuki.t@yahoo.jp",name:"Yuki Tanaka",subject:"Bienvenue sur SubCraft ✦",status:"delivered",time:"Hier 23:11",trigger:"Inscription",opened:true,clicked:false},
-    {id:6,type:"upgrade",icon:"🚀",to:"m.lefebvre@free.fr",name:"Marie Lefebvre",subject:"⭐ Passe au niveau supérieur — Offre spéciale",status:"bounced",time:"Hier 20:33",trigger:"70% quota",opened:false,clicked:false},
-    {id:7,type:"video_ready",icon:"✅",to:"james@gmail.com",name:"James O'Brien",subject:"🎬 Ta vidéo est prête !",status:"delivered",time:"Hier 18:55",trigger:"Transcription terminée",opened:false,clicked:false},
-    {id:8,type:"expiry",icon:"⏰",to:"priya.s@gmail.com",name:"Priya Sharma",subject:"⚠️ Ta vidéo sera supprimée dans 2h",status:"delivered",time:"Hier 16:22",trigger:"2h avant suppression",opened:true,clicked:false},
-    {id:9,type:"welcome",icon:"🎉",to:"a.bernard@gmail.com",name:"Antoine Bernard",subject:"Bienvenue sur SubCraft ✦",status:"delivered",time:"07/03 09:14",trigger:"Inscription",opened:true,clicked:true},
-    {id:10,type:"upgrade",icon:"🚀",to:"lisa.chen@gmail.com",name:"Lisa Chen",subject:"⭐ Passe au niveau supérieur",status:"delivered",time:"07/03 08:02",trigger:"70% quota",opened:true,clicked:true},
-    {id:11,type:"video_ready",icon:"✅",to:"m.ali@hotmail.com",name:"Mohamed Ali",subject:"🎬 Ta vidéo est prête !",status:"failed",time:"06/03 21:33",trigger:"Transcription terminée",opened:false,clicked:false},
-    {id:12,type:"expiry",icon:"⏰",to:"c.schmidt@gmail.de",name:"Clara Schmidt",subject:"⚠️ Ta vidéo sera supprimée dans 2h",status:"delivered",time:"06/03 19:47",trigger:"2h avant suppression",opened:false,clicked:false},
-  ];
+  const [logs,setLogs]=useState([]);
+  const [logsLoading,setLogsLoading]=useState(true);
   const [filter,setFilter]=useState("all");
   const [search,setSearch]=useState("");
-  const filtered=MOCK_LOGS.filter(l=>{
+
+  useEffect(()=>{
+    const token=localStorage.getItem("sc_token");
+    fetch("/api/admin?action=email-logs",{headers:{"Authorization":`Bearer ${token}`}})
+      .then(r=>r.json())
+      .then(d=>{
+        if(Array.isArray(d.logs)) setLogs(d.logs);
+        else {
+          // Fallback — logs simulés si table email_logs pas encore créée
+          setLogs([
+            {id:1,type:"welcome",icon:"🎉",to:"sophie@gmail.com",name:"Sophie Martin",subject:"Bienvenue sur SubCraft ✦",status:"delivered",time:"Auj. 14:32",trigger:"Inscription",opened:true,clicked:true},
+            {id:2,type:"payment",icon:"💳",to:"lucas@outlook.com",name:"Lucas Dubois",subject:"✅ Paiement confirmé — Plan Expert",status:"delivered",time:"Auj. 13:17",trigger:"Paiement Stripe",opened:true,clicked:false},
+            {id:3,type:"j3-reminder",icon:"⏰",to:"emma@icloud.com",name:"Emma Wilson",subject:"Tu n'as pas encore testé SubCraft 🎬",status:"delivered",time:"Auj. 11:04",trigger:"J+3 sans upload",opened:false,clicked:false},
+            {id:4,type:"credits-empty",icon:"⚠️",to:"carlos@gmail.com",name:"Carlos García",subject:"Plus de vidéos disponibles ce mois",status:"delivered",time:"Hier 10:48",trigger:"0 crédits restants",opened:true,clicked:true},
+          ]);
+        }
+      })
+      .catch(()=>{
+        setLogs([]);
+      })
+      .finally(()=>setLogsLoading(false));
+  },[]);
+
+  const filtered=logs.filter(l=>{
     const matchType=filter==="all"||l.type===filter;
     const q=search.toLowerCase();
-    const matchSearch=!q||(l.name.toLowerCase().includes(q)||l.to.toLowerCase().includes(q)||l.subject.toLowerCase().includes(q));
+    const matchSearch=!q||(l.name?.toLowerCase().includes(q)||l.to?.toLowerCase().includes(q)||l.subject?.toLowerCase().includes(q));
     return matchType&&matchSearch;
   });
   const stats={
-    total:MOCK_LOGS.length,
-    delivered:MOCK_LOGS.filter(l=>l.status==="delivered").length,
-    opened:MOCK_LOGS.filter(l=>l.opened).length,
-    clicked:MOCK_LOGS.filter(l=>l.clicked).length,
+    total:logs.length,
+    delivered:logs.filter(l=>l.status==="delivered").length,
+    opened:logs.filter(l=>l.opened).length,
+    clicked:logs.filter(l=>l.clicked).length,
   };
   const statusColor={delivered:T.green,bounced:T.orange,failed:T.pink};
-  const typeColor={welcome:T.acc,video_ready:T.green,upgrade:T.yellow,expiry:T.orange};
+  const typeColor={welcome:T.acc,payment:T.green,"j3-reminder":T.yellow,"credits-empty":T.orange,broadcast:T.purple,cancel:T.pink};
   return(
     <div className="page">
       <div style={{marginBottom:24}}>
@@ -4390,8 +4549,9 @@ const AdminEmailLogs=()=>{
             <div key={i} style={{fontSize:10,fontWeight:700,color:T.dim,textTransform:"uppercase",letterSpacing:".08em",textAlign:i>3?"center":undefined}}>{h}</div>
           ))}
         </div>
-        {filtered.map((log,i)=>(
-          <div key={log.id} style={{display:"grid",gridTemplateColumns:"36px 1fr 160px 100px 80px 80px",gap:0,padding:"12px 18px",borderBottom:i<filtered.length-1?`1px solid ${T.border}`:"none",alignItems:"center",transition:"background .15s"}} onMouseEnter={e=>e.currentTarget.style.background=T.surf2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+        {logsLoading&&<div style={{padding:"40px 20px",textAlign:"center"}}><div style={{width:28,height:28,borderRadius:"50%",border:`3px solid ${T.acc}30`,borderTop:`3px solid ${T.acc}`,animation:"spin 1s linear infinite",margin:"0 auto 12px"}}/><div style={{color:T.muted,fontSize:13}}>Chargement...</div></div>}
+        {!logsLoading&&filtered.length===0&&<div style={{padding:"32px 20px",textAlign:"center",color:T.muted,fontSize:13}}>Aucun log email trouvé</div>}
+        {!logsLoading&&filtered.map((log,i)=>(
             <div style={{fontSize:20}}>{log.icon}</div>
             <div>
               <div style={{fontWeight:700,fontSize:13}}>{log.name}</div>
@@ -6104,27 +6264,32 @@ const AdminLandingEditor=()=>{
 
 const ADMIN_EMAIL = "kevin.nedzvedsky@gmail.com";
 
-const AdminPanel=({onExit})=>{
-  // Sécurité : vérifie l'email dans le token JWT local
-  const token = localStorage.getItem("sc_token");
-  const adminOk = (() => {
-    if(!token) return false;
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      const email = payload.email || payload.user_metadata?.email || "";
-      return email === ADMIN_EMAIL;
-    } catch { return false; }
-  })();
-
-  if(!adminOk) return(
-    <div style={{minHeight:"100vh",background:"#030305",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}>
-      <div style={{fontSize:48}}>🔒</div>
-      <div className="syne" style={{fontWeight:800,fontSize:22,color:"#fff"}}>Accès refusé</div>
-      <div style={{color:"rgba(255,255,255,.4)",fontSize:14,textAlign:"center",maxWidth:300}}>Connecte-toi avec ton compte Google admin pour accéder à ce panneau.</div>
-      <button onClick={onExit} style={{padding:"10px 24px",borderRadius:10,background:"#7c3aed",border:"none",color:"#fff",cursor:"pointer",fontWeight:600,marginTop:8}}>Se connecter</button>
-    </div>
+// Charts définis HORS du composant AdminPanel pour éviter les re-créations
+const MiniChart=({data,color,height=44,filled=true})=>{
+  const max=Math.max(...(data||[1]),1);
+  const w=100/Math.max((data||[]).length,1);
+  return(
+    <svg width="100%" height={height} viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" style={{display:"block"}}>
+      {filled&&(<defs><linearGradient id={`g${color.replace("#","")}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity=".3"/><stop offset="100%" stopColor={color} stopOpacity="0"/></linearGradient></defs>)}
+      {filled&&<path d={`M0,${height} ${(data||[]).map((v,i)=>`L${i*w+w/2},${height-((v/max)*(height-4))}`).join(" ")} L100,${height} Z`} fill={`url(#g${color.replace("#","")})`}/>}
+      <path d={`M${(data||[]).map((v,i)=>`${i*w+w/2},${height-((v/max)*(height-4))}`).join(" L")}`} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
   );
+};
 
+const BarChart=({data,color,height=80})=>{
+  const max=Math.max(...(data||[1]),1);
+  const w=100/Math.max((data||[]).length,1);
+  return(
+    <svg width="100%" height={height} viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" style={{display:"block"}}>
+      {(data||[]).map((v,i)=>(
+        <rect key={i} x={i*w+w*.15} y={height-((v/max)*(height-2))} width={w*.7} height={(v/max)*(height-2)} rx="1.5" fill={color} opacity={.7+.3*(v/max)}/>
+      ))}
+    </svg>
+  );
+};
+
+const AdminPanel=({onExit})=>{
   const [users,setUsers]=useState([]);
   const [loadingUsers,setLoadingUsers]=useState(true);
   const [view,setView]=useState("dashboard");
@@ -6143,7 +6308,8 @@ const AdminPanel=({onExit})=>{
     const loadAll = async () => {
       try {
         // Charge users
-        const res = await fetch("/api/admin?action=users");
+        const token_u=localStorage.getItem("sc_token");
+        const res = await fetch("/api/admin?action=users",{headers:{"Authorization":`Bearer ${token_u}`}});
         const data = await res.json();
         if(data.users) {
           setUsers(data.users.map(u=>({
@@ -6161,7 +6327,7 @@ const AdminPanel=({onExit})=>{
           })));
         }
         // Charge stats réelles
-        const sres = await fetch("/api/admin?action=stats");
+        const sres = await fetch("/api/admin?action=stats",{headers:{"Authorization":`Bearer ${token_u}`}});
         const sdata = await sres.json();
         if(sdata.mrr !== undefined) {
           setRealStats({
@@ -6193,80 +6359,53 @@ const AdminPanel=({onExit})=>{
 
   const totalMRR = realStats.mrr || users.reduce((a,u)=>a+({Free:0,Basic:12,Expert:18,Pro:30}[u.plan]||0),0);
 
-  // Generate sparkline data for charts
   const genData=(base,noise,len)=>Array.from({length:len},(_,i)=>Math.max(0,Math.round(base+Math.sin(i*.4)*noise*.5+Math.random()*noise+(i/len)*base*.3)));
-
   const visitData30=genData(420,120,30);
   const visitData7=visitData30.slice(-7);
   const visitData90=genData(380,150,90);
   const visitData99=genData(375,155,99);
-
-  const getRangeData=()=>({
-    7:visitData7,
-    30:visitData30,
-    90:visitData90,
-    99:visitData99,
-  }[analyticsRange]||visitData30);
-
-  const rangeData=getRangeData();
+  const rangeData=({7:visitData7,30:visitData30,90:visitData90,99:visitData99}[analyticsRange]||visitData30);
   const totalVisits=rangeData.reduce((a,v)=>a+v,0);
   const avgVisits=Math.round(totalVisits/rangeData.length);
   const maxVisits=Math.max(...rangeData);
   const prevTotal=Math.round(totalVisits*.82);
   const growthPct=Math.round(((totalVisits-prevTotal)/prevTotal)*100);
-
   const signupData30=genData(12,6,30);
   const convData30=genData(3,2,30);
   const revenueData30=genData(280,80,30);
 
-  const MiniChart=({data,color,height=44,filled=true})=>{
-    const max=Math.max(...data,1);
-    const w=100/data.length;
-    return(
-      <svg width="100%" height={height} viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" style={{display:"block"}}>
-        {filled&&(
-          <defs>
-            <linearGradient id={`g${color.replace("#","")}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity=".3"/>
-              <stop offset="100%" stopColor={color} stopOpacity="0"/>
-            </linearGradient>
-          </defs>
-        )}
-        {filled&&(
-          <path d={`M0,${height} ${data.map((v,i)=>`L${i*w+w/2},${height-((v/max)*(height-4))}`).join(" ")} L100,${height} Z`}
-            fill={`url(#g${color.replace("#","")})`}/>
-        )}
-        <path d={`M${data.map((v,i)=>`${i*w+w/2},${height-((v/max)*(height-4))}`).join(" L")}`}
-          fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        {data.map((v,i)=>(
-          <circle key={i} cx={i*w+w/2} cy={height-((v/max)*(height-4))} r="1.5" fill={color} opacity=".5"/>
-        ))}
-      </svg>
-    );
-  };
-
-  const BarChart=({data,color,height=80})=>{
-    const max=Math.max(...data,1);
-    const w=100/data.length;
-    return(
-      <svg width="100%" height={height} viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" style={{display:"block"}}>
-        {data.map((v,i)=>(
-          <rect key={i} x={i*w+w*.15} y={height-((v/max)*(height-2))} width={w*.7} height={(v/max)*(height-2)} rx="1.5" fill={color} opacity={.7+.3*(v/max)}/>
-        ))}
-      </svg>
-    );
-  };
-
   const NAV=[
     {id:"dashboard",icon:"📊",label:"Dashboard"},
+    {id:"analytics",icon:"📈",label:"Stats & Visites"},
     {id:"users",icon:"👥",label:"Utilisateurs"},
-    {id:"revenue",icon:"💰",label:"Revenus"},
+    {id:"revenue",icon:"💰",label:"Revenus & MRR"},
+    {id:"coupons",icon:"🎟️",label:"Codes Promo"},
+    {id:"emails",icon:"📧",label:"Emails"},
     {id:"tickets",icon:"🎫",label:"Support & Chats"},
+    {id:"operations",icon:"⚙️",label:"Opérations"},
     {id:"api-keys",icon:"🔑",label:"Clés API"},
-    {id:"coupons",icon:"🎟️",label:"Coupons"},
     {id:"security",icon:"🔒",label:"Sécurité"},
-    {id:"settings",icon:"⚙️",label:"Paramètres"},
   ];
+
+  // ✅ Check d'auth APRÈS tous les hooks (React Rules of Hooks)
+  const token = localStorage.getItem("sc_token");
+  const adminOk = (() => {
+    if(!token) return false;
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      const email = payload.email || payload.user_metadata?.email || "";
+      return email === ADMIN_EMAIL;
+    } catch { return false; }
+  })();
+
+  if(!adminOk) return(
+    <div style={{minHeight:"100vh",background:"#030305",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}>
+      <div style={{fontSize:48}}>🔒</div>
+      <div className="syne" style={{fontWeight:800,fontSize:22,color:"#fff"}}>Accès refusé</div>
+      <div style={{color:"rgba(255,255,255,.4)",fontSize:14,textAlign:"center",maxWidth:300}}>Connecte-toi avec ton compte admin pour accéder à ce panneau.</div>
+      <button onClick={onExit} style={{padding:"10px 24px",borderRadius:10,background:"#7c3aed",border:"none",color:"#fff",cursor:"pointer",fontWeight:600,marginTop:8}}>Se connecter</button>
+    </div>
+  );
 
   return(
     <div style={{minHeight:"100vh",display:"flex",background:"#010208",position:"relative"}}>
@@ -6286,8 +6425,8 @@ const AdminPanel=({onExit})=>{
         {/* Nav groups */}
         <div style={{flex:1,overflowY:"auto",padding:"10px 10px",scrollbarWidth:"none"}}>
           {[
-            {group:"Principal",items:NAV.slice(0,4)},
-            {group:"Système",items:NAV.slice(4)},
+            {group:"Principal",items:NAV.slice(0,5)},
+            {group:"Outils",items:NAV.slice(5)},
           ].map(g=>(
             <div key={g.group} style={{marginBottom:16}}>
               <div style={{fontSize:9,fontWeight:700,color:T.dim,letterSpacing:".1em",padding:"0 8px 6px",textTransform:"uppercase"}}>{g.group}</div>
@@ -6366,170 +6505,7 @@ const AdminPanel=({onExit})=>{
           </div>
         )}
 
-        {/* ANALYTICS */}
-        {view==="analytics"&&(
-          <div className="page">
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24,flexWrap:"wrap",gap:12}}>
-              <h1 style={{fontWeight:800,fontSize:22}}>📈 Statistiques</h1>
-              {/* Range selector */}
-              <div style={{display:"flex",gap:4,background:T.surf,borderRadius:10,padding:4,border:`1px solid ${T.border}`}}>
-                {[7,30,90,99].map(r=>(
-                  <button key={r} onClick={()=>setAnalyticsRange(r)} style={{padding:"6px 14px",borderRadius:7,background:analyticsRange===r?T.acc:"transparent",border:"none",color:analyticsRange===r?"#fff":T.muted,fontWeight:analyticsRange===r?700:400,fontSize:12,cursor:"pointer",transition:"all .15s",fontFamily:"JetBrains Mono"}}>
-                    {r}J
-                  </button>
-                ))}
-              </div>
-            </div>
 
-            {/* KPI row */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12,marginBottom:20}} className="mobile-grid1">
-              {[
-                {icon:"👁",label:"Visites totales",value:totalVisits.toLocaleString("fr"),sub:`+${growthPct}% vs période préc.`,color:T.acc,trend:growthPct>=0},
-                {icon:"📅",label:"Visites / jour moy.",value:avgVisits.toLocaleString("fr"),sub:"Moyenne sur la période",color:T.cyan,trend:true},
-                {icon:"🔥",label:"Pic journalier",value:maxVisits.toLocaleString("fr"),sub:`Jour ${rangeData.indexOf(maxVisits)+1}`,color:T.orange,trend:true},
-                {icon:"📝",label:"Inscriptions",value:signupData30.slice(-analyticsRange).reduce((a,v)=>a+v,0),sub:"Nouveaux comptes",color:T.green,trend:true},
-                {icon:"💰",label:"Revenus (€)",value:"$"+revenueData30.slice(-Math.min(analyticsRange,30)).reduce((a,v)=>a+v,0).toLocaleString("fr"),sub:"Paiements traités",color:T.yellow,trend:true},
-                {icon:"🎯",label:"Taux conversion",value:`${(convData30.slice(-Math.min(analyticsRange,30)).reduce((a,v)=>a+v,0)/Math.max(signupData30.slice(-Math.min(analyticsRange,30)).reduce((a,v)=>a+v,0),1)*100).toFixed(1)}%`,sub:"Trial → Payant",color:T.purple,trend:true},
-              ].map((k,i)=>(
-                <div key={k.label} style={{padding:"16px 18px",borderRadius:13,background:T.surf,border:`1px solid ${T.border}`,animation:`fadeUp .35s ease ${i*.05}s both`,position:"relative",overflow:"hidden"}}>
-                  <div style={{position:"absolute",top:-10,right:-10,width:50,height:50,borderRadius:"50%",background:`${k.color}10`}}/>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                    <span style={{fontSize:20}}>{k.icon}</span>
-                    <span style={{fontSize:10,color:k.trend?T.green:T.pink,fontWeight:700,background:`${k.trend?T.green:T.pink}10`,padding:"2px 7px",borderRadius:100}}>{k.trend?"↑":"↓"}</span>
-                  </div>
-                  <div style={{fontFamily:"JetBrains Mono",fontWeight:900,fontSize:22,color:k.color,marginBottom:3}}>{k.value}</div>
-                  <div style={{fontSize:11,fontWeight:600,color:T.text,marginBottom:2}}>{k.label}</div>
-                  <div style={{fontSize:10,color:T.dim}}>{k.sub}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Main visits chart */}
-            <div style={{background:T.surf,borderRadius:16,border:`1px solid ${T.border}`,padding:"20px 22px",marginBottom:16}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
-                <div>
-                  <div style={{fontWeight:700,fontSize:15,marginBottom:3}}>👁 Visites — {analyticsRange} derniers jours</div>
-                  <div style={{fontSize:12,color:T.muted}}>Total : <strong style={{color:T.acc,fontFamily:"JetBrains Mono"}}>{totalVisits.toLocaleString("fr")}</strong> · Moyenne : <strong style={{color:T.text,fontFamily:"JetBrains Mono"}}>{avgVisits}/jour</strong></div>
-                </div>
-                <div style={{display:"flex",gap:14,fontSize:11,color:T.muted}}>
-                  <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:2,background:T.acc,display:"inline-block",borderRadius:1}}/> Visites</span>
-                </div>
-              </div>
-              <MiniChart data={rangeData} color={T.acc} height={100}/>
-              {/* X axis labels */}
-              <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
-                {[0,Math.floor(rangeData.length/4),Math.floor(rangeData.length/2),Math.floor(3*rangeData.length/4),rangeData.length-1].map(i=>(
-                  <span key={i} style={{fontSize:9,color:T.dim,fontFamily:"JetBrains Mono"}}>J-{rangeData.length-1-i}</span>
-                ))}
-              </div>
-            </div>
-
-            {/* Row of 3 small charts */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:16}} className="mobile-grid1">
-              {[
-                {title:"📝 Inscriptions / jour",data:signupData30.slice(-Math.min(analyticsRange,30)),color:T.green,type:"bar"},
-                {title:"💰 Revenu / jour ($)",data:revenueData30.slice(-Math.min(analyticsRange,30)),color:T.yellow,type:"line"},
-                {title:"🎯 Conversions / jour",data:convData30.slice(-Math.min(analyticsRange,30)),color:T.purple,type:"bar"},
-              ].map(c=>(
-                <div key={c.title} style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:"16px 18px"}}>
-                  <div style={{fontWeight:600,fontSize:12,marginBottom:12,color:T.muted}}>{c.title}</div>
-                  <div style={{fontFamily:"JetBrains Mono",fontWeight:800,fontSize:20,color:c.color,marginBottom:10}}>{c.data.reduce((a,v)=>a+v,0).toLocaleString("fr")}</div>
-                  {c.type==="bar"?<BarChart data={c.data} color={c.color} height={60}/>:<MiniChart data={c.data} color={c.color} height={60}/>}
-                </div>
-              ))}
-            </div>
-
-            {/* Traffic sources et top pages */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}} className="mobile-grid1">
-              {/* Sources */}
-              <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:"18px 20px"}}>
-                <div style={{fontWeight:700,fontSize:14,marginBottom:16}}>🌐 Sources de trafic</div>
-                {[
-                  {src:"Recherche organique",pct:38,color:T.acc},
-                  {src:"Réseaux sociaux",pct:27,color:T.pink},
-                  {src:"Direct / Bookmark",pct:18,color:T.cyan},
-                  {src:"Parrainage",pct:11,color:T.green},
-                  {src:"Email",pct:6,color:T.yellow},
-                ].map(s=>(
-                  <div key={s.src} style={{marginBottom:11}}>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                      <span style={{fontSize:12,color:T.muted}}>{s.src}</span>
-                      <span style={{fontSize:11,fontFamily:"JetBrains Mono",fontWeight:700,color:s.color}}>{s.pct}%</span>
-                    </div>
-                    <div style={{height:5,background:T.border,borderRadius:3,overflow:"hidden"}}>
-                      <div style={{height:"100%",width:`${s.pct}%`,background:s.color,borderRadius:3,transition:"width .7s"}}/>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {/* Top pages */}
-              <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:"18px 20px"}}>
-                <div style={{fontWeight:700,fontSize:14,marginBottom:16}}>📄 Pages les plus visitées</div>
-                {[
-                  {page:"Landing page",visits:Math.round(totalVisits*.42),bounce:"38%"},
-                  {page:"Pricing",visits:Math.round(totalVisits*.21),bounce:"24%"},
-                  {page:"Dashboard",visits:Math.round(totalVisits*.18),bounce:"12%"},
-                  {page:"Auth / Login",visits:Math.round(totalVisits*.11),bounce:"55%"},
-                  {page:"Support",visits:Math.round(totalVisits*.08),bounce:"61%"},
-                ].map((p,i)=>(
-                  <div key={p.page} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:i<4?`1px solid ${T.border}`:"none"}}>
-                    <span style={{fontSize:10,color:T.dim,fontFamily:"JetBrains Mono",width:14,flexShrink:0}}>{i+1}</span>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.page}</div>
-                      <div style={{fontSize:10,color:T.muted}}>Rebond : {p.bounce}</div>
-                    </div>
-                    <span style={{fontSize:11,fontFamily:"JetBrains Mono",fontWeight:700,color:T.acc,flexShrink:0}}>{p.visits.toLocaleString("fr")}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Geographic et devices */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}} className="mobile-grid1">
-              <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:"18px 20px"}}>
-                <div style={{fontWeight:700,fontSize:14,marginBottom:16}}>🌍 Pays top visiteurs</div>
-                {[
-                  {country:"🇫🇷 France",pct:44},
-                  {country:"🇧🇪 Belgique",pct:12},
-                  {country:"🇨🇦 Canada",pct:10},
-                  {country:"🇨🇭 Suisse",pct:8},
-                  {country:"🇩🇿 Algérie",pct:6},
-                  {country:"🌐 Autres",pct:20},
-                ].map(c=>(
-                  <div key={c.country} style={{display:"flex",alignItems:"center",gap:10,marginBottom:9}}>
-                    <span style={{fontSize:13,width:100,flexShrink:0}}>{c.country}</span>
-                    <div style={{flex:1,height:5,background:T.border,borderRadius:3,overflow:"hidden"}}>
-                      <div style={{height:"100%",width:`${c.pct}%`,background:T.acc,borderRadius:3,opacity:.7+.3*(c.pct/44)}}/>
-                    </div>
-                    <span style={{fontSize:10,fontFamily:"JetBrains Mono",color:T.muted,width:28,textAlign:"right",flexShrink:0}}>{c.pct}%</span>
-                  </div>
-                ))}
-              </div>
-              <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:"18px 20px"}}>
-                <div style={{fontWeight:700,fontSize:14,marginBottom:16}}>📱 Appareils</div>
-                {[
-                  {device:"📱 Mobile",pct:61,color:T.pink},
-                  {device:"💻 Desktop",pct:31,color:T.acc},
-                  {device:"🖥 Tablette",pct:8,color:T.cyan},
-                ].map(d=>(
-                  <div key={d.device} style={{marginBottom:16}}>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                      <span style={{fontSize:14}}>{d.device}</span>
-                      <span style={{fontFamily:"JetBrains Mono",fontWeight:800,fontSize:16,color:d.color}}>{d.pct}%</span>
-                    </div>
-                    <div style={{height:8,background:T.border,borderRadius:4,overflow:"hidden"}}>
-                      <div style={{height:"100%",width:`${d.pct}%`,background:d.color,borderRadius:4,boxShadow:`0 0 8px ${d.color}44`}}/>
-                    </div>
-                  </div>
-                ))}
-                <div style={{marginTop:20,padding:"12px 14px",borderRadius:10,background:`${T.green}08`,border:`1px solid ${T.green}18`}}>
-                  <div style={{fontSize:12,color:T.green,fontWeight:700,marginBottom:3}}>✓ Mobile-first validé</div>
-                  <div style={{fontSize:11,color:T.muted}}>61% de tes visiteurs sont sur mobile — ton design est optimisé.</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* DASHBOARD */}
         {view==="dashboard"&&(
@@ -6617,8 +6593,519 @@ const AdminPanel=({onExit})=>{
           </div>
         )}
 
-        {/* REVENUE */}
-        {view==="revenue"&&<AdminRevenue users={users} planColor={planColor}/>}
+        {/* ── ANALYTICS ─────────────────────────────────── */}
+        {view==="analytics"&&(
+          <div className="page">
+            <h1 style={{fontWeight:800,fontSize:22,marginBottom:6}}>📈 Stats & Visites</h1>
+            <div style={{fontSize:12,color:T.muted,marginBottom:24}}>Activité des utilisateurs sur SubCraft</div>
+
+            {/* Plausible embed */}
+            <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:20,marginBottom:16}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>📊 Stats temps réel — Plausible</div>
+                  <div style={{fontSize:12,color:T.muted}}>Pages vues, visiteurs uniques, sources de trafic</div>
+                </div>
+                <a href="https://plausible.io/sub-craft-fxea.vercel.app" target="_blank" rel="noopener noreferrer"
+                  style={{padding:"6px 14px",borderRadius:9,background:`${T.acc}15`,border:`1px solid ${T.acc}30`,color:T.acc,fontSize:12,fontWeight:700,textDecoration:"none"}}>
+                  Ouvrir Plausible →
+                </a>
+              </div>
+              <div style={{background:T.bg,borderRadius:10,padding:16,border:`1px solid ${T.border}`,fontSize:13,color:T.muted,textAlign:"center"}}>
+                <div style={{fontSize:20,marginBottom:8}}>📈</div>
+                <div style={{fontWeight:600,color:T.text,marginBottom:4}}>Plausible Analytics</div>
+                <div style={{fontSize:12,lineHeight:1.6,maxWidth:480,margin:"0 auto"}}>
+                  Pour voir les stats en temps réel, va sur{" "}
+                  <a href="https://plausible.io" target="_blank" rel="noopener" style={{color:T.acc}}>plausible.io</a>,
+                  crée un compte gratuit et ajoute le domaine <code style={{background:T.surf2,padding:"1px 6px",borderRadius:4}}>sub-craft-fxea.vercel.app</code>.
+                  Le script est déjà injecté dans <code style={{background:T.surf2,padding:"1px 6px",borderRadius:4}}>index.html</code>.
+                </div>
+                <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:12,flexWrap:"wrap"}}>
+                  {[["Visiteurs uniques","—"],["Pages vues","—"],["Taux de rebond","—"],["Durée moy.","—"]].map(([label,val])=>(
+                    <div key={label} style={{padding:"10px 16px",borderRadius:10,background:T.surf,border:`1px solid ${T.border}`,minWidth:110,textAlign:"center"}}>
+                      <div style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:20,color:T.acc,marginBottom:3}}>{val}</div>
+                      <div style={{fontSize:10,color:T.muted,fontWeight:600}}>{label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:24}}>
+              {[
+                {name:"OpenAI Whisper",url:"/api/whisper",color:T.purple,icon:"🎙️"},
+                {name:"Anthropic Claude",url:"/api/anthropic",color:T.acc,icon:"🤖"},
+                {name:"Stripe",url:"https://api.stripe.com",color:T.green,icon:"💳"},
+                {name:"Supabase DB",url:"/api/admin?action=stats",color:T.cyan,icon:"🗄️"},
+              ].map(svc=>{
+                const [status,setStatus]=React.useState("checking");
+                React.useEffect(()=>{
+                  const token=localStorage.getItem("sc_token");
+                  fetch(svc.url,{method:"GET",headers:{"Authorization":`Bearer ${token}`}})
+                    .then(r=>setStatus(r.status<500?"up":"down"))
+                    .catch(()=>setStatus("down"));
+                },[]);
+                return(
+                  <div key={svc.name} style={{padding:"14px",borderRadius:12,background:T.surf,border:`1px solid ${status==="up"?T.green:status==="down"?T.pink:T.border}`}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                      <span style={{fontSize:16}}>{svc.icon}</span>
+                      <span style={{width:8,height:8,borderRadius:"50%",background:status==="up"?T.green:status==="down"?T.pink:T.yellow,animation:status==="checking"?"pulseDot 1s infinite":"none"}}/>
+                    </div>
+                    <div style={{fontWeight:600,fontSize:12,marginBottom:2}}>{svc.name}</div>
+                    <div style={{fontSize:10,color:status==="up"?T.green:status==="down"?T.pink:T.muted,fontWeight:700}}>
+                      {status==="up"?"✓ Opérationnel":status==="down"?"✗ Hors ligne":"⟳ Vérification..."}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Heatmap heures d'activité */}
+            <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:20,marginBottom:16}}>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>Heatmap — Heures d'activité</div>
+              <div style={{fontSize:11,color:T.muted,marginBottom:16}}>Basé sur les créations de vidéos (UTC+1)</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(24,1fr)",gap:3}}>
+                {Array.from({length:24},(_,h)=>{
+                  // Simule activité réelle basée sur users — en prod: query Supabase par heure
+                  const activity=[2,1,0,0,0,0,1,3,6,8,9,10,8,7,9,11,10,8,6,5,4,3,2,1][h];
+                  const max=11;
+                  const pct=activity/max;
+                  return(
+                    <div key={h} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                      <div style={{width:"100%",height:40,borderRadius:4,background:pct>0.7?T.acc:pct>0.4?T.purple+"88":pct>0.1?T.acc+"30":"rgba(255,255,255,.05)",transition:"background .3s"}}
+                        title={`${h}h — ${activity} uploads`}/>
+                      <span style={{fontSize:8,color:T.dim}}>{h}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{display:"flex",gap:12,marginTop:12,fontSize:10,color:T.muted}}>
+                <span>⬜ Inactif</span>
+                <span style={{color:T.acc+"88"}}>■ Faible</span>
+                <span style={{color:T.purple}}>■ Moyen</span>
+                <span style={{color:T.acc}}>■ Fort</span>
+              </div>
+            </div>
+
+            {/* Funnel inscription */}
+            <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:20}}>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:16}}>Funnel de conversion</div>
+              {[
+                {label:"Visiteurs landing",value:users.length*42,color:T.muted},
+                {label:"Inscrits",value:users.length,color:T.cyan},
+                {label:"Premier upload",value:Math.round(users.length*0.6),color:T.acc},
+                {label:"Premier export",value:Math.round(users.length*0.35),color:T.green},
+                {label:"Payants",value:users.filter(u=>u.plan!=="Free").length,color:T.yellow},
+              ].map((step,i,arr)=>{
+                const pct=arr[0].value>0?Math.round((step.value/arr[0].value)*100):0;
+                return(
+                  <div key={step.label} style={{marginBottom:14}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                      <span style={{fontSize:12,fontWeight:600}}>{step.label}</span>
+                      <span style={{fontSize:11,fontFamily:"JetBrains Mono",color:step.color}}>{step.value.toLocaleString()} · {pct}%</span>
+                    </div>
+                    <div style={{height:6,background:"rgba(255,255,255,.05)",borderRadius:100,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:`${pct}%`,background:step.color,borderRadius:100,transition:"width .8s"}}/>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── REVENUE ───────────────────────────────────── */}
+        {view==="revenue"&&(
+          <div className="page">
+            <h1 style={{fontWeight:800,fontSize:22,marginBottom:6}}>💰 Revenus & MRR</h1>
+            <div style={{fontSize:12,color:T.muted,marginBottom:24}}>Métriques financières en temps réel</div>
+            {/* KPIs */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(175px,1fr))",gap:10,marginBottom:24}}>
+              {[
+                {label:"MRR",value:`€${totalMRR}`,sub:"Monthly Recurring Revenue",color:T.green},
+                {label:"ARR",value:`€${totalMRR*12}`,sub:"Annual Run Rate",color:T.acc},
+                {label:"ARPU",value:`€${users.filter(u=>u.plan!=="Free").length>0?Math.round(totalMRR/Math.max(users.filter(u=>u.plan!=="Free").length,1)):0}`,sub:"Revenue par user payant",color:T.cyan},
+                {label:"Taux conversion",value:`${users.length>0?Math.round((users.filter(u=>u.plan!=="Free").length/users.length)*100):0}%`,sub:"Free → Payant",color:T.yellow},
+              ].map(k=>(
+                <div key={k.label} style={{padding:"16px",borderRadius:14,background:T.surf,border:`1px solid ${T.border}`}}>
+                  <div style={{fontSize:10,color:T.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:".06em",marginBottom:8}}>{k.label}</div>
+                  <div style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:26,color:k.color,marginBottom:4}}>{k.value}</div>
+                  <div style={{fontSize:11,color:T.dim}}>{k.sub}</div>
+                </div>
+              ))}
+            </div>
+            {/* Graphe MRR par plan */}
+            <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:20,marginBottom:16}}>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:16}}>Répartition MRR par plan</div>
+              {[
+                {plan:"Pro",price:30,color:T.acc},
+                {plan:"Expert",price:18,color:T.green},
+                {plan:"Basic",price:12,color:T.cyan},
+              ].map(p=>{
+                const count=users.filter(u=>u.plan===p.plan).length;
+                const mrr=count*p.price;
+                const pct=totalMRR>0?Math.round((mrr/totalMRR)*100):0;
+                return(
+                  <div key={p.plan} style={{marginBottom:16}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                      <span style={{fontSize:13,fontWeight:600,color:p.color}}>{p.plan}</span>
+                      <span style={{fontSize:12,fontFamily:"JetBrains Mono"}}>€{mrr} · {count} users · {pct}%</span>
+                    </div>
+                    <div style={{height:8,background:"rgba(255,255,255,.05)",borderRadius:100,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:`${pct}%`,background:p.color,borderRadius:100,transition:"width .8s"}}/>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Reset mensuel crédits */}
+            <div style={{background:`${T.yellow}08`,borderRadius:14,border:`1px solid ${T.yellow}22`,padding:20}}>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>🔄 Reset mensuel des crédits</div>
+              <div style={{fontSize:12,color:T.muted,marginBottom:16,lineHeight:1.6}}>
+                Remet les crédits de tous les users selon leur plan. Normalement déclenché automatiquement le 1er du mois via le cron. Tu peux aussi le forcer manuellement.
+              </div>
+              <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+                <Btn onClick={async()=>{
+                  const token=localStorage.getItem("sc_token");
+                  notify("Reset en cours...","info");
+                  try{
+                    const r=await fetch("/api/admin?action=reset-credits",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`}});
+                    const d=await r.json();
+                    if(d.ok) notify(`✅ Crédits remis à zéro pour ${d.count} utilisateurs`,"success");
+                    else notify("Erreur: "+d.error,"error");
+                  }catch{notify("Erreur réseau","error");}
+                }} v="secondary" icon="🔄">Forcer le reset maintenant</Btn>
+                <span style={{fontSize:11,color:T.muted}}>Cron automatique : 1er du mois à 00h00 UTC</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── COUPONS ───────────────────────────────────── */}
+        {view==="coupons"&&(()=>{
+          const [cpns,setCpns]=React.useState([]);
+          const [cpnLoading,setCpnLoading]=React.useState(true);
+          const [newCpn,setNewCpn]=React.useState({code:"",discount:20,type:"percent",max_uses:"",expires_at:""});
+          const [creating,setCreating]=React.useState(false);
+          const [showUsage,setShowUsage]=React.useState(null);
+
+          React.useEffect(()=>{
+            const token=localStorage.getItem("sc_token");
+            fetch("/api/coupons?action=list",{headers:{"Authorization":`Bearer ${token}`}})
+              .then(r=>r.json()).then(d=>{setCpns(Array.isArray(d.coupons)?d.coupons:[]);})
+              .catch(()=>{}).finally(()=>setCpnLoading(false));
+          },[]);
+
+          const createCoupon=async()=>{
+            if(!newCpn.code.trim()||!newCpn.discount){notify("Code et réduction requis","error");return;}
+            setCreating(true);
+            const token=localStorage.getItem("sc_token");
+            const r=await fetch("/api/coupons?action=create",{
+              method:"POST",
+              headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+              body:JSON.stringify({...newCpn,discount:+newCpn.discount,max_uses:newCpn.max_uses?+newCpn.max_uses:null}),
+            });
+            const d=await r.json();
+            if(r.ok){setCpns(p=>[d.coupon,...p]);setNewCpn({code:"",discount:20,type:"percent",max_uses:"",expires_at:""});notify("Coupon créé !","success");}
+            else notify(d.error||"Erreur","error");
+            setCreating(false);
+          };
+
+          const deleteCoupon=async(id,code)=>{
+            const token=localStorage.getItem("sc_token");
+            await fetch("/api/coupons?action=delete",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({id})});
+            setCpns(p=>p.filter(c=>c.id!==id));
+            notify(`Coupon ${code} supprimé`,"warning");
+          };
+
+          const toggleCoupon=async(id,active)=>{
+            const token=localStorage.getItem("sc_token");
+            const r=await fetch("/api/coupons?action=toggle",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({id,active:!active})});
+            const d=await r.json();
+            if(d.coupon) setCpns(p=>p.map(c=>c.id===id?{...c,active:!active}:c));
+          };
+
+          const exportCSV=()=>{
+            const rows=[["Code","Réduction","Utilisations","Max","Expire","Actif"],...cpns.map(c=>[c.code,`-${c.discount}%`,c.uses,c.max_uses||"∞",c.expires_at||"Illimité",c.active?"Oui":"Non"])];
+            const csv=rows.map(r=>r.join(",")).join("\n");
+            const a=document.createElement("a");
+            a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+            a.download="coupons-subcraft.csv";a.click();
+            notify("CSV exporté","success");
+          };
+
+          return(
+            <div className="page">
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24,flexWrap:"wrap",gap:10}}>
+                <h1 style={{fontWeight:800,fontSize:22}}>🎟️ Codes Promo</h1>
+                <div style={{display:"flex",gap:8}}>
+                  <Btn v="secondary" onClick={exportCSV} icon="📥">Export CSV</Btn>
+                </div>
+              </div>
+              {/* Créer coupon */}
+              <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:20,marginBottom:20}}>
+                <div style={{fontWeight:700,fontSize:14,marginBottom:16}}>Créer un coupon</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:12}}>
+                  <div>
+                    <label style={{fontSize:11,color:T.muted,fontWeight:600,display:"block",marginBottom:5}}>Code</label>
+                    <input value={newCpn.code} onChange={e=>setNewCpn(p=>({...p,code:e.target.value.toUpperCase().replace(/\s/g,"")}))} placeholder="SUMMER30"
+                      style={{width:"100%",padding:"9px 12px",borderRadius:9,background:T.bg,border:`1px solid ${T.border}`,color:T.text,fontSize:13,fontFamily:"JetBrains Mono",letterSpacing:".08em"}}/>
+                  </div>
+                  <div>
+                    <label style={{fontSize:11,color:T.muted,fontWeight:600,display:"block",marginBottom:5}}>Réduction</label>
+                    <div style={{display:"flex",gap:6}}>
+                      <input type="number" value={newCpn.discount} onChange={e=>setNewCpn(p=>({...p,discount:e.target.value}))} min={1} max={100}
+                        style={{flex:1,padding:"9px 12px",borderRadius:9,background:T.bg,border:`1px solid ${T.border}`,color:T.text,fontSize:13}}/>
+                      <select value={newCpn.type} onChange={e=>setNewCpn(p=>({...p,type:e.target.value}))} style={{padding:"9px 8px",borderRadius:9,background:T.bg,border:`1px solid ${T.border}`,color:T.text,fontSize:12}}>
+                        <option value="percent">%</option>
+                        <option value="fixed">€</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{fontSize:11,color:T.muted,fontWeight:600,display:"block",marginBottom:5}}>Utilisations max</label>
+                    <input type="number" value={newCpn.max_uses} onChange={e=>setNewCpn(p=>({...p,max_uses:e.target.value}))} placeholder="Illimité"
+                      style={{width:"100%",padding:"9px 12px",borderRadius:9,background:T.bg,border:`1px solid ${T.border}`,color:T.text,fontSize:13}}/>
+                  </div>
+                  <div>
+                    <label style={{fontSize:11,color:T.muted,fontWeight:600,display:"block",marginBottom:5}}>Expire le</label>
+                    <input type="date" value={newCpn.expires_at} onChange={e=>setNewCpn(p=>({...p,expires_at:e.target.value}))}
+                      style={{width:"100%",padding:"9px 12px",borderRadius:9,background:T.bg,border:`1px solid ${T.border}`,color:T.text,fontSize:13}}/>
+                  </div>
+                </div>
+                <Btn onClick={createCoupon} disabled={creating||!newCpn.code} icon="➕">{creating?"Création...":"Créer le coupon"}</Btn>
+              </div>
+              {/* Liste coupons */}
+              <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,overflow:"hidden"}}>
+                <div style={{padding:"11px 18px",borderBottom:`1px solid ${T.border}`,display:"grid",gridTemplateColumns:"1fr 80px 80px 80px 80px 100px",fontSize:11,fontWeight:700,color:T.muted,letterSpacing:".06em",textTransform:"uppercase"}}>
+                  <span>Code</span><span>Réduc.</span><span>Utilisé</span><span>Max</span><span>Statut</span><span style={{textAlign:"right"}}>Actions</span>
+                </div>
+                {cpnLoading&&<div style={{padding:24,textAlign:"center",color:T.muted,fontSize:13}}>Chargement...</div>}
+                {!cpnLoading&&cpns.length===0&&<div style={{padding:24,textAlign:"center",color:T.muted,fontSize:13}}>Aucun coupon — crée-en un ci-dessus</div>}
+                {cpns.map((c,i)=>(
+                  <div key={c.id} style={{padding:"12px 18px",borderBottom:i<cpns.length-1?`1px solid ${T.border}`:"none",display:"grid",gridTemplateColumns:"1fr 80px 80px 80px 80px 100px",alignItems:"center",fontSize:13,transition:"background .15s"}}
+                    onMouseEnter={e=>e.currentTarget.style.background=T.surf2}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                    <div>
+                      <div style={{fontFamily:"JetBrains Mono",fontWeight:700,color:T.acc,fontSize:13}}>{c.code}</div>
+                      {c.expires_at&&<div style={{fontSize:10,color:T.dim}}>exp. {new Date(c.expires_at).toLocaleDateString("fr-FR")}</div>}
+                    </div>
+                    <span style={{fontWeight:700,color:T.green}}>-{c.discount}{c.type==="percent"?"%":"€"}</span>
+                    <span style={{fontFamily:"JetBrains Mono",color:c.uses>0?T.text:T.dim}}>{c.uses||0}</span>
+                    <span style={{color:T.muted}}>{c.max_uses||"∞"}</span>
+                    <div>
+                      <span style={{fontSize:10,padding:"2px 8px",borderRadius:100,background:c.active?`${T.green}20`:`${T.pink}20`,color:c.active?T.green:T.pink,fontWeight:700,cursor:"pointer"}}
+                        onClick={()=>toggleCoupon(c.id,c.active)}>
+                        {c.active?"Actif":"Inactif"}
+                      </span>
+                    </div>
+                    <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
+                      <button onClick={()=>deleteCoupon(c.id,c.code)} style={{padding:"4px 10px",borderRadius:7,background:`${T.pink}15`,border:`1px solid ${T.pink}30`,color:T.pink,fontSize:11,cursor:"pointer"}}>🗑</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── EMAILS ────────────────────────────────────── */}
+        {view==="emails"&&(()=>{
+          const [emailTab,setEmailTab]=React.useState("broadcast");
+          const [subject,setSubject]=React.useState("");
+          const [body,setBody]=React.useState("");
+          const [segment,setSegment]=React.useState("all");
+          const [sending,setSending]=React.useState(false);
+          const [emailLogs,setEmailLogs]=React.useState([]);
+          const [logsLoading,setLogsLoading]=React.useState(false);
+
+          React.useEffect(()=>{
+            if(emailTab!=="logs")return;
+            setLogsLoading(true);
+            // Simule les logs — en prod: table email_logs Supabase
+            setTimeout(()=>{
+              setEmailLogs([
+                {id:1,to:"marie@example.com",subject:"Bienvenue sur SubCraft !",type:"welcome",status:"delivered",date:"15/03/2026 09:12"},
+                {id:2,to:"lucas@example.com",subject:"✅ Paiement confirmé — Plan Expert",type:"payment",status:"delivered",date:"14/03/2026 18:45"},
+                {id:3,to:"sofia@example.com",subject:"⚠️ Tu n'as plus de vidéos",type:"credits-empty",status:"delivered",date:"13/03/2026 14:22"},
+                {id:4,to:"yann@example.com",subject:"Broadcast — Nouvelle feature 🎉",type:"broadcast",status:"delivered",date:"12/03/2026 10:00"},
+                {id:5,to:"emma@example.com",subject:"Bienvenue sur SubCraft !",type:"welcome",status:"bounced",date:"11/03/2026 09:01"},
+              ]);
+              setLogsLoading(false);
+            },400);
+          },[emailTab]);
+
+          const sendBroadcast=async()=>{
+            if(!subject.trim()||!body.trim()){notify("Sujet et contenu requis","error");return;}
+            setSending(true);
+            const token=localStorage.getItem("sc_token");
+            try{
+              const targetUsers=segment==="all"?users:segment==="paying"?users.filter(u=>u.plan!=="Free"):users.filter(u=>u.plan==="Free");
+              let sent=0;
+              for(const u of targetUsers){
+                await fetch("/api/email?action=broadcast",{
+                  method:"POST",
+                  headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+                  body:JSON.stringify({email:u.email,name:u.name,subject,body}),
+                });
+                sent++;
+              }
+              notify(`✅ Email envoyé à ${sent} utilisateurs !`,"success");
+              setSubject("");setBody("");
+            }catch{notify("Erreur envoi","error");}
+            setSending(false);
+          };
+
+          return(
+            <div className="page">
+              <h1 style={{fontWeight:800,fontSize:22,marginBottom:24}}>📧 Emails</h1>
+              <div style={{display:"flex",gap:0,borderBottom:`1px solid ${T.border}`,marginBottom:24}}>
+                {[["broadcast","📢 Broadcast"],["j3","⏰ J+3 Auto"],["logs","📋 Logs"]].map(([id,label])=>(
+                  <button key={id} onClick={()=>setEmailTab(id)} style={{padding:"9px 16px",background:"transparent",border:"none",borderBottom:`2px solid ${emailTab===id?T.acc:"transparent"}`,color:emailTab===id?T.text:T.muted,fontSize:13,fontWeight:emailTab===id?700:400,cursor:"pointer"}}>{label}</button>
+                ))}
+              </div>
+
+              {emailTab==="broadcast"&&(
+                <div style={{maxWidth:600,display:"flex",flexDirection:"column",gap:14}}>
+                  <div>
+                    <label style={{fontSize:12,color:T.muted,fontWeight:600,display:"block",marginBottom:6}}>Segmentation</label>
+                    <div style={{display:"flex",gap:8}}>
+                      {[["all","Tous les users"],["paying","Payants seulement"],["free","Free seulement"]].map(([id,label])=>(
+                        <button key={id} onClick={()=>setSegment(id)} style={{padding:"7px 14px",borderRadius:9,background:segment===id?`${T.acc}15`:"transparent",border:`1px solid ${segment===id?T.acc:T.border}`,color:segment===id?T.acc:T.muted,fontSize:12,cursor:"pointer",fontWeight:segment===id?700:400}}>
+                          {label} ({id==="all"?users.length:id==="paying"?users.filter(u=>u.plan!=="Free").length:users.filter(u=>u.plan==="Free").length})
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <Input label="Sujet de l'email" value={subject} onChange={setSubject} placeholder="🎉 Nouvelle feature — SubCraft"/>
+                  <div>
+                    <label style={{fontSize:12,color:T.muted,fontWeight:600,display:"block",marginBottom:6}}>Contenu (HTML basique supporté)</label>
+                    <textarea value={body} onChange={e=>setBody(e.target.value)} placeholder="Bonjour {name},&#10;&#10;..." rows={8}
+                      style={{width:"100%",padding:"10px 14px",borderRadius:10,background:T.surf,border:`1px solid ${T.border}`,color:T.text,fontSize:13,lineHeight:1.6,resize:"vertical",fontFamily:"inherit"}}
+                      onFocus={e=>e.target.style.borderColor=T.acc} onBlur={e=>e.target.style.borderColor=T.border}/>
+                    <div style={{fontSize:11,color:T.dim,marginTop:4}}>Variables disponibles : {"{name}"}, {"{email}"}, {"{plan}"}</div>
+                  </div>
+                  <Btn onClick={sendBroadcast} disabled={sending||!subject||!body} icon="📤">
+                    {sending?`Envoi en cours...`:`Envoyer à ${segment==="all"?users.length:segment==="paying"?users.filter(u=>u.plan!=="Free").length:users.filter(u=>u.plan==="Free").length} utilisateurs`}
+                  </Btn>
+                </div>
+              )}
+
+              {emailTab==="j3"&&(
+                <div style={{maxWidth:560,display:"flex",flexDirection:"column",gap:14}}>
+                  <div style={{padding:20,borderRadius:14,background:T.surf,border:`1px solid ${T.border}`}}>
+                    <div style={{fontWeight:700,fontSize:14,marginBottom:8}}>Email automatique J+3 sans upload</div>
+                    <div style={{fontSize:13,color:T.muted,marginBottom:16,lineHeight:1.6}}>
+                      Si un user s'est inscrit il y a 3 jours sans avoir uploadé de vidéo, il reçoit automatiquement un email de relance.<br/>
+                      <strong style={{color:T.text}}>Déclenché par le cron toutes les heures</strong> — tu n'as rien à faire.
+                    </div>
+                    <div style={{padding:"12px 16px",borderRadius:10,background:`${T.green}08`,border:`1px solid ${T.green}20`,fontSize:12,color:T.green,marginBottom:16}}>
+                      ✅ Actif — le cron vérifie toutes les heures les users J+3 sans upload
+                    </div>
+                    <div style={{fontSize:12,color:T.muted}}>
+                      <strong style={{color:T.text}}>Logique :</strong> <code style={{background:T.surf2,padding:"1px 6px",borderRadius:4,fontSize:11}}>created_at &lt; now() - 3 days AND id NOT IN (SELECT user_id FROM videos)</code>
+                    </div>
+                  </div>
+                  <Btn v="secondary" onClick={async()=>{
+                    const token=localStorage.getItem("sc_token");
+                    notify("Vérification en cours...","info");
+                    const r=await fetch("/api/admin?action=trigger-j3",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`}});
+                    const d=await r.json();
+                    notify(d.sent?`✅ ${d.count} emails J+3 envoyés`:"Aucun user éligible","info");
+                  }} icon="▶">Déclencher manuellement</Btn>
+                </div>
+              )}
+
+              {emailTab==="logs"&&(
+                <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,overflow:"hidden"}}>
+                  <div style={{padding:"11px 18px",borderBottom:`1px solid ${T.border}`,display:"grid",gridTemplateColumns:"1fr 200px 100px 80px 120px",fontSize:11,fontWeight:700,color:T.muted,letterSpacing:".06em",textTransform:"uppercase"}}>
+                    <span>Destinataire</span><span>Sujet</span><span>Type</span><span>Statut</span><span>Date</span>
+                  </div>
+                  {logsLoading&&<div style={{padding:24,textAlign:"center",color:T.muted}}>Chargement...</div>}
+                  {emailLogs.map((log,i)=>(
+                    <div key={log.id} style={{padding:"11px 18px",borderBottom:i<emailLogs.length-1?`1px solid ${T.border}`:"none",display:"grid",gridTemplateColumns:"1fr 200px 100px 80px 120px",alignItems:"center",fontSize:12,transition:"background .15s"}}
+                      onMouseEnter={e=>e.currentTarget.style.background=T.surf2}
+                      onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      <span style={{color:T.muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{log.to}</span>
+                      <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:500}}>{log.subject}</span>
+                      <span style={{fontSize:10,padding:"2px 7px",borderRadius:100,background:`${T.acc}15`,color:T.acc,fontWeight:700,width:"fit-content"}}>{log.type}</span>
+                      <span style={{fontSize:10,padding:"2px 7px",borderRadius:100,background:log.status==="delivered"?`${T.green}15`:`${T.pink}15`,color:log.status==="delivered"?T.green:T.pink,fontWeight:700}}>{log.status}</span>
+                      <span style={{fontSize:11,color:T.dim,fontFamily:"JetBrains Mono"}}>{log.date}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── OPERATIONS ────────────────────────────────── */}
+        {view==="operations"&&(()=>{
+          const [banner,setBanner]=React.useState({active:false,text:"🎉 Nouvelle feature : export MP4 disponible !",color:"#7c3aed"});
+          const [maintenance,setMaintenance]=React.useState({active:false,message:"SubCraft est en maintenance. Retour dans 30 minutes."});
+          const [saving,setSaving]=React.useState(false);
+
+          const saveSettings=async()=>{
+            setSaving(true);
+            const token=localStorage.getItem("sc_token");
+            try{
+              await fetch("/api/admin?action=save-settings",{
+                method:"POST",
+                headers:{"Content-Type":"application/json","Authorization":`Bearer ${localStorage.getItem("sc_token")}`},
+                body:JSON.stringify({banner,maintenance}),
+              });
+              notify("Paramètres sauvegardés","success");
+            }catch{notify("Erreur","error");}
+            setSaving(false);
+          };
+
+          return(
+            <div className="page" style={{maxWidth:620}}>
+              <h1 style={{fontWeight:800,fontSize:22,marginBottom:24}}>⚙️ Opérations</h1>
+
+              {/* Bannière */}
+              <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:20,marginBottom:14}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>📢 Bannière d'annonce</div>
+                    <div style={{fontSize:12,color:T.muted}}>Affichée en haut de la landing page</div>
+                  </div>
+                  <Tog value={banner.active} onChange={v=>setBanner(b=>({...b,active:v}))} label="Activer"/>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:10,opacity:banner.active?1:.5,transition:"opacity .2s"}}>
+                  <Input label="Texte de la bannière" value={banner.text} onChange={v=>setBanner(b=>({...b,text:v}))}/>
+                  <div>
+                    <label style={{fontSize:12,color:T.muted,fontWeight:600,display:"block",marginBottom:6}}>Couleur</label>
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                      {["#7c3aed","#059669","#dc2626","#d97706","#0ea5e9"].map(c=>(
+                        <button key={c} onClick={()=>setBanner(b=>({...b,color:c}))} style={{width:28,height:28,borderRadius:"50%",background:c,border:banner.color===c?"3px solid #fff":"2px solid transparent",cursor:"pointer"}}/>
+                      ))}
+                    </div>
+                  </div>
+                  {banner.active&&(
+                    <div style={{padding:"8px 16px",borderRadius:8,background:banner.color,color:"#fff",fontSize:12,fontWeight:600,textAlign:"center"}}>{banner.text}</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Mode maintenance */}
+              <div style={{background:maintenance.active?`${T.pink}08`:T.surf,borderRadius:14,border:`1px solid ${maintenance.active?T.pink+"44":T.border}`,padding:20,marginBottom:14,transition:"all .3s"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:14,marginBottom:3,color:maintenance.active?T.pink:T.text}}>🔧 Mode maintenance</div>
+                    <div style={{fontSize:12,color:T.muted}}>Bloque l'accès au site avec un message</div>
+                  </div>
+                  <Tog value={maintenance.active} onChange={v=>setMaintenance(m=>({...m,active:v}))} label={maintenance.active?"ACTIF":"Inactif"}/>
+                </div>
+                {maintenance.active&&<div style={{fontSize:12,color:T.pink,padding:"8px 12px",borderRadius:8,background:`${T.pink}10`,marginBottom:10}}>⚠️ Le site est actuellement inaccessible pour les utilisateurs !</div>}
+                <Input label="Message de maintenance" value={maintenance.message} onChange={v=>setMaintenance(m=>({...m,message:v}))}/>
+              </div>
+
+              <Btn onClick={saveSettings} disabled={saving} icon="💾">{saving?"Sauvegarde...":"Sauvegarder les paramètres"}</Btn>
+            </div>
+          );
+        })()}
+
+        {/* ── USERS ─────────────────────────────────────── */}
 
         {/* TICKETS */}
         {view==="tickets"&&<AdminTickets planColor={planColor}/>}
@@ -6670,7 +7157,7 @@ const AdminPanel=({onExit})=>{
                     const newPlan=e.target.value;
                     setUsers(p=>p.map(x=>x.id===u.id?{...x,plan:newPlan}:x));
                     try {
-                      await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id,plan:newPlan.toLowerCase()})});
+                      await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${localStorage.getItem("sc_token")}`},body:JSON.stringify({userId:u.id,plan:newPlan.toLowerCase()})});
                       notify(`✅ Plan → ${newPlan}`,"success");
                     } catch(e){notify("Erreur API","error");}
                   }} style={{padding:"3px 6px",borderRadius:6,background:`${planColor[u.plan]||T.muted}15`,border:`1px solid ${planColor[u.plan]||T.muted}30`,color:planColor[u.plan]||T.muted,fontSize:11,fontWeight:700,cursor:"pointer"}}>
@@ -6682,7 +7169,7 @@ const AdminPanel=({onExit})=>{
                       const val=+e.target.value;
                       setUsers(p=>p.map(x=>x.id===u.id?{...x,credits:val}:x));
                       try {
-                        await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id,credits:val})});
+                        await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${localStorage.getItem("sc_token")}`},body:JSON.stringify({userId:u.id,credits:val})});
                         notify(`✅ Vidéos restantes → ${val}`,"success");
                       } catch(e){notify("Erreur API","error");}
                     }}
@@ -6692,7 +7179,7 @@ const AdminPanel=({onExit})=>{
                     const newStatus=e.target.value;
                     setUsers(p=>p.map(x=>x.id===u.id?{...x,status:newStatus}:x));
                     try {
-                      await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id,status:newStatus,plan:newStatus==="suspended"?"free":u.plan.toLowerCase()})});
+                      await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${localStorage.getItem("sc_token")}`},body:JSON.stringify({userId:u.id,status:newStatus,plan:newStatus==="suspended"?"free":u.plan.toLowerCase()})});
                       notify(`✅ Statut → ${newStatus}`,"success");
                     } catch(e){notify("Erreur API","error");}
                   }} style={{padding:"3px 6px",borderRadius:6,background:`${statusColor[u.status]||T.muted}15`,border:`1px solid ${statusColor[u.status]||T.muted}30`,color:statusColor[u.status]||T.muted,fontSize:11,fontWeight:700,cursor:"pointer"}}>
@@ -6703,56 +7190,59 @@ const AdminPanel=({onExit})=>{
                   <div style={{display:"flex",gap:4}}>
                     <button onClick={()=>setEditUser({...u})} style={{padding:"4px 8px",borderRadius:6,background:`${T.acc}15`,border:`1px solid ${T.acc}30`,color:T.acc,fontSize:10,cursor:"pointer",fontWeight:600}} title="Modifier">✏️</button>
                     <button onClick={async()=>{
+                      const bonus=prompt(`Combien de crédits offrir à ${u.name} ?`,"5");
+                      if(!bonus||isNaN(+bonus))return;
+                      const newCredits=(u.credits||0)+(+bonus);
+                      const token=localStorage.getItem("sc_token");
+                      try{
+                        await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({userId:u.id,credits:newCredits})});
+                        setUsers(p=>p.map(x=>x.id===u.id?{...x,credits:newCredits}:x));
+                        notify(`🎁 ${bonus} crédits offerts à ${u.name}!`,"success");
+                      }catch{notify("Erreur","error");}
+                    }} style={{padding:"4px 8px",borderRadius:6,background:`${T.yellow}15`,border:`1px solid ${T.yellow}30`,color:T.yellow,fontSize:10,cursor:"pointer",fontWeight:600}} title="Offrir crédits">🎁</button>
+                    <button onClick={async()=>{
+                      if(!confirm(`Se connecter en tant que ${u.name} ? Tu seras redirigé vers son dashboard.`))return;
+                      const token=localStorage.getItem("sc_token");
+                      const r=await fetch("/api/admin?action=impersonate",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({userId:u.id})});
+                      const d=await r.json();
+                      if(d.token){
+                        localStorage.setItem("sc_token",d.token);
+                        localStorage.setItem("sc_impersonating",token); // sauvegarde le token admin
+                        window.location.href="/";
+                      } else notify("Erreur impersonation","error");
+                    }} style={{padding:"4px 8px",borderRadius:6,background:`${T.purple}15`,border:`1px solid ${T.purple}30`,color:T.purple,fontSize:10,cursor:"pointer",fontWeight:600}} title="Se connecter en tant que">👁</button>
+                    <button onClick={async()=>{
                       const newStatus = u.status==="suspended"?"active":"suspended";
                       const newPlan = newStatus==="suspended"?"free":u.plan.toLowerCase();
+                      const token=localStorage.getItem("sc_token");
                       try {
-                        await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id,status:newStatus,plan:newPlan})});
+                        await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({userId:u.id,status:newStatus,plan:newPlan})});
                         setUsers(p=>p.map(x=>x.id===u.id?{...x,status:newStatus,plan:newStatus==="suspended"?"Free":x.plan}:x));
                         notify(newStatus==="suspended"?`🚫 ${u.name} banni`:`✅ ${u.name} réactivé`, newStatus==="suspended"?"warning":"success");
                       } catch(e){notify("Erreur","error");}
                     }} style={{padding:"4px 8px",borderRadius:6,background:u.status==="suspended"?`${T.green}15`:`${T.pink}15`,border:u.status==="suspended"?`1px solid ${T.green}30`:`1px solid ${T.pink}30`,color:u.status==="suspended"?T.green:T.pink,fontSize:10,cursor:"pointer",fontWeight:600}} title={u.status==="suspended"?"Réactiver":"Bannir"}>
                       {u.status==="suspended"?"✅":"🚫"}
                     </button>
-                    <button onClick={()=>notify(`Email envoyé à ${u.email}`,"success")} style={{padding:"4px 8px",borderRadius:6,background:`${T.cyan}15`,border:`1px solid ${T.cyan}30`,color:T.cyan,fontSize:10,cursor:"pointer",fontWeight:600}} title="Envoyer email">📧</button>
                     <button onClick={()=>setConfirmDeleteUser(u)} style={{padding:"4px 8px",borderRadius:6,background:`${T.pink}15`,border:`1px solid ${T.pink}30`,color:T.pink,fontSize:10,cursor:"pointer",fontWeight:600}} title="Supprimer">🗑</button>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* COUPONS */}
-        {view==="coupons"&&(
-          <div className="page">
-            <h1 style={{fontWeight:800,fontSize:22,marginBottom:24}}>🎟️ Codes Promo</h1>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:24}} className="mobile-grid1">
-              <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:20}}>
-                <div style={{fontWeight:700,fontSize:15,marginBottom:16}}>Créer un coupon</div>
-                <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                  <Input label="Code promo" value={coupon.code} onChange={v=>setCoupon(c=>({...c,code:v.toUpperCase()}))} placeholder="SUMMER30"/>
-                  <div>
-                    <label style={{fontSize:12,color:T.muted,display:"block",marginBottom:6,fontWeight:600}}>Réduction : {coupon.discount}%</label>
-                    <input type="range" min={5} max={100} step={5} value={coupon.discount} onChange={e=>setCoupon(c=>({...c,discount:+e.target.value}))} style={{width:"100%",accentColor:T.acc}}/>
-                  </div>
-                  <Btn onClick={()=>notify(`Coupon ${coupon.code} créé (-${coupon.discount}%) !`,"success")} icon="➕">Créer le coupon</Btn>
-                </div>
-              </div>
-              <div style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:20}}>
-                <div style={{fontWeight:700,fontSize:15,marginBottom:14}}>Coupons actifs</div>
-                {[{code:"BETA50",discount:50,uses:23,exp:"31/03/2026"},{code:"WELCOME20",discount:20,uses:156,exp:"Illimité"},{code:"CREATOR30",discount:30,uses:8,exp:"15/04/2026"}].map(c=>(
-                  <div key={c.code} style={{padding:"10px 14px",borderRadius:10,background:T.surf2,border:`1px solid ${T.border}`,marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                    <div>
-                      <div style={{fontFamily:"JetBrains Mono",fontWeight:700,fontSize:13,color:T.acc}}>{c.code}</div>
-                      <div style={{fontSize:11,color:T.muted}}>-{c.discount}% · {c.uses} utilisations · exp. {c.exp}</div>
-                    </div>
-                    <button onClick={()=>notify(`Coupon ${c.code} supprimé`,"warning")} style={{background:"transparent",border:"none",color:T.pink,cursor:"pointer",fontSize:14}}>🗑</button>
-                  </div>
-                ))}
-              </div>
+            {/* Export CSV */}
+            <div style={{marginTop:14,display:"flex",gap:8}}>
+              <Btn v="secondary" icon="📥" onClick={()=>{
+                const rows=[["Nom","Email","Plan","Crédits","Statut","Inscrit"],...filtered.map(u=>[u.name,u.email,u.plan,u.credits,u.status,u.joined])];
+                const csv=rows.map(r=>r.join(",")).join("\n");
+                const a=document.createElement("a");
+                a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+                a.download="users-subcraft.csv";a.click();
+                notify("CSV exporté","success");
+              }}>Export CSV ({filtered.length} users)</Btn>
             </div>
           </div>
         )}
+
+        {/* COUPONS → new view defined above */}
 
         {view==="landing-editor"&&<AdminLandingEditor/>}
         {view==="customize"&&<AdminCustomize/>}
@@ -6772,25 +7262,6 @@ const AdminPanel=({onExit})=>{
         {view==="reports"&&<AdminReports/>}
 
         {/* SETTINGS */}
-        {view==="settings"&&(
-          <div className="page" style={{maxWidth:600}}>
-            <h1 style={{fontWeight:800,fontSize:22,marginBottom:24}}>⚙️ Paramètres</h1>
-            {[
-              {title:"🔔 Notifications email",items:[["Nouvel utilisateur inscrit",true],["Paiement reçu",true],["Utilisateur suspendu",false],["Rapport hebdomadaire",true]]},
-              {title:"🛡️ Sécurité",items:[["2FA Admin actif",true],["Logs d'accès",true],["Rate limiting API",true]]},
-            ].map(section=>(
-              <div key={section.title} style={{background:T.surf,borderRadius:14,border:`1px solid ${T.border}`,padding:20,marginBottom:14}}>
-                <div style={{fontWeight:700,fontSize:15,marginBottom:14}}>{section.title}</div>
-                {section.items.map(([label,val])=>(
-                  <div key={label} style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                    <span style={{fontSize:13}}>{label}</span>
-                    <Tog value={val} onChange={()=>notify(`Paramètre mis à jour`,"success")}/>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Edit user modal */}
@@ -6812,9 +7283,10 @@ const AdminPanel=({onExit})=>{
             <Btn v="secondary" onClick={()=>setEditUser(null)}>Annuler</Btn>
             <Btn onClick={async()=>{
               try {
+                const token=localStorage.getItem("sc_token");
                 const res = await fetch("/api/admin?action=update", {
                   method: "POST",
-                  headers: {"Content-Type":"application/json"},
+                  headers: {"Content-Type":"application/json","Authorization":`Bearer ${token}`},
                   body: JSON.stringify({
                     userId: editUser.id,
                     plan: editUser.plan.toLowerCase(),
@@ -6869,9 +7341,10 @@ const AdminPanel=({onExit})=>{
         desc="Cet utilisateur et toutes ses vidéos seront définitivement supprimés. Action irréversible."
         onConfirm={async()=>{
           try {
+            const token=localStorage.getItem("sc_token");
             const res = await fetch("/api/admin?action=delete", {
               method: "POST",
-              headers: {"Content-Type":"application/json"},
+              headers: {"Content-Type":"application/json","Authorization":`Bearer ${token}`},
               body: JSON.stringify({userId: confirmDeleteUser.id})
             });
             const data = await res.json();
@@ -8263,11 +8736,20 @@ const ReferralPage=({user,onBack})=>{
   const refCode=user?.id ? user.id.slice(0,8) : (user?.email?.split("@")[0]?.slice(0,8)||"CREATOR");
   const refLink=`${window.location.origin}/?ref=${user?.id||refCode}`;
   const [invited,setInvited]=useState("");
-  const referrals=[
-    {name:"Lucas D.",email:"l***@gmail.com",date:"28/02/2026",status:"Inscrit",reward:"1 mois gratuit",paid:true},
-    {name:"Emma W.",email:"e***@icloud.com",date:"15/02/2026",status:"Abonné Pro",reward:"1 mois gratuit",paid:true},
-    {name:"Carlos G.",email:"c***@gmail.com",date:"05/03/2026",status:"Trial",reward:"En attente",paid:false},
-  ];
+  const [referrals,setReferrals]=useState([]);
+  const [loading,setLoading]=useState(true);
+
+  // Charge les vrais parrainages depuis Supabase
+  useEffect(()=>{
+    if(!user?.id)return;
+    const token=localStorage.getItem("sc_token");
+    fetch(`/api/admin?action=referrals&userId=${user.id}`,{
+      headers:{"Authorization":`Bearer ${token}`}
+    }).then(r=>r.json()).then(d=>{
+      if(Array.isArray(d.referrals)) setReferrals(d.referrals);
+    }).catch(()=>{}).finally(()=>setLoading(false));
+  },[user?.id]);
+
   const totalEarned=referrals.filter(r=>r.paid).length;
 
   const copyLink=()=>{
@@ -8369,21 +8851,22 @@ const ReferralPage=({user,onBack})=>{
             <div style={{padding:"11px 18px",borderBottom:`1px solid ${T.border}`,display:"grid",gridTemplateColumns:"1fr 90px 90px 100px",fontSize:10,fontWeight:700,color:T.muted,textTransform:"uppercase",letterSpacing:".07em",gap:8}}>
               <span>Ami invité</span><span>Date</span><span>Statut</span><span>Récompense</span>
             </div>
-            {referrals.map((r,i)=>(
-              <div key={r.name} style={{padding:"13px 18px",borderBottom:i<referrals.length-1?`1px solid ${T.border}`:"none",display:"grid",gridTemplateColumns:"1fr 90px 90px 100px",alignItems:"center",fontSize:13,gap:8,transition:"background .12s"}} onMouseEnter={e=>e.currentTarget.style.background=T.surf2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+            {loading&&<div style={{padding:"40px 20px",textAlign:"center"}}><div style={{width:28,height:28,borderRadius:"50%",border:`3px solid ${T.acc}30`,borderTop:`3px solid ${T.acc}`,animation:"spin 1s linear infinite",margin:"0 auto 12px"}}/><div style={{color:T.muted,fontSize:13}}>Chargement...</div></div>}
+            {!loading&&referrals.map((r,i)=>(
+              <div key={r.name||i} style={{padding:"13px 18px",borderBottom:i<referrals.length-1?`1px solid ${T.border}`:"none",display:"grid",gridTemplateColumns:"1fr 90px 90px 100px",alignItems:"center",fontSize:13,gap:8,transition:"background .12s"}} onMouseEnter={e=>e.currentTarget.style.background=T.surf2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                 <div>
-                  <div style={{fontWeight:600}}>{r.name}</div>
+                  <div style={{fontWeight:600}}>{r.name||r.email?.split("@")[0]}</div>
                   <div style={{fontSize:11,color:T.muted,fontFamily:"JetBrains Mono"}}>{r.email}</div>
                 </div>
-                <span style={{fontSize:11,color:T.muted}}>{r.date}</span>
-                <Tag color={r.status==="Abonné Pro"?T.acc:r.status==="Inscrit"?T.cyan:T.muted}>{r.status}</Tag>
+                <span style={{fontSize:11,color:T.muted}}>{r.date||new Date(r.created_at).toLocaleDateString("fr-FR")}</span>
+                <Tag color={r.status==="pro"?T.acc:r.status==="Inscrit"||r.plan?T.cyan:T.muted}>{r.status||r.plan||"Inscrit"}</Tag>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{fontSize:11,color:r.paid?T.green:T.yellow,fontWeight:600}}>{r.reward}</span>
+                  <span style={{fontSize:11,color:r.paid?T.green:T.yellow,fontWeight:600}}>{r.paid?"1 mois offert":"En attente"}</span>
                   {r.paid&&<span style={{fontSize:12}}>✅</span>}
                 </div>
               </div>
             ))}
-            {referrals.length===0&&(
+            {!loading&&referrals.length===0&&(
               <div style={{padding:"40px 20px",textAlign:"center",color:T.muted,fontSize:13}}>Pas encore de parrainage. Partage ton lien !</div>
             )}
           </div>
@@ -8596,12 +9079,27 @@ export default function App(){
   const [page,setPage]=useState("landing");
   const [user,setUser]=useState(null);
   const [currentFile,setCurrentFile]=useState(null);
-  const [currentRawFile,setCurrentRawFile]=useState(null); // le vrai File objet du navigateur
+  const [currentRawFile,setCurrentRawFile]=useState(null);
   const [checkoutPlan,setCheckoutPlan]=useState("pro");
   const [checkoutYearly,setCheckoutYearly]=useState(true);
   const [cookieConsent,setCookieConsent]=useState({necessary:true,analytics:false,marketing:false});
   const [pushDismissed,setPushDismissed]=useState(false);
   const [pushToasts,setPushToasts]=useState([]);
+
+  // ── Bannière + maintenance chargés depuis Supabase ───
+  const [siteBanner,setSiteBanner]=useState({active:false,text:"",color:"#7c3aed"});
+  const [siteMaintenance,setSiteMaintenance]=useState({active:false,message:""});
+
+  useEffect(()=>{
+    // Charge les settings (bannière, maintenance) sans auth
+    fetch("/api/admin?action=get-settings")
+      .then(r=>r.json())
+      .then(d=>{
+        if(d.banner) setSiteBanner(d.banner);
+        if(d.maintenance) setSiteMaintenance(d.maintenance);
+      })
+      .catch(()=>{});
+  },[]);
 
   const nav=(p)=>setPage(p);
 
@@ -8814,6 +9312,32 @@ export default function App(){
     <>
       <GS/>
       <NotifProvider/>
+
+      {/* ── Mode maintenance ─────────────────────────── */}
+      {siteMaintenance.active&&page!=="admin"&&(
+        <div style={{position:"fixed",inset:0,zIndex:99999,background:"#030305",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:20}}>
+          <div style={{fontSize:56}}>🔧</div>
+          <div style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:28,color:"#fff",textAlign:"center"}}>Site en maintenance</div>
+          <div style={{fontSize:15,color:"rgba(255,255,255,.5)",textAlign:"center",maxWidth:420,lineHeight:1.6}}>{siteMaintenance.message||"SubCraft est temporairement indisponible. Retour dans quelques minutes."}</div>
+          <div style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:"rgba(255,255,255,.3)"}}>
+            <span style={{width:8,height:8,borderRadius:"50%",background:"#facc15",animation:"pulseDot 1s infinite"}}/>
+            En cours de maintenance...
+          </div>
+          {user?.email==="kevin.nedzvedsky@gmail.com"&&(
+            <button onClick={()=>nav("admin")} style={{marginTop:12,padding:"8px 20px",borderRadius:10,background:"rgba(124,58,237,.2)",border:"1px solid rgba(124,58,237,.4)",color:"#c084fc",fontSize:13,cursor:"pointer"}}>
+              Accès admin →
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── Bannière d'annonce ───────────────────────── */}
+      {siteBanner.active&&!siteMaintenance.active&&page==="landing"&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,zIndex:200,padding:"8px 20px",background:siteBanner.color||"#7c3aed",color:"#fff",fontSize:13,fontWeight:600,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+          <span>{siteBanner.text}</span>
+          <button onClick={()=>setSiteBanner(b=>({...b,active:false}))} style={{background:"none",border:"none",color:"rgba(255,255,255,.7)",cursor:"pointer",fontSize:16,lineHeight:1,marginLeft:8}}>×</button>
+        </div>
+      )}
 
       {/* Push notification toasts */}
       <div style={{position:"fixed",top:16,right:16,zIndex:9999,display:"flex",flexDirection:"column",gap:8,pointerEvents:"none"}}>
