@@ -171,42 +171,16 @@ export default async function handler(req, res) {
 
     const profileRes = await fetch(
       `${SUPABASE_URL}/rest/v1/users?id=eq.${userData.id}&select=*`,
-      { headers: { ...headers, Authorization: `Bearer ${SERVICE_KEY}` } }
+      { headers: { ...headers, Authorization: `Bearer ${token}` } }
     );
     const profiles = await profileRes.json();
-    let profile = profiles[0] || null;
-
-    // Création automatique du profil pour les users Google OAuth
-    if (!profile) {
-      const googleName = userData.user_metadata?.full_name
-        || userData.user_metadata?.name
-        || userData.email?.split("@")[0]
-        || "Créateur";
-      await fetch(`${SUPABASE_URL}/rest/v1/users`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": SERVICE_KEY,
-          "Authorization": `Bearer ${SERVICE_KEY}`,
-          "Prefer": "return=minimal",
-        },
-        body: JSON.stringify({
-          id: userData.id,
-          email: userData.email,
-          name: googleName,
-          plan: "free",
-          credits: 3,
-          status: "active",
-        }),
-      });
-      profile = { name: googleName, plan: "free", credits: 3, status: "active" };
-    }
+    const profile = profiles[0] || {};
 
     return res.status(200).json({
       user: {
         id: userData.id,
         email: userData.email,
-        name: profile.name || userData.user_metadata?.full_name || userData.email?.split("@")[0],
+        name: profile.name,
         plan: profile.plan || "free",
         credits: profile.credits ?? 3,
         status: profile.status || "active",
@@ -215,6 +189,80 @@ export default async function handler(req, res) {
         referred_by: profile.referred_by || null,
       },
     });
+  }
+
+  // ── RESET PASSWORD ────────────────────────────────
+  if (action === "reset-password" && req.method === "POST") {
+    const { email } = req.body || {};
+    if (!email) return res.status(400).json({ error: "email requis" });
+
+    // Utilise l'API Supabase pour envoyer le lien de reset
+    const resetRes = await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+      },
+      body: JSON.stringify({
+        email,
+        // URL de redirection après le clic sur le lien
+        redirect_to: "https://sub-craft-fxea.vercel.app/?page=reset-confirm",
+      }),
+    });
+
+    // Toujours répondre 200 — ne pas révéler si l'email existe ou non
+    return res.status(200).json({ sent: true });
+  }
+
+  // ── RESET PASSWORD (envoi email) ──────────────────
+  if (action === "reset-password" && req.method === "POST") {
+    const { email } = req.body || {};
+    if (!email) return res.status(400).json({ error: "email requis" });
+
+    await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+      },
+      body: JSON.stringify({
+        email,
+        redirect_to: "https://sub-craft-fxea.vercel.app/",
+      }),
+    });
+    // Toujours 200 — ne pas révéler si l'email existe
+    return res.status(200).json({ sent: true });
+  }
+
+  // ── UPDATE PASSWORD (après clic lien email) ────────
+  if (action === "update-password" && req.method === "POST") {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) return res.status(401).json({ error: "Token manquant" });
+
+    const { password } = req.body || {};
+    if (!password || password.length < 8) {
+      return res.status(400).json({ error: "Mot de passe trop court (8 min)" });
+    }
+
+    // Met à jour le mot de passe via l'API Supabase user
+    const updateRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify({ password }),
+    });
+    const updateData = await updateRes.json();
+
+    if (!updateRes.ok) {
+      return res.status(400).json({ error: updateData.error?.message || "Erreur mise à jour" });
+    }
+
+    return res.status(200).json({ updated: true });
   }
 
   return res.status(400).json({ error: `Action inconnue: ${action}` });

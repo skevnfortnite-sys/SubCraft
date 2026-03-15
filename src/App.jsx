@@ -1115,7 +1115,26 @@ const LoginPage=({onAuth,onAdmin,goSignup})=>{
   const [loading,setLoading]=useState(false);
   const [err,setErr]=useState("");
   const [attempts,setAttempts]=useState(0);
+  const [forgotMode,setForgotMode]=useState(false);
+  const [forgotEmail,setForgotEmail]=useState("");
+  const [forgotSent,setForgotSent]=useState(false);
+  const [forgotLoading,setForgotLoading]=useState(false);
   const isLocked=attempts>=5;
+
+  const handleForgot=async()=>{
+    if(!forgotEmail){return;}
+    setForgotLoading(true);
+    try{
+      await fetch(`${API_BASE}/api/auth?action=reset-password`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({email:forgotEmail})
+      });
+      // On affiche toujours "envoyé" pour ne pas révéler si l'email existe
+      setForgotSent(true);
+    }catch{}
+    setForgotLoading(false);
+  };
 
   const handle=async()=>{
     if(isLocked){setErr("Trop de tentatives. Réessaie dans 15 min.");return;}
@@ -1135,35 +1154,77 @@ const LoginPage=({onAuth,onAdmin,goSignup})=>{
     finally{setLoading(false);}
   };
 
+  // ── Mode reset mot de passe ─────────────────────────
+  if(forgotMode){
+    return(
+      <AuthCard title="Mot de passe oublié" subtitle="On t'envoie un lien de réinitialisation">
+        {forgotSent?(
+          <div style={{textAlign:"center",padding:"16px 0"}}>
+            <div style={{fontSize:48,marginBottom:16}}>📬</div>
+            <div style={{fontWeight:700,fontSize:16,marginBottom:8}}>Email envoyé !</div>
+            <div style={{fontSize:13,color:"rgba(255,255,255,.4)",marginBottom:24,lineHeight:1.6}}>
+              Si un compte existe pour <strong style={{color:"#fff"}}>{forgotEmail}</strong>, tu recevras un lien dans les prochaines minutes.
+            </div>
+            <button onClick={()=>{setForgotMode(false);setForgotSent(false);setForgotEmail("");}}
+              style={{width:"100%",padding:"12px",borderRadius:11,background:"#6366f1",border:"none",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+              Retour à la connexion
+            </button>
+          </div>
+        ):(
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <input value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="Ton adresse email" type="email"
+              style={{width:"100%",padding:"12px 14px",borderRadius:11,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",color:"#fff",fontSize:14,outline:"none",fontFamily:"inherit"}}
+              onKeyDown={e=>e.key==="Enter"&&handleForgot()}
+              onFocus={e=>e.target.style.borderColor="rgba(99,102,241,.5)"}
+              onBlur={e=>e.target.style.borderColor="rgba(255,255,255,.1)"}/>
+            <button onClick={handleForgot} disabled={forgotLoading||!forgotEmail}
+              style={{width:"100%",padding:"13px",borderRadius:11,background:forgotLoading||!forgotEmail?"rgba(99,102,241,.5)":"#6366f1",border:"none",color:"#fff",fontSize:14,fontWeight:700,cursor:forgotLoading?"not-allowed":"pointer"}}>
+              {forgotLoading?"Envoi en cours...":"Envoyer le lien"}
+            </button>
+            <button onClick={()=>setForgotMode(false)}
+              style={{background:"none",border:"none",color:"rgba(255,255,255,.3)",cursor:"pointer",fontSize:13,marginTop:4}}>
+              ← Retour à la connexion
+            </button>
+          </div>
+        )}
+      </AuthCard>
+    );
+  }
+
   return(
     <AuthCard title="Bienvenue" subtitle="Connecte-toi à ton espace SubCraft">
-      {/* Google OAuth — CTA principal */}
       <GoogleBtn onClick={signInWithGoogle}/>
-      {/* Séparateur */}
       <div style={{display:"flex",alignItems:"center",gap:12,margin:"18px 0"}}>
         <div style={{flex:1,height:1,background:"rgba(255,255,255,.08)"}}/>
         <span style={{fontSize:11,color:"rgba(255,255,255,.22)",fontWeight:600,letterSpacing:".06em"}}>OU</span>
         <div style={{flex:1,height:1,background:"rgba(255,255,255,.08)"}}/>
       </div>
-      {/* Email/password */}
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email" type="email"
           style={{width:"100%",padding:"12px 14px",borderRadius:11,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",color:"#fff",fontSize:14,outline:"none",transition:"border .2s",fontFamily:"inherit"}}
           onFocus={e=>e.target.style.borderColor="rgba(99,102,241,.5)"}
           onBlur={e=>e.target.style.borderColor="rgba(255,255,255,.1)"}
           onKeyDown={e=>e.key==="Enter"&&handle()}/>
-        <input value={pw} onChange={e=>setPw(e.target.value)} placeholder="Mot de passe" type="password"
-          style={{width:"100%",padding:"12px 14px",borderRadius:11,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",color:"#fff",fontSize:14,outline:"none",transition:"border .2s",fontFamily:"inherit"}}
-          onFocus={e=>e.target.style.borderColor="rgba(99,102,241,.5)"}
-          onBlur={e=>e.target.style.borderColor="rgba(255,255,255,.1)"}
-          onKeyDown={e=>e.key==="Enter"&&handle()}/>
+        <div style={{position:"relative"}}>
+          <input value={pw} onChange={e=>setPw(e.target.value)} placeholder="Mot de passe" type="password"
+            style={{width:"100%",padding:"12px 14px",borderRadius:11,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",color:"#fff",fontSize:14,outline:"none",transition:"border .2s",fontFamily:"inherit"}}
+            onFocus={e=>e.target.style.borderColor="rgba(99,102,241,.5)"}
+            onBlur={e=>e.target.style.borderColor="rgba(255,255,255,.1)"}
+            onKeyDown={e=>e.key==="Enter"&&handle()}/>
+        </div>
+        {/* Mot de passe oublié */}
+        <div style={{textAlign:"right",marginTop:-4}}>
+          <button onClick={()=>{setForgotMode(true);setForgotEmail(email);}}
+            style={{background:"none",border:"none",color:"#818cf8",cursor:"pointer",fontSize:12,fontWeight:600}}>
+            Mot de passe oublié ?
+          </button>
+        </div>
         {err&&<div style={{fontSize:12,color:"#f43f5e",padding:"8px 12px",borderRadius:8,background:"rgba(244,63,94,.1)",border:"1px solid rgba(244,63,94,.2)"}}>{err}</div>}
         <button onClick={handle} disabled={loading||isLocked}
           style={{width:"100%",padding:"13px",borderRadius:11,background:loading?"rgba(99,102,241,.5)":"#6366f1",border:"none",color:"#fff",fontSize:14,fontWeight:700,cursor:loading?"not-allowed":"pointer",transition:"all .2s",boxShadow:"0 4px 20px rgba(99,102,241,.4)"}}>
           {loading?"Connexion...":"Se connecter"}
         </button>
       </div>
-      {/* Footer */}
       <div style={{marginTop:18,textAlign:"center",fontSize:13,color:"rgba(255,255,255,.3)"}}>
         Pas encore de compte ?{" "}
         <button onClick={goSignup} style={{background:"none",border:"none",color:"#818cf8",cursor:"pointer",fontWeight:700,fontSize:13}}>Créer un compte →</button>
@@ -6809,6 +6870,63 @@ const AdminPanel=({onExit})=>{
 /* ══════════════════════════════════════════════
    PAGE: 404
 ══════════════════════════════════════════════ */
+const ResetPasswordPage=({onDone})=>{
+  const [pw,setPw]=useState("");
+  const [pw2,setPw2]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [err,setErr]=useState("");
+  const [done,setDone]=useState(false);
+
+  const handle=async()=>{
+    if(pw.length<8){setErr("Le mot de passe doit faire au moins 8 caractères.");return;}
+    if(pw!==pw2){setErr("Les mots de passe ne correspondent pas.");return;}
+    setErr("");setLoading(true);
+    try{
+      const token=localStorage.getItem("sc_reset_token");
+      const res=await fetch(`${API_BASE}/api/auth?action=update-password`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+        body:JSON.stringify({password:pw}),
+      });
+      const data=await res.json();
+      if(!res.ok){setErr(data.error||"Erreur lors du changement.");return;}
+      localStorage.removeItem("sc_reset_token");
+      setDone(true);
+      setTimeout(()=>onDone(),2500);
+    }catch{setErr("Erreur réseau. Réessaie.");}
+    finally{setLoading(false);}
+  };
+
+  return(
+    <AuthCard title="Nouveau mot de passe" subtitle="Choisis un mot de passe sécurisé">
+      {done?(
+        <div style={{textAlign:"center",padding:"16px 0"}}>
+          <div style={{fontSize:48,marginBottom:16}}>✅</div>
+          <div style={{fontWeight:700,fontSize:16,marginBottom:8}}>Mot de passe mis à jour !</div>
+          <div style={{fontSize:13,color:"rgba(255,255,255,.4)"}}>Redirection vers la connexion...</div>
+        </div>
+      ):(
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <input value={pw} onChange={e=>setPw(e.target.value)} placeholder="Nouveau mot de passe (8 min.)" type="password"
+            style={{width:"100%",padding:"12px 14px",borderRadius:11,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",color:"#fff",fontSize:14,outline:"none",fontFamily:"inherit"}}
+            onFocus={e=>e.target.style.borderColor="rgba(99,102,241,.5)"}
+            onBlur={e=>e.target.style.borderColor="rgba(255,255,255,.1)"}/>
+          <input value={pw2} onChange={e=>setPw2(e.target.value)} placeholder="Confirme le mot de passe" type="password"
+            style={{width:"100%",padding:"12px 14px",borderRadius:11,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",color:"#fff",fontSize:14,outline:"none",fontFamily:"inherit"}}
+            onFocus={e=>e.target.style.borderColor="rgba(99,102,241,.5)"}
+            onBlur={e=>e.target.style.borderColor="rgba(255,255,255,.1)"}
+            onKeyDown={e=>e.key==="Enter"&&handle()}/>
+          {err&&<div style={{fontSize:12,color:"#f43f5e",padding:"8px 12px",borderRadius:8,background:"rgba(244,63,94,.1)",border:"1px solid rgba(244,63,94,.2)"}}>{err}</div>}
+          <button onClick={handle} disabled={loading}
+            style={{width:"100%",padding:"13px",borderRadius:11,background:loading?"rgba(99,102,241,.5)":"#6366f1",border:"none",color:"#fff",fontSize:14,fontWeight:700,cursor:loading?"not-allowed":"pointer",boxShadow:"0 4px 20px rgba(99,102,241,.4)"}}>
+            {loading?"Mise à jour...":"Enregistrer le mot de passe"}
+          </button>
+        </div>
+      )}
+    </AuthCard>
+  );
+};
+
 const NotFound=({onHome})=>{
   const [count,setCount]=useState(8);
   useEffect(()=>{
@@ -8506,18 +8624,28 @@ export default function App(){
     }
   },[]);
 
-  // Intercepte le token Google OAuth dans l'URL hash
+  // Intercepte le token Google OAuth + reset password dans l'URL hash
   useEffect(()=>{
     const hash = window.location.hash;
     if(hash && hash.includes("access_token=")) {
       const params = new URLSearchParams(hash.replace("#",""));
       const token = params.get("access_token");
+      const type = params.get("type"); // "recovery" pour reset password
+
       if(token) {
+        window.history.replaceState(null, "", window.location.pathname);
+
+        // ── Reset password — afficher le formulaire de nouveau mot de passe
+        if(type === "recovery") {
+          localStorage.setItem("sc_reset_token", token);
+          nav("reset-password");
+          return;
+        }
+
         try {
           const payload = JSON.parse(atob(token.split(".")[1]));
           localStorage.setItem("sc_token", token);
           localStorage.setItem("sc_google_processing", "1");
-          window.history.replaceState(null, "", window.location.pathname);
           fetch("/api/auth?action=me", {
             headers: { "Authorization": `Bearer ${token}` }
           }).then(r=>r.json()).then(d=>{
@@ -8698,6 +8826,7 @@ export default function App(){
       {LEGAL_PAGES.includes(page)&&<LegalPage type={page} onBack={()=>nav(user?"dashboard":"landing")} setPage={nav}/>}
       {page==="banned"&&<BannedPage user={user} onLogout={()=>{setUser(null);localStorage.removeItem("sc_token");nav("landing");}}/>}
       {page==="admin"&&<AdminPanel onExit={()=>nav("landing")}/>}
+      {page==="reset-password"&&<ResetPasswordPage onDone={()=>nav("login")}/>}
       {page==="404"&&<NotFound onHome={()=>nav("landing")}/>}
 
     </>
