@@ -6291,7 +6291,8 @@ const AdminPanel=({onExit})=>{
     const loadAll = async () => {
       try {
         // Charge users
-        const res = await fetch("/api/admin?action=users");
+        const token_u=localStorage.getItem("sc_token");
+        const res = await fetch("/api/admin?action=users",{headers:{"Authorization":`Bearer ${token_u}`}});
         const data = await res.json();
         if(data.users) {
           setUsers(data.users.map(u=>({
@@ -6309,7 +6310,7 @@ const AdminPanel=({onExit})=>{
           })));
         }
         // Charge stats réelles
-        const sres = await fetch("/api/admin?action=stats");
+        const sres = await fetch("/api/admin?action=stats",{headers:{"Authorization":`Bearer ${token_u}`}});
         const sdata = await sres.json();
         if(sdata.mrr !== undefined) {
           setRealStats({
@@ -7194,7 +7195,7 @@ const AdminPanel=({onExit})=>{
             try{
               await fetch("/api/admin?action=save-settings",{
                 method:"POST",
-                headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+                headers:{"Content-Type":"application/json","Authorization":`Bearer ${localStorage.getItem("sc_token")}`},
                 body:JSON.stringify({banner,maintenance}),
               });
               notify("Paramètres sauvegardés","success");
@@ -7301,7 +7302,7 @@ const AdminPanel=({onExit})=>{
                     const newPlan=e.target.value;
                     setUsers(p=>p.map(x=>x.id===u.id?{...x,plan:newPlan}:x));
                     try {
-                      await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id,plan:newPlan.toLowerCase()})});
+                      await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${localStorage.getItem("sc_token")}`},body:JSON.stringify({userId:u.id,plan:newPlan.toLowerCase()})});
                       notify(`✅ Plan → ${newPlan}`,"success");
                     } catch(e){notify("Erreur API","error");}
                   }} style={{padding:"3px 6px",borderRadius:6,background:`${planColor[u.plan]||T.muted}15`,border:`1px solid ${planColor[u.plan]||T.muted}30`,color:planColor[u.plan]||T.muted,fontSize:11,fontWeight:700,cursor:"pointer"}}>
@@ -7313,7 +7314,7 @@ const AdminPanel=({onExit})=>{
                       const val=+e.target.value;
                       setUsers(p=>p.map(x=>x.id===u.id?{...x,credits:val}:x));
                       try {
-                        await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id,credits:val})});
+                        await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${localStorage.getItem("sc_token")}`},body:JSON.stringify({userId:u.id,credits:val})});
                         notify(`✅ Vidéos restantes → ${val}`,"success");
                       } catch(e){notify("Erreur API","error");}
                     }}
@@ -7323,7 +7324,7 @@ const AdminPanel=({onExit})=>{
                     const newStatus=e.target.value;
                     setUsers(p=>p.map(x=>x.id===u.id?{...x,status:newStatus}:x));
                     try {
-                      await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:u.id,status:newStatus,plan:newStatus==="suspended"?"free":u.plan.toLowerCase()})});
+                      await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${localStorage.getItem("sc_token")}`},body:JSON.stringify({userId:u.id,status:newStatus,plan:newStatus==="suspended"?"free":u.plan.toLowerCase()})});
                       notify(`✅ Statut → ${newStatus}`,"success");
                     } catch(e){notify("Erreur API","error");}
                   }} style={{padding:"3px 6px",borderRadius:6,background:`${statusColor[u.status]||T.muted}15`,border:`1px solid ${statusColor[u.status]||T.muted}30`,color:statusColor[u.status]||T.muted,fontSize:11,fontWeight:700,cursor:"pointer"}}>
@@ -7446,9 +7447,10 @@ const AdminPanel=({onExit})=>{
             <Btn v="secondary" onClick={()=>setEditUser(null)}>Annuler</Btn>
             <Btn onClick={async()=>{
               try {
+                const token=localStorage.getItem("sc_token");
                 const res = await fetch("/api/admin?action=update", {
                   method: "POST",
-                  headers: {"Content-Type":"application/json"},
+                  headers: {"Content-Type":"application/json","Authorization":`Bearer ${token}`},
                   body: JSON.stringify({
                     userId: editUser.id,
                     plan: editUser.plan.toLowerCase(),
@@ -7503,9 +7505,10 @@ const AdminPanel=({onExit})=>{
         desc="Cet utilisateur et toutes ses vidéos seront définitivement supprimés. Action irréversible."
         onConfirm={async()=>{
           try {
+            const token=localStorage.getItem("sc_token");
             const res = await fetch("/api/admin?action=delete", {
               method: "POST",
-              headers: {"Content-Type":"application/json"},
+              headers: {"Content-Type":"application/json","Authorization":`Bearer ${token}`},
               body: JSON.stringify({userId: confirmDeleteUser.id})
             });
             const data = await res.json();

@@ -21,13 +21,37 @@ function supabaseHeaders() {
 
 export default async function handler(req, res) {
   const origin = req.headers.origin || "";
-  const isAllowed = !origin || origin.includes("subcraftai.com") || origin.includes("vercel.app") || origin.includes("netlify.app");
+  const isAllowed = !origin || origin.includes("subcraftai.com") || origin.includes("vercel.app") || origin.includes("netlify.app") || origin.includes("localhost");
   res.setHeader("Access-Control-Allow-Origin", isAllowed ? origin || "*" : "https://subcraftai.com");
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(204).end();
 
   const action = req.query.action;
+
+  // ── AUTH : actions publiques cron (pas de token requis) ──
+  const CRON_ACTIONS = ["reset-credits", "trigger-j3"];
+  const isCron = CRON_ACTIONS.includes(action);
+  const cronSecret = req.headers["x-vercel-cron-signature"] || req.headers["x-cron-secret"];
+
+  if (!isCron) {
+    // Actions admin → vérifier JWT + email admin
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) return res.status(401).json({ error: "Non authentifié" });
+
+    try {
+      const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: { "apikey": process.env.SUPABASE_ANON_KEY, "Authorization": `Bearer ${token}` },
+      });
+      const userData = await userRes.json();
+      const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "kevin.nedzvedsky@gmail.com";
+      if (!userData?.email || userData.email !== ADMIN_EMAIL) {
+        return res.status(403).json({ error: "Accès refusé — admin uniquement" });
+      }
+    } catch {
+      return res.status(401).json({ error: "Token invalide" });
+    }
+  }
 
   // ── USERS — liste tous les utilisateurs ────────────
   if (action === "users" && req.method === "GET") {
