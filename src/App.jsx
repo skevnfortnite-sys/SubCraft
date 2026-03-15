@@ -17,7 +17,7 @@ const GS = () => (
     a{color:inherit;text-decoration:none}
     .syne{font-family:'Syne',sans-serif!important}
     .mono{font-family:'JetBrains Mono',monospace!important}
-    body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:.025}
+    body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:.006}
     @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
     @keyframes wordPop{from{opacity:0;transform:scale(.7) translateY(6px)}to{opacity:1;transform:scale(1) translateY(0)}}
     @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -1335,7 +1335,7 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
     <div style={{background:"#05040c",minHeight:"100vh",color:"#f8fafc",overflowX:"hidden",fontFamily:"'DM Sans',system-ui,sans-serif"}}>
 
       {/* ── BRUIT GLOBAL ── */}
-      <div style={{position:"fixed",inset:0,zIndex:0,pointerEvents:"none",opacity:.018,backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")"}}></div>
+      <div style={{position:"fixed",inset:0,zIndex:0,pointerEvents:"none",opacity:.006,backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")"}}></div>
 
       {/* ── NAV ── */}
       <nav style={{
@@ -1530,46 +1530,6 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
         </div>
       </div>
 
-      {/* ── TÉMOIGNAGES ── */}
-      <section style={{padding:"clamp(60px,8vh,90px) max(32px,5vw)",maxWidth:1200,margin:"0 auto"}}>
-        <div style={{textAlign:"center",marginBottom:48}}>
-          <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 14px",borderRadius:100,background:"rgba(251,191,36,.08)",border:"1px solid rgba(251,191,36,.2)",marginBottom:14}}>
-            <span style={{fontSize:12}}>★★★★★</span>
-            <span style={{fontSize:11,color:"#fbbf24",fontWeight:700,letterSpacing:".1em"}}>+10 000 CRÉATEURS SATISFAITS</span>
-          </div>
-          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(26px,3.5vw,48px)",letterSpacing:"-.05em",lineHeight:.9}}>
-            Ils cartonnent.<br/><span style={{color:"rgba(255,255,255,.18)"}}>Maintenant c'est ton tour.</span>
-          </h2>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16}} className="mobile-grid1">
-          {[
-            {name:"Marie L.",handle:"@mariecreates",avatar:"ML",color:"#7c3aed",stars:5,text:"SubCraft a littéralement changé ma façon de créer. Mes Shorts passent de 2k à 80k vues depuis que j'utilise les sous-titres Bold Yellow. L'IA transcrit en 10 secondes, c'est dingue.",platform:"YouTube Shorts",followers:"124k"},
-            {name:"Yassine K.",handle:"@yassinefitness",avatar:"YK",color:"#f97316",stars:5,text:"J'ai testé 5 outils de sous-titres. SubCraft est le seul qui comprend l'arabe et le français en même temps. Mon taux de complétion a grimpé de 40% en 2 semaines.",platform:"TikTok",followers:"89k"},
-            {name:"Sophie B.",handle:"@sophiebusiness",avatar:"SB",color:"#ec4899",stars:5,text:"En tant que créatrice business, les sous-titres propres sont non-négociables. SubCraft me sauve 3h par semaine. Le style Captions est exactement ce que je cherchais.",platform:"Instagram Reels",followers:"56k"},
-          ].map((t,i)=>(
-            <div key={i} style={{padding:"22px",borderRadius:20,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.07)",display:"flex",flexDirection:"column",gap:16,transition:"all .25s"}}
-              onMouseEnter={e=>{e.currentTarget.style.background="rgba(124,58,237,.06)";e.currentTarget.style.borderColor="rgba(124,58,237,.2)";}}
-              onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.03)";e.currentTarget.style.borderColor="rgba(255,255,255,.07)";}}>
-              {/* Header */}
-              <div style={{display:"flex",alignItems:"center",gap:12}}>
-                <div style={{width:44,height:44,borderRadius:"50%",background:`linear-gradient(135deg,${t.color},${t.color}66)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff",flexShrink:0}}>{t.avatar}</div>
-                <div style={{flex:1}}>
-                  <div style={{fontWeight:700,fontSize:14,color:"#fff"}}>{t.name}</div>
-                  <div style={{fontSize:11,color:"rgba(255,255,255,.35)"}}>{t.handle} · {t.followers}</div>
-                </div>
-                <div style={{padding:"4px 10px",borderRadius:8,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)",fontSize:9,color:"rgba(255,255,255,.35)",fontWeight:600}}>{t.platform}</div>
-              </div>
-              {/* Stars */}
-              <div style={{display:"flex",gap:2}}>
-                {Array(t.stars).fill(0).map((_,s)=><span key={s} style={{fontSize:13,color:"#fbbf24"}}>★</span>)}
-              </div>
-              {/* Quote */}
-              <p style={{fontSize:13,color:"rgba(255,255,255,.6)",lineHeight:1.75,margin:0,flex:1}}>"{t.text}"</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* ── STYLES ── */}      <section id="styles" data-reveal="styles" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",maxWidth:1100,margin:"0 auto",transition:"opacity .6s, transform .6s",opacity:1}}>
         <div style={{textAlign:"center",marginBottom:40}}>
           <div style={{display:"inline-block",fontSize:10,padding:"3px 12px",borderRadius:100,background:"rgba(168,85,247,.08)",border:"1px solid rgba(168,85,247,.2)",color:"#c084fc",fontWeight:700,letterSpacing:".12em",marginBottom:14}}>28 STYLES VIRAUX</div>
@@ -1654,41 +1614,6 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
               <div style={{fontSize:13,color:"rgba(255,255,255,.38)",lineHeight:1.7}}>{step.desc}</div>
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* ── TESTIMONIALS ── */}
-      <section data-reveal="testi" style={{padding:"clamp(70px,9vh,110px) max(32px,5vw)",background:"rgba(255,255,255,.018)",borderTop:"1px solid rgba(255,255,255,.05)",borderBottom:"1px solid rgba(255,255,255,.05)",transition:"opacity .6s, transform .6s",opacity:1}}>
-        <div id="testi" style={{maxWidth:1100,margin:"0 auto"}}>
-          <div style={{textAlign:"center",marginBottom:44}}>
-            <div style={{display:"inline-flex",gap:1,marginBottom:10}}>{"★★★★★".split("").map((s,i)=><span key={i} style={{color:"#fbbf24",fontSize:20}}>{s}</span>)}</div>
-            <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(28px,3.5vw,50px)",letterSpacing:"-.05em",lineHeight:.9}}>
-              Ils ont deja <span style={{color:"rgba(255,255,255,.2)"}}>saute le pas.</span>
-            </h2>
-            <p style={{fontSize:13,color:"rgba(255,255,255,.22)",marginTop:8}}>4.9/5 · 2 400+ createurs actifs</p>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}} className="mobile-grid1">
-            {[
-              {name:"Sophie M.",role:"TikToker · 890k",text:"J ai multiplie mes vues par 3 en 2 semaines. Les styles sont exactement comme les grands createurs.",platform:"TikTok",color:"#a78bfa"},
-              {name:"Lucas D.",role:"YouTubeur Shorts · 210k",text:"Avant je passais 2h par Short a sous-titrer. Maintenant c est 10 secondes. Jeu change.",platform:"YouTube",color:"#34d399"},
-              {name:"Emma W.",role:"Creatrice Reels · 450k",text:"SubCraft c est l outil que j attendais. Design magnifique, styles au top, ca marche vraiment.",platform:"Instagram",color:"#f472b6"},
-            ].map((r,i)=>(
-              <div key={i} style={{padding:"26px",borderRadius:18,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.065)",transition:"all .25s",position:"relative",overflow:"hidden"}}
-                onMouseEnter={e=>{e.currentTarget.style.background="rgba(124,58,237,.07)";e.currentTarget.style.borderColor="rgba(124,58,237,.2)";e.currentTarget.style.transform="translateY(-4px)";}}
-                onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.03)";e.currentTarget.style.borderColor="rgba(255,255,255,.065)";e.currentTarget.style.transform="none";}}>
-                <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${r.color}40,transparent)`}}/>
-                <div style={{display:"flex",gap:1,marginBottom:14}}>{"★★★★★".split("").map((s,j)=><span key={j} style={{color:"#fbbf24",fontSize:13}}>{s}</span>)}</div>
-                <p style={{fontSize:14,color:"rgba(255,255,255,.52)",lineHeight:1.78,marginBottom:18}}>"{r.text}"</p>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <div style={{width:36,height:36,borderRadius:"50%",background:`linear-gradient(135deg,${r.color}80,${r.color}30)`,border:`1px solid ${r.color}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff"}}>{r.name.slice(0,1)}</div>
-                    <div><div style={{fontWeight:600,fontSize:13,color:"#fff"}}>{r.name}</div><div style={{fontSize:11,color:"rgba(255,255,255,.28)"}}>{r.role}</div></div>
-                  </div>
-                  <span style={{fontSize:10,padding:"3px 8px",borderRadius:100,background:"rgba(255,255,255,.05)",color:"rgba(255,255,255,.3)",fontWeight:600}}>{r.platform}</span>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -1781,6 +1706,46 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
           </div>
         </div>
         <p style={{textAlign:"center",marginTop:14,fontSize:12,color:"rgba(255,255,255,.18)"}}>Annulation libre · Sans engagement · RGPD conforme</p>
+      </section>
+
+      {/* ── TÉMOIGNAGES ── */}
+      <section style={{padding:"clamp(60px,8vh,90px) max(32px,5vw)",maxWidth:1200,margin:"0 auto"}}>
+        <div style={{textAlign:"center",marginBottom:48}}>
+          <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 14px",borderRadius:100,background:"rgba(251,191,36,.08)",border:"1px solid rgba(251,191,36,.2)",marginBottom:14}}>
+            <span style={{fontSize:12}}>★★★★★</span>
+            <span style={{fontSize:11,color:"#fbbf24",fontWeight:700,letterSpacing:".1em"}}>+10 000 CRÉATEURS SATISFAITS</span>
+          </div>
+          <h2 style={{fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:"clamp(26px,3.5vw,48px)",letterSpacing:"-.05em",lineHeight:.9}}>
+            Ils cartonnent.<br/><span style={{color:"rgba(255,255,255,.18)"}}>Maintenant c'est ton tour.</span>
+          </h2>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16}} className="mobile-grid1">
+          {[
+            {name:"Marie L.",handle:"@mariecreates",avatar:"ML",color:"#7c3aed",stars:5,text:"SubCraft a littéralement changé ma façon de créer. Mes Shorts passent de 2k à 80k vues depuis que j'utilise les sous-titres Bold Yellow. L'IA transcrit en 10 secondes, c'est dingue.",platform:"YouTube Shorts",followers:"124k"},
+            {name:"Yassine K.",handle:"@yassinefitness",avatar:"YK",color:"#f97316",stars:5,text:"J'ai testé 5 outils de sous-titres. SubCraft est le seul qui comprend l'arabe et le français en même temps. Mon taux de complétion a grimpé de 40% en 2 semaines.",platform:"TikTok",followers:"89k"},
+            {name:"Sophie B.",handle:"@sophiebusiness",avatar:"SB",color:"#ec4899",stars:5,text:"En tant que créatrice business, les sous-titres propres sont non-négociables. SubCraft me sauve 3h par semaine. Le style Captions est exactement ce que je cherchais.",platform:"Instagram Reels",followers:"56k"},
+          ].map((t,i)=>(
+            <div key={i} style={{padding:"22px",borderRadius:20,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.07)",display:"flex",flexDirection:"column",gap:16,transition:"all .25s"}}
+              onMouseEnter={e=>{e.currentTarget.style.background="rgba(124,58,237,.06)";e.currentTarget.style.borderColor="rgba(124,58,237,.2)";}}
+              onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.03)";e.currentTarget.style.borderColor="rgba(255,255,255,.07)";}}>
+              {/* Header */}
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                <div style={{width:44,height:44,borderRadius:"50%",background:`linear-gradient(135deg,${t.color},${t.color}66)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff",flexShrink:0}}>{t.avatar}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:14,color:"#fff"}}>{t.name}</div>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,.35)"}}>{t.handle} · {t.followers}</div>
+                </div>
+                <div style={{padding:"4px 10px",borderRadius:8,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)",fontSize:9,color:"rgba(255,255,255,.35)",fontWeight:600}}>{t.platform}</div>
+              </div>
+              {/* Stars */}
+              <div style={{display:"flex",gap:2}}>
+                {Array(t.stars).fill(0).map((_,s)=><span key={s} style={{fontSize:13,color:"#fbbf24"}}>★</span>)}
+              </div>
+              {/* Quote */}
+              <p style={{fontSize:13,color:"rgba(255,255,255,.6)",lineHeight:1.75,margin:0,flex:1}}>"{t.text}"</p>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* ── FAQ ── */}
@@ -2376,19 +2341,29 @@ const UploadModal=({onClose,onImport})=>{
       .then(decoded => {
         URL.revokeObjectURL(url);
         const sampleRate = 16000;
-        const numChannels = decoded.numberOfChannels; // tous les canaux (voix off, musique, etc.)
-        // Mix tous les canaux en mono pour Whisper
+        // OfflineAudioContext mono 16kHz
         const offlineCtx = new OfflineAudioContext(1, Math.ceil(decoded.duration * sampleRate), sampleRate);
         const source = offlineCtx.createBufferSource();
         source.buffer = decoded;
-        // ChannelMerger pour mixer tous les canaux en mono
-        const merger = offlineCtx.createChannelMerger(1);
-        source.connect(offlineCtx.destination);
+
+        // Si stéréo ou multi-canaux → mixer en mono via ChannelMerger
+        if(decoded.numberOfChannels > 1) {
+          const splitter = offlineCtx.createChannelSplitter(decoded.numberOfChannels);
+          const merger = offlineCtx.createChannelMerger(1);
+          source.connect(splitter);
+          for(let i = 0; i < decoded.numberOfChannels; i++) {
+            splitter.connect(merger, i, 0);
+          }
+          merger.connect(offlineCtx.destination);
+        } else {
+          source.connect(offlineCtx.destination);
+        }
+
         source.start(0);
         return offlineCtx.startRendering();
       })
       .then(rendered => {
-        // Convertit AudioBuffer → WAV 16bit mono
+        // WAV 16bit mono 16kHz
         const numFrames = rendered.length;
         const sampleRate = rendered.sampleRate;
         const dataSize = numFrames * 2;
@@ -2398,27 +2373,33 @@ const UploadModal=({onClose,onImport})=>{
         writeStr(0,"RIFF"); view.setUint32(4, 36+dataSize, true);
         writeStr(8,"WAVE"); writeStr(12,"fmt ");
         view.setUint32(16,16,true); view.setUint16(20,1,true);
-        view.setUint16(22,1,true);
+        view.setUint16(22,1,true);           // mono
         view.setUint32(24,sampleRate,true);
         view.setUint32(28,sampleRate*2,true);
         view.setUint16(32,2,true);
         view.setUint16(34,16,true);
         writeStr(36,"data"); view.setUint32(40,dataSize,true);
-        // Mix tous les canaux disponibles en mono
-        const numCh = rendered.numberOfChannels;
+        const ch = rendered.getChannelData(0);
         let off = 44;
         for(let i=0;i<numFrames;i++){
-          let sample = 0;
-          for(let ch=0;ch<numCh;ch++) sample += rendered.getChannelData(ch)[i];
-          sample = sample / numCh; // moyenne des canaux
-          sample = Math.max(-1, Math.min(1, sample));
-          view.setInt16(off, sample < 0 ? sample*0x8000 : sample*0x7FFF, true);
+          const s = Math.max(-1, Math.min(1, ch[i]));
+          view.setInt16(off, s < 0 ? s*0x8000 : s*0x7FFF, true);
           off += 2;
         }
         audioCtx.close();
-        resolve(new Blob([buffer], { type: "audio/wav" }));
+        const blob = new Blob([buffer], { type: "audio/wav" });
+        // Vérif taille finale < 24MB
+        if(blob.size > 24 * 1024 * 1024) {
+          reject(new Error(`Audio trop lourd après extraction (${(blob.size/1024/1024).toFixed(1)} MB). Essaie une vidéo plus courte.`));
+        } else {
+          resolve(blob);
+        }
       })
-      .catch(err => { URL.revokeObjectURL(url); audioCtx.close(); reject(err); });
+      .catch(err => {
+        URL.revokeObjectURL(url);
+        try { audioCtx.close(); } catch{}
+        reject(err);
+      });
   });
 
   const doImport=async()=>{
@@ -2436,24 +2417,31 @@ const UploadModal=({onClose,onImport})=>{
         let audioBlob = file;
 
         if(isVideo) {
-          // Extrait l'audio dans le navigateur
           setProgress(15);
           try {
             audioBlob = await extractAudioBlob(file);
+            notify("🎵 Audio extrait — envoi à Whisper...", "info");
           } catch(e) {
-            // Fallback: envoie direct si extraction échoue
-            console.warn("[audio extract]", e);
+            console.warn("[audio extract]", e.message);
+            // Si l'erreur vient de la taille → on arrête
+            if(e.message.includes("trop lourd")) {
+              notify(e.message, "error");
+              setUploading(false); setProgress(0); return;
+            }
+            // Sinon fallback : envoyer le fichier vidéo directement
+            notify("⚠️ Extraction audio impossible — envoi direct de la vidéo...", "warning");
             audioBlob = file;
           }
         }
 
         setProgress(35);
         const fileSizeMB = (audioBlob.size / 1024 / 1024).toFixed(1);
-        if(audioBlob.size > 24*1024*1024) {
-          notify(`Audio trop lourd (${fileSizeMB} MB). Essaie une vidéo plus courte.`, "error");
+        if(audioBlob.size > 24 * 1024 * 1024) {
+          notify(`Fichier trop lourd (${fileSizeMB} MB > 24 MB). Essaie une vidéo plus courte ou compresse-la.`, "error");
           setUploading(false); setProgress(0); return;
         }
 
+        notify(`📤 Envoi à Whisper (${fileSizeMB} MB)...`, "info");
         const formData = new FormData();
         formData.append("file", audioBlob, isVideo ? "audio.wav" : file.name);
         formData.append("language", lang||"fr");
