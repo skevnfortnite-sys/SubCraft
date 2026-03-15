@@ -1863,22 +1863,30 @@ const LandingPage=({user,onCTA,setPage,goCheckout})=>{
 
 
 const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
-  // 🔒 SÉCURITÉ: chaque session utilisateur a son propre état en mémoire.
-  // En prod → filtrer par user.id côté API: GET /api/files?userId={user.id}
-  // Ne jamais renvoyer les fichiers d'un autre utilisateur sans vérifier le JWT.
   const userFiles=useMemo(()=>MOCK_FILES.filter(f=>f.status!=="deleted").map(f=>({...f,ownerId:user?.email})),[user?.email]);
   const [files,setFiles]=useState(userFiles);
   const [showUpload,setShowUpload]=useState(false);
   const [search,setSearch]=useState("");
-  const [confirmDelete,setConfirmDelete]=useState(null); // {id, name}
+  const [confirmDelete,setConfirmDelete]=useState(null);
   const [notifPanel,setNotifPanel]=useState(false);
-  // Génère les vraies notifications depuis les données réelles
   const [notifications,setNotifications]=useState(()=>{
     const notifs=[];
-    // Notification de bienvenue toujours présente
     notifs.push({id:"welcome",icon:"🎉",text:"Bienvenue sur SubCraft ! Tu as 3 vidéos gratuites ce mois-ci.",time:"Maintenant",read:false});
     return notifs;
   });
+
+  // 🔒 Recharge TOUJOURS les crédits depuis la DB au montage — jamais de fallback
+  useEffect(()=>{
+    const token = localStorage.getItem("sc_token");
+    if(!token || !user?.id) return;
+    fetch("/api/credits?action=balance", {
+      headers: { "Authorization": `Bearer ${token}` }
+    }).then(r=>r.json()).then(d=>{
+      if(typeof d.credits === "number") {
+        setUser(u=>({...u, credits: d.credits, plan: d.plan || u?.plan}));
+      }
+    }).catch(()=>{});
+  },[user?.id]);
 
   // Ajoute des notifs réelles selon le contexte user
   useEffect(()=>{
@@ -1912,11 +1920,16 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
   const filtered=files.filter(f=>f.status!=="deleted"&&f.name.toLowerCase().includes(search.toLowerCase()));
 
   const handleUpload=async(file,lang,realSubs=null)=>{
-    // Vérifie les crédits
     const planCreditsMap={free:3,basic:30,expert:100,pro:Infinity};
     const userPlan=(user?.plan||"free").toLowerCase();
     const maxCredits=planCreditsMap[userPlan]||3;
-    const currentCredits=user?.credits??0;
+    const currentCredits=user?.credits;
+
+    // Crédits pas encore chargés depuis la DB → bloquer
+    if(currentCredits === null || currentCredits === undefined) {
+      notify("Chargement de tes crédits en cours... réessaie dans 2 secondes","warning");
+      return;
+    }
     if(maxCredits!==Infinity && currentCredits<=0){
       notify("❌ Plus de vidéos disponibles ce mois ! Passe au plan supérieur.","error");
       setPage("pricing");
@@ -1926,21 +1939,32 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
     setFiles(p=>[newF,...p]);
     setShowUpload(false);
     notify("Vidéo uploadée ! Transcription en cours...","info");
-    // Décrémente en Supabase
+
+    // 🔒 Déduction via endpoint sécurisé — userId extrait du JWT côté serveur
     if(maxCredits!==Infinity){
-      const newCredits=Math.max(0,currentCredits-1);
-      setUser(u=>({...u,credits:newCredits}));
       try {
         const token=localStorage.getItem("sc_token");
-        await fetch("/api/admin?action=update",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({userId:user.id,credits:newCredits})});
-        // Email si crédits épuisés
-        if(newCredits===0){
-          fetch("/api/email?action=credits-empty",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:user.email,name:user.name})});
-          notify("⚠️ C'était ta dernière vidéo ce mois-ci ! Pense à upgrader.","warning",6000);
-        } else if(newCredits<=Math.ceil(maxCredits*0.2)){
-          notify(`⚠️ Plus que ${newCredits} vidéo${newCredits>1?"s":""} restante${newCredits>1?"s":""} ce mois...`,"warning");
+        const r=await fetch("/api/credits?action=deduct",{
+          method:"POST",
+          headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+        });
+        const d=await r.json();
+        if(r.status===402){
+          notify("❌ Plus de crédits — la vidéo n'a pas été comptée","error");
+          setFiles(p=>p.filter(f=>f.id!==newF.id));
+          setPage("pricing");
+          return;
         }
-      } catch(e){ console.error("Erreur décrémentation vidéos",e); }
+        if(d.ok){
+          setUser(u=>({...u,credits:d.credits}));
+          if(d.empty){
+            fetch("/api/email?action=credits-empty",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:user.email,name:user.name})});
+            notify("⚠️ C'était ta dernière vidéo ce mois-ci !","warning",6000);
+          } else if(d.warn){
+            notify(`⚠️ Plus que ${d.credits} vidéo${d.credits>1?"s":""} restante${d.credits>1?"s":""} ce mois...`,"warning");
+          }
+        }
+      } catch(e){ console.error("Erreur déduction crédits",e); }
     }
     setTimeout(()=>{
       setFiles(p=>p.map(f=>f.id===newF.id?{...f,status:"ready"}:f));
@@ -1951,12 +1975,12 @@ const Dashboard=({user,setUser,onOpen,onLogout,setPage})=>{
   };
 
   // Stats réelles depuis user + files
-  const realCredits = user?.credits ?? 3;
+  const realCredits = user?.credits !== null && user?.credits !== undefined ? user.credits : null;
   const planCredits={free:3,basic:30,expert:100,pro:Infinity};
   const totalCredits = user?.plan==="pro"||user?.plan==="Pro" ? Infinity : (planCredits[user?.plan?.toLowerCase()]||3);
   const usedCredits = files.filter(f=>f.status==="ready").length;
-  const creditPct = totalCredits===Infinity ? 15 : Math.round(((totalCredits - realCredits) / totalCredits)*100);
-  const creditWarn = totalCredits!==Infinity && realCredits<=Math.ceil(totalCredits*0.2);
+  const creditPct = totalCredits===Infinity ? 15 : realCredits===null ? 0 : Math.round(((totalCredits - realCredits) / totalCredits)*100);
+  const creditWarn = totalCredits!==Infinity && realCredits!==null && realCredits<=Math.ceil(totalCredits*0.2);
   const joinedDate = user?.created_at ? new Date(user.created_at).toLocaleDateString("fr-FR",{month:"long",year:"numeric"}) : "—";
 
   const statsCards=[
@@ -8458,7 +8482,7 @@ export default function App(){
               email: d.user?.email || payload.email,
               name: googleName || d.user?.name || payload.email?.split("@")[0],
               plan: d.user?.plan || "free",
-              credits: d.user?.credits ?? 3,
+              credits: typeof d.user?.credits === "number" ? d.user.credits : null,
             };
             // Email admin → panel admin direct
             if(emailFromToken === "kevin.nedzvedsky@gmail.com") { nav("admin"); return; }
@@ -8510,7 +8534,12 @@ export default function App(){
             headers: { "Authorization": `Bearer ${savedToken}` }
           }).then(r => r.json()).then(d => {
             if(d.user) {
-              setUser(d.user); // ← user chargé, on reste sur la landing
+              // Ne jamais écraser les crédits avec un fallback si null — utiliser la valeur DB strictement
+              const freshUser = {
+                ...d.user,
+                credits: typeof d.user.credits === "number" ? d.user.credits : null,
+              };
+              setUser(freshUser);
             } else {
               localStorage.removeItem("sc_token");
             }
