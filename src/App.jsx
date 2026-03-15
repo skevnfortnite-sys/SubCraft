@@ -3405,7 +3405,7 @@ const EditorPage=({onBack,file,rawFile})=>{
           <div style={{position:"absolute",top:"35%",left:"50%",transform:"translateX(-50%)",width:280,height:280,borderRadius:"50%",background:`radial-gradient(${T.acc}15,transparent 70%)`,filter:"blur(60px)",pointerEvents:"none"}}/>
           {/* Phone — flex:1 so it takes all available space */}
           <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",position:"relative",zIndex:1,minHeight:0}}>
-            <div style={{position:"relative"}}
+            <div
               onMouseEnter={e=>e.currentTarget.style.transform="scale(1.02)"}
               onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}
               style={{transition:"transform .25s ease",position:"relative"}}>
@@ -5208,7 +5208,7 @@ const AdminApiKeys=()=>{
           {/* Tabs */}
           <div style={{display:"flex",background:T.bg,borderBottom:`1px solid ${T.border}`}}>
             {[["config","⚙️ Configuration"],["doc","📖 Documentation"]].map(([id,label])=>(
-              <button key={id} onClick={()=>setTab(id)} style={{flex:1,padding:"10px",background:tab===id?T.surf:"transparent",borderBottom:tab===id?`2px solid ${svc.color}`:"2px solid transparent",color:tab===id?svc.color:T.muted,fontWeight:tab===id?800:400,fontSize:12,cursor:"pointer",border:"none",borderBottom:tab===id?`2px solid ${svc.color}`:"2px solid transparent",transition:"all .2s"}}>{label}</button>
+              <button key={id} onClick={()=>setTab(id)} style={{flex:1,padding:"10px",background:tab===id?T.surf:"transparent",border:"none",borderBottom:tab===id?`2px solid ${svc.color}`:"2px solid transparent",color:tab===id?svc.color:T.muted,fontWeight:tab===id?800:400,fontSize:12,cursor:"pointer",transition:"all .2s"}}>{label}</button>
             ))}
           </div>
 
@@ -6264,6 +6264,31 @@ const AdminLandingEditor=()=>{
 
 const ADMIN_EMAIL = "kevin.nedzvedsky@gmail.com";
 
+// Charts définis HORS du composant AdminPanel pour éviter les re-créations
+const MiniChart=({data,color,height=44,filled=true})=>{
+  const max=Math.max(...(data||[1]),1);
+  const w=100/Math.max((data||[]).length,1);
+  return(
+    <svg width="100%" height={height} viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" style={{display:"block"}}>
+      {filled&&(<defs><linearGradient id={`g${color.replace("#","")}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity=".3"/><stop offset="100%" stopColor={color} stopOpacity="0"/></linearGradient></defs>)}
+      {filled&&<path d={`M0,${height} ${(data||[]).map((v,i)=>`L${i*w+w/2},${height-((v/max)*(height-4))}`).join(" ")} L100,${height} Z`} fill={`url(#g${color.replace("#","")})`}/>}
+      <path d={`M${(data||[]).map((v,i)=>`${i*w+w/2},${height-((v/max)*(height-4))}`).join(" L")}`} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+};
+
+const BarChart=({data,color,height=80})=>{
+  const max=Math.max(...(data||[1]),1);
+  const w=100/Math.max((data||[]).length,1);
+  return(
+    <svg width="100%" height={height} viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" style={{display:"block"}}>
+      {(data||[]).map((v,i)=>(
+        <rect key={i} x={i*w+w*.15} y={height-((v/max)*(height-2))} width={w*.7} height={(v/max)*(height-2)} rx="1.5" fill={color} opacity={.7+.3*(v/max)}/>
+      ))}
+    </svg>
+  );
+};
+
 const AdminPanel=({onExit})=>{
   const [users,setUsers]=useState([]);
   const [loadingUsers,setLoadingUsers]=useState(true);
@@ -6334,69 +6359,20 @@ const AdminPanel=({onExit})=>{
 
   const totalMRR = realStats.mrr || users.reduce((a,u)=>a+({Free:0,Basic:12,Expert:18,Pro:30}[u.plan]||0),0);
 
-  // Generate sparkline data for charts
   const genData=(base,noise,len)=>Array.from({length:len},(_,i)=>Math.max(0,Math.round(base+Math.sin(i*.4)*noise*.5+Math.random()*noise+(i/len)*base*.3)));
-
   const visitData30=genData(420,120,30);
   const visitData7=visitData30.slice(-7);
   const visitData90=genData(380,150,90);
   const visitData99=genData(375,155,99);
-
-  const getRangeData=()=>({
-    7:visitData7,
-    30:visitData30,
-    90:visitData90,
-    99:visitData99,
-  }[analyticsRange]||visitData30);
-
-  const rangeData=getRangeData();
+  const rangeData=({7:visitData7,30:visitData30,90:visitData90,99:visitData99}[analyticsRange]||visitData30);
   const totalVisits=rangeData.reduce((a,v)=>a+v,0);
   const avgVisits=Math.round(totalVisits/rangeData.length);
   const maxVisits=Math.max(...rangeData);
   const prevTotal=Math.round(totalVisits*.82);
   const growthPct=Math.round(((totalVisits-prevTotal)/prevTotal)*100);
-
   const signupData30=genData(12,6,30);
   const convData30=genData(3,2,30);
   const revenueData30=genData(280,80,30);
-
-  const MiniChart=({data,color,height=44,filled=true})=>{
-    const max=Math.max(...data,1);
-    const w=100/data.length;
-    return(
-      <svg width="100%" height={height} viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" style={{display:"block"}}>
-        {filled&&(
-          <defs>
-            <linearGradient id={`g${color.replace("#","")}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity=".3"/>
-              <stop offset="100%" stopColor={color} stopOpacity="0"/>
-            </linearGradient>
-          </defs>
-        )}
-        {filled&&(
-          <path d={`M0,${height} ${data.map((v,i)=>`L${i*w+w/2},${height-((v/max)*(height-4))}`).join(" ")} L100,${height} Z`}
-            fill={`url(#g${color.replace("#","")})`}/>
-        )}
-        <path d={`M${data.map((v,i)=>`${i*w+w/2},${height-((v/max)*(height-4))}`).join(" L")}`}
-          fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        {data.map((v,i)=>(
-          <circle key={i} cx={i*w+w/2} cy={height-((v/max)*(height-4))} r="1.5" fill={color} opacity=".5"/>
-        ))}
-      </svg>
-    );
-  };
-
-  const BarChart=({data,color,height=80})=>{
-    const max=Math.max(...data,1);
-    const w=100/data.length;
-    return(
-      <svg width="100%" height={height} viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" style={{display:"block"}}>
-        {data.map((v,i)=>(
-          <rect key={i} x={i*w+w*.15} y={height-((v/max)*(height-2))} width={w*.7} height={(v/max)*(height-2)} rx="1.5" fill={color} opacity={.7+.3*(v/max)}/>
-        ))}
-      </svg>
-    );
-  };
 
   const NAV=[
     {id:"dashboard",icon:"📊",label:"Dashboard"},
